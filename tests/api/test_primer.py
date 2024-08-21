@@ -1,0 +1,440 @@
+from dataclasses import dataclass
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+from typing import Optional
+
+import pytest
+from fgpyo.fasta.sequence_dictionary import SequenceDictionary
+
+from prymer.api.primer import Primer
+from prymer.api.span import Span
+from prymer.api.span import Strand
+
+
+@pytest.mark.parametrize(
+    "bases,tm,penalty,test_span",
+    [
+        ("AGCT", 1.0, 2.0, Span(refname="chr1", start=1, end=4, strand=Strand.POSITIVE)),
+        (
+            "AGCTAGCTAA",
+            10.0,
+            20.0,
+            Span(refname="chr2", start=1, end=10, strand=Strand.NEGATIVE),
+        ),
+    ],
+)
+def test_valid_primer_config(bases: str, tm: float, penalty: float, test_span: Span) -> None:
+    """Test Primer construction with valid input and ensure reported lengths match"""
+    test_primer = Primer(bases=bases, tm=tm, penalty=penalty, span=test_span)
+    assert test_primer.length == test_primer.span.length
+
+
+def test_span_returns_span(test_span: Span) -> None:
+    """Test that the mapping property returns the span object."""
+    test_primer = Primer(
+        bases="AGCTAGCTAA",
+        tm=1.0,
+        penalty=2.0,
+        span=test_span,
+    )
+    assert test_primer.span == test_span
+
+
+def test_invalid_primer_config_raises() -> None:
+    """Test Primer construction with invalid input raises ValueError"""
+    with pytest.raises(ValueError, match="Bases must not be an empty string"):
+        Primer(
+            bases="",
+            tm=1.0,
+            penalty=2.0,
+            span=Span(refname="chr1", start=1, end=4, strand=Strand.POSITIVE),
+        )
+
+    with pytest.raises(
+        ValueError, match="Conflicting lengths: span length=1000, sequence length=4"
+    ):
+        Primer(
+            bases="ACGT",
+            tm=1.0,
+            penalty=2.0,
+            span=Span(refname="chr1", start=1, end=1000, strand=Strand.POSITIVE),
+        )
+
+
+@dataclass(init=True, frozen=True)
+class PrimerTestCase:
+    """Test case for a `Primer`.
+
+    Attributes:
+        primer: the primer to test
+        gc_pct: the expected value for the `Primer.percent_gc_content` method
+        longest_hp: the expected value for the `Primer.longest_homopolymer` method
+        longest_dinuc: the expected value for the `Primer.longest_dinucleotide_run` method
+        str_fields: the fields, that when tab-delimited, are the expected string for the
+            `Primer.__str__` method.
+    """
+
+    primer: Primer
+    gc_pct: float
+    longest_hp: int
+    longest_dinuc: int
+    str_fields: list[str]
+
+
+def build_primer_test_cases() -> list[PrimerTestCase]:
+    """Builds a set of test cases for `Primer` methods."""
+    return [
+        PrimerTestCase(
+            primer=Primer(
+                bases="ATAT",
+                tm=1.0,
+                penalty=2.0,
+                span=Span(refname="chr1", start=1, end=4, strand=Strand.POSITIVE),
+            ),
+            gc_pct=0.0,
+            longest_hp=1,
+            longest_dinuc=4,
+            str_fields=["ATAT", "1.0", "2.0", "chr1:1-4:+"],
+        ),
+        PrimerTestCase(
+            primer=Primer(
+                bases="ACGTAAAAAATT",
+                tm=1.0,
+                penalty=2.0,
+                span=Span(refname="chr1", start=1, end=12, strand=Strand.POSITIVE),
+            ),
+            gc_pct=16.667,
+            longest_hp=6,
+            longest_dinuc=6,
+            str_fields=["ACGTAAAAAATT", "1.0", "2.0", "chr1:1-12:+"],
+        ),
+        PrimerTestCase(
+            primer=Primer(
+                bases="ATAC",
+                tm=1.0,
+                penalty=2.0,
+                span=Span(refname="chr1", start=1, end=4, strand=Strand.POSITIVE),
+            ),
+            gc_pct=25.0,
+            longest_hp=1,
+            longest_dinuc=2,
+            str_fields=["ATAC", "1.0", "2.0", "chr1:1-4:+"],
+        ),
+        PrimerTestCase(
+            primer=Primer(
+                bases="ATATCC",
+                tm=1.0,
+                penalty=2.0,
+                span=Span(refname="chr1", start=1, end=6, strand=Strand.POSITIVE),
+            ),
+            gc_pct=33.333,
+            longest_hp=2,
+            longest_dinuc=4,
+            str_fields=["ATATCC", "1.0", "2.0", "chr1:1-6:+"],
+        ),
+        PrimerTestCase(
+            primer=Primer(
+                bases="AGCT",
+                tm=1.0,
+                penalty=2.0,
+                span=Span(refname="chr1", start=1, end=4, strand=Strand.POSITIVE),
+            ),
+            gc_pct=50.0,
+            longest_hp=1,
+            longest_dinuc=2,
+            str_fields=["AGCT", "1.0", "2.0", "chr1:1-4:+"],
+        ),
+        PrimerTestCase(
+            primer=Primer(
+                bases="GGGGG",
+                tm=1.0,
+                penalty=2.0,
+                span=Span(refname="chr1", start=1, end=5, strand=Strand.POSITIVE),
+            ),
+            gc_pct=100.0,
+            longest_hp=5,
+            longest_dinuc=4,
+            str_fields=["GGGGG", "1.0", "2.0", "chr1:1-5:+"],
+        ),
+        PrimerTestCase(
+            primer=Primer(
+                bases="ccgTATGC",
+                tm=1.0,
+                penalty=2.0,
+                span=Span(refname="chr1", start=1, end=8, strand=Strand.POSITIVE),
+            ),
+            gc_pct=62.5,
+            longest_hp=2,
+            longest_dinuc=2,
+            str_fields=["ccgTATGC", "1.0", "2.0", "chr1:1-8:+"],
+        ),
+        PrimerTestCase(
+            primer=Primer(
+                bases=None,
+                tm=1.0,
+                penalty=2.0,
+                span=Span(refname="chr1", start=1, end=4, strand=Strand.POSITIVE),
+            ),
+            gc_pct=0.0,
+            longest_hp=0,
+            longest_dinuc=0,
+            str_fields=["*", "1.0", "2.0", "chr1:1-4:+"],
+        ),
+        PrimerTestCase(
+            primer=Primer(
+                bases="ACACACTCTCTCT",
+                tm=1.0,
+                penalty=2.0,
+                span=Span(refname="chr1", start=1, end=13, strand=Strand.POSITIVE),
+            ),
+            gc_pct=46.154,
+            longest_hp=1,
+            longest_dinuc=8,
+            str_fields=["ACACACTCTCTCT", "1.0", "2.0", "chr1:1-13:+"],
+        ),
+    ]
+
+
+PRIMER_TEST_CASES: list[PrimerTestCase] = build_primer_test_cases()
+
+
+@pytest.mark.parametrize("test_case", PRIMER_TEST_CASES)
+def test_gc_content_calc(test_case: PrimerTestCase) -> None:
+    """Test that percent GC content is calculated correctly."""
+    assert test_case.primer.percent_gc_content == pytest.approx(test_case.gc_pct)
+
+
+@pytest.mark.parametrize("test_case", PRIMER_TEST_CASES)
+def test_longest_homopolymer_len_calc(test_case: PrimerTestCase) -> None:
+    """Test that longest homopolymer run is calculated correctly."""
+    assert test_case.primer.longest_hp_length() == test_case.longest_hp
+
+
+@pytest.mark.parametrize(
+    "init, value, expected",
+    [
+        # no initial value
+        (None, "", ""),
+        (None, "GATTACA", "GATTACA"),
+        (None, "NNNNN", "NNNNN"),
+        # update the initial value
+        ("TTTT", "", ""),
+        ("TTTT", "GATTACA", "GATTACA"),
+        ("TTTT", "NNNNN", "NNNNN"),
+    ],
+)
+def test_with_tail(init: Optional[str], value: str, expected: Optional[str]) -> None:
+    """Tests the `with_tail` method, setting the initial value to `init`, updating the
+    tail using the `with_tail()` method with value `value`, and testing for the execpted
+    value `expected`."""
+    test_primer = Primer(
+        bases="AGCT",
+        tm=1.0,
+        penalty=2.0,
+        span=Span(refname="chr1", start=1, end=4, strand=Strand.POSITIVE),
+        tail=init,
+    )
+    modified_test_primer = test_primer.with_tail(tail=value)
+    assert modified_test_primer.tail is expected
+    assert modified_test_primer.bases == "AGCT"
+
+
+@pytest.mark.parametrize(
+    "tail_seq, bases, expected_result",
+    [
+        ("TTTT", "AGCT", "TTTTAGCT"),
+        ("", "AGCT", "AGCT"),
+        ("AAA", None, "AAA"),
+        (None, "AGCT", "AGCT"),
+        ("NNNNNNNNNN", "AGCT", "NNNNNNNNNNAGCT"),
+        ("GATTACA", "AGCT", "GATTACAAGCT"),
+        (None, None, None),
+    ],
+)
+def test_bases_with_tail(
+    tail_seq: Optional[str], bases: Optional[str], expected_result: Optional[str]
+) -> None:
+    test_primer = Primer(
+        bases=bases,
+        tm=1.0,
+        penalty=2.0,
+        span=Span(refname="chr1", start=1, end=4, strand=Strand.POSITIVE),
+        tail=tail_seq,
+    )
+    assert test_primer.bases_with_tail() == expected_result
+
+
+@pytest.mark.parametrize(
+    "init, value, expected",
+    [
+        # no initial value
+        (None, "", ""),
+        (None, "GATTACA", "GATTACA"),
+        (None, "NNNNN", "NNNNN"),
+        # update the initial value
+        ("TTTT", "", ""),
+        ("TTTT", "GATTACA", "GATTACA"),
+        ("TTTT", "NNNNN", "NNNNN"),
+    ],
+)
+def test_with_name(init: Optional[str], value: str, expected: Optional[str]) -> None:
+    test_primer = Primer(
+        bases="AGCT",
+        tm=1.0,
+        penalty=2.0,
+        span=Span(refname="chr1", start=1, end=4, strand=Strand.POSITIVE),
+        name=init,
+    )
+    modified_test_primer = test_primer.with_name(name=value)
+    assert test_primer.name is init
+    assert modified_test_primer.name is expected
+
+
+@pytest.mark.parametrize(
+    "name, expected_id",
+    [
+        ("test", "test"),
+        (None, "chr1_1_10_F"),
+    ],
+)
+def test_id_generation(
+    test_span: Span,
+    name: Optional[str],
+    expected_id: str,
+) -> None:
+    """Asserts that the id field is correctly generated based on the name field."""
+
+    # For each scenario, generate a Primer object and assert that the generated ID
+    # matches the expected ID.
+    primer = Primer(
+        name=name,
+        span=test_span,
+        bases="AAAAAAAAAA",
+        tm=1.0,
+        penalty=1.0,
+        tail="AAA",
+    )
+    assert primer.id == expected_id
+
+
+def test_to_bed12_row(test_span: Span) -> None:
+    """Asserts that the to_bed12_row method exists and returns the expected value."""
+    primer = Primer(
+        name="test",
+        span=test_span,
+        bases="AAAAAAAAAA",
+        tm=1.0,
+        penalty=1.0,
+        tail="AAA",
+    )
+    assert primer.to_bed12_row() == "\t".join(
+        [
+            "chr1",
+            "0",
+            "10",
+            "test",
+            "500",
+            "+",
+            "0",
+            "10",
+            "100,100,100",
+            "1",
+            "10",
+            "0",
+        ],
+    )
+
+
+@pytest.mark.parametrize("test_case", PRIMER_TEST_CASES)
+def test_untailed_length(test_case: PrimerTestCase) -> None:
+    assert test_case.primer.length == test_case.primer.untailed_length()
+
+
+@pytest.mark.parametrize(
+    "tail_seq, expected_length",
+    [
+        ("TTTT", 8),
+        ("", 4),
+        (None, 4),
+        ("NNNNNNNNNN", 14),
+        ("GATTACA", 11),
+    ],
+)
+def test_tailed_length(tail_seq: str, expected_length: int) -> None:
+    test_primer = Primer(
+        bases="AGCT",
+        tm=1.0,
+        penalty=2.0,
+        span=Span(refname="chr1", start=1, end=4, strand=Strand.POSITIVE),
+        tail=tail_seq,
+    )
+    assert test_primer.tailed_length() == expected_length
+
+
+@pytest.mark.parametrize("test_case", PRIMER_TEST_CASES)
+def test_primer_str(test_case: PrimerTestCase) -> None:
+    """Test whether the __str__ method returns the expected string representation"""
+
+    # For each of the primer objects supplied, look up the expected set of string values & join
+    # them with tabs. Then, assert that the string representation of the primer object matches
+    assert f"{test_case.primer}" == "\t".join(test_case.str_fields)
+
+
+def test_primer_serialization_roundtrip() -> None:
+    input_primers: list[Primer] = [test_case.primer for test_case in PRIMER_TEST_CASES]
+
+    with NamedTemporaryFile(suffix=".txt", mode="r", delete=True) as write_file:
+        path = Path(write_file.name)
+
+        # write them to a file
+        Primer.write(path, *input_primers)
+
+        # read them back in again
+        output_primers = list(Primer.read(path=path))
+
+        # make sure they're the same!
+        assert input_primers == output_primers
+
+
+@pytest.mark.parametrize(
+    "this, that, expected",
+    [
+        # same primer
+        (
+            Primer(
+                bases="GATTACA",
+                tm=1.0,
+                penalty=2.0,
+                span=Span(refname="chr1", start=100, end=106, strand=Strand.POSITIVE),
+            ),
+            Primer(
+                bases="GATTACA",
+                tm=1.0,
+                penalty=2.0,
+                span=Span(refname="chr1", start=100, end=106, strand=Strand.POSITIVE),
+            ),
+            0,
+        ),
+        # different primer (chromosome)
+        (
+            Primer(
+                bases="GATTACA",
+                tm=1.0,
+                penalty=2.0,
+                span=Span(refname="chr1", start=100, end=106, strand=Strand.POSITIVE),
+            ),
+            Primer(
+                bases="GATTACA",
+                tm=1.0,
+                penalty=2.0,
+                span=Span(refname="chr2", start=100, end=106, strand=Strand.POSITIVE),
+            ),
+            -1,
+        ),
+    ],
+)
+def test_primer_compare(
+    this: Primer, that: Primer, expected: int, seq_dict: SequenceDictionary
+) -> None:
+    assert expected == Primer.compare(this=this, that=that, seq_dict=seq_dict)
+    assert -expected == Primer.compare(this=that, that=this, seq_dict=seq_dict)

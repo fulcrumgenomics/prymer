@@ -1,0 +1,105 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "!**"
+  workflow_call:
+
+env:
+  POETRY_VERSION: 1.8.2
+
+jobs:
+  Tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        PYTHON_VERSION: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout fulcrumgenomics/bwa
+        uses: actions/checkout@v4
+        with:
+          repository: fulcrumgenomics/bwa
+          ref: interactive_aln
+          path: bwa
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.PYTHON_VERSION }}
+
+      - name: Set up miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          channels: conda-forge,bioconda
+          activate-environment: prymer
+          environment-file: prymer.yml
+          channel-priority: true
+          auto-update-conda: true
+          auto-activate-base: false
+          python-version: ${{ matrix.PYTHON_VERSION }}
+
+      - name: Install fulcrumgenomics/bwa
+        shell: bash -l {0}
+        run: |
+          conda activate prymer
+          pushd bwa
+          make -j $(nproc)
+          cp bwa ${CONDA_PREFIX}/bin
+          popd
+
+      - name: Configure poetry and check lock file
+        shell: bash -l {0}
+        run: |
+          conda activate prymer
+          poetry config virtualenvs.in-project false
+          poetry check --lock
+
+      - name: Poetry install
+        shell: bash -l {0}
+        run: |
+          conda activate prymer
+          poetry lock --no-update
+          poetry install --with dev
+
+      - name: Unit tests (with doctest and coverage)
+        shell: bash -l {0}
+        run: |
+          conda activate prymer
+          poetry run pytest --cov=prymer --cov-report=xml --cov-branch --doctest-plus --doctest-modules prymer tests
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.5.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+      
+      - name: Style checking
+        shell: bash -l {0}
+        run: |
+          conda activate prymer
+          poetry run ruff format --check
+
+      - name: Run lint
+        shell: bash -l {0}
+        run: |
+          conda activate prymer
+          poetry run ruff check
+
+      - name: Run mypy
+        shell: bash -l {0}
+        run: |
+          conda activate prymer
+          poetry run mypy
+
+      - name: Run docs
+        shell: bash -l {0}
+        run: |
+          conda activate prymer
+          set -euo pipefail
+          poetry run mkdocs build --strict

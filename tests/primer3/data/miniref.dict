@@ -1,0 +1,3 @@
+@HD	VN:1.5	SO:unsorted
+@SQ	SN:chr1	LN:577	M5:ef0179df9e1890de460f8aead36f0047	AS:miniref	UR:file:fgprimer/src/test/resources/com/fulcrumegenomics/primerdesign/primer3/miniref.fa
+@SQ	SN:chr2	LN:9821	M5:0b0a7e507a574dc21824fe2efa2d0838	AS:miniref	UR:file:fgprimer/src/test/resources/com/fulcrumegenomics/primerdesign/primer3/miniref.fa

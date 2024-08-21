@@ -1,0 +1,153 @@
+[tool.poetry]
+name         = "prymer"
+version      = "2.0.0-dev"
+description  = "Python primer design library"
+readme       = "README.md"
+authors      = [
+    "Yossi Farjoun <yossi@fulcrumgenomics.com>",
+    "Jeff Gentry <jeff@fulcrumgenomics.com>",
+	"Tim Fennell <tim@fulcrumgenomics.com>",
+    "Nils Homer <nils@fulcrumgenomics.com>",
+    "Erin McAuley <erin@fulcrumgenomics.com>",
+    "Matt Stone <matt@fulcrumgenomics.com>",
+]
+license = "MIT"
+homepage = "https://github.com/fulcrumgenomics/prymer"
+repository = "https://github.com/fulcrumgenomics/prymer"
+documentation = "https://github.com/fulcrumgenomics/prymer"
+keywords = ["bioinformatics", "genomics", "dna"]
+classifiers = [
+	"Development Status :: 3 - Alpha",
+	"Programming Language :: Python :: 3.11",
+	"Programming Language :: Python :: 3.12",
+	"Environment :: Console",
+	"Intended Audience :: Developers",
+	"Intended Audience :: Science/Research",
+	"License :: OSI Approved :: MIT License",
+	"Operating System :: OS Independent",
+	"Programming Language :: Python :: 3",
+	"Topic :: Scientific/Engineering :: Bio-Informatics",
+	"Topic :: Software Development :: Documentation",
+	"Topic :: Software Development :: Libraries :: Python Modules",
+]
+include = ["LICENSE"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pyproject_hooks= "^1.0.0,!=1.1.0"
+pybedlite = "1.0.0"
+strenum = "^0.4.15"
+fgpyo = "0.7.1"
+pysam = "^0.22.1"
+ordered-set = "^4.1.0"
+
+[tool.poetry.group.dev.dependencies]
+poetry      = "^1.8.2"
+mypy        = "^1.5.1"
+pytest      = "^7.4.4"
+pytest-cov  = "^4.1.0"
+pytest-mypy = "^0.10.3"
+pytest-ruff = "^0.3.1"
+ruff        = "0.3.3"
+# dependencies for building docs
+mkdocs-autorefs = { version = ">=0.5.0,<1.1.0" }
+mkdocs-include-markdown-plugin = { version = ">=6.0.1" }
+mkdocs-material = { version = ">=9.2.8" }
+mkdocs-table-reader-plugin = { version = ">=2.0.1" }
+mkdocs = { version = ">=1.5.2" }
+mkdocs-gen-files = { version = ">=0.5.0" }
+mkdocs-literate-nav = { version = ">=0.6.1" }
+mkdocs-section-index = { version = ">=0.3.9" }
+mkdocstrings-python = { version = ">=1.6.2" }
+mkdocstrings = { version = ">=0.23.0" }
+black = "^24.4.2"
+pytest-doctestplus = "^1.2.1"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/fulcrumgenomics/prymer/issues"
+
+[build-system]
+requires      = ["poetry-core>=1.6"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.git-cliff.changelog]
+header = ""
+trim = true
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}
+    ## {{ group | upper_first }}
+    {% for commit in commits %}
+        - {{ commit.message | upper_first }} ({{ commit.id | truncate(length=8, end="") }})\
+    {% endfor %}
+{% endfor %}\n
+"""
+
+[tool.git-cliff.git]
+conventional_commits = true
+commit_parsers = [
+    { message = "^.+!:*", group = "Breaking"},
+    { message = "^feat*", group = "Features"},
+    { message = "^fix*", group = "Bug Fixes"},
+    { message = "^docs*", group = "Documentation"},
+    { message = "^perf*", group = "Performance"},
+    { message = "^refactor*", group = "Refactor"},
+    { message = "^style*", group = "Styling"},
+    { message = "^test*", group = "Testing"},
+    { message = "^chore\\(release\\):*", skip = true},
+    { message = "^chore*", group = "Miscellaneous Tasks"},
+    { body = ".*security", group = "Security"}
+]
+filter_commits = false
+
+[tool.mypy]
+files                       = ["prymer", "tests"]
+python_version              = "3.11"
+strict_optional             = false
+check_untyped_defs          = true
+disallow_incomplete_defs    = true
+disallow_untyped_calls      = true
+disallow_untyped_decorators = true
+disallow_untyped_defs       = true
+no_implicit_optional        = true
+warn_no_return              = true
+warn_redundant_casts        = true
+warn_return_any             = true
+warn_unreachable            = true
+warn_unused_configs         = true
+warn_unused_ignores         = true
+
+[[tool.mypy.overrides]]
+module = "defopt"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.4"
+addopts    = [
+    "--ignore=docs/scripts",
+    "--color=yes",
+    "--mypy",
+    "--ruff",
+    "--doctest-plus",
+    "--doctest-modules",
+    "-v"
+]
+doctest_optionflags = "NORMALIZE_WHITESPACE ELLIPSIS"
+doctest_plus = "enabled"
+testpaths = [
+    "prymer", "tests"
+]
+
+[tool.ruff]
+include = ["prymer/**/*.py", "tests/**/*.py"]
+line-length    = 100
+target-version = "py311"
+output-format  = "full"
+
+[tool.ruff.lint]
+select    = ["C901", "B", "E", "F", "I", "W", "Q"]
+ignore    = ["E203", "E701"]
+unfixable = ["B"]
+
+[tool.ruff.lint.isort]
+
+force-single-line = true
