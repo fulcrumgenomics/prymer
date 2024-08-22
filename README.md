@@ -9,10 +9,11 @@
 
 ---
 
-[![install with bioconda][bioconda-badge]][bioconda-link]
-[![Python package][python-package-badge]][python-package-link]
+[![Install with Bioconda][bioconda-badge]][bioconda-link]
+[![Bioconda][bioconda-dl-badge]][bioconda-dl-link]
 [![PyPI version][pypi-badge]][pypi-link]
 [![PyPI download total][pypi-downloads-badge]][pypi-downloads-link]
+[![Python package][python-package-badge]][python-package-link]
 
 [language-badge]:       https://img.shields.io/badge/python-3.11_|_3.12-blue
 [language-link]:        http://www.python.org/
@@ -28,12 +29,14 @@
 [license-link]:         https://github.com/fulcrumgenomics/prymer/blob/main/LICENSE
 [bioconda-badge]:       https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat
 [bioconda-link]:        http://bioconda.github.io/recipes/prymer/README.html
-[python-package-badge]: https://github.com/fulcrumgenomics/prymer/workflows/publish/badge.svg
-[python-package-link]:  https://github.com/fulcrumgenomics/prymer/actions?query=workflow%3A%22Python+package%22
+[bioconda-dl-badge]:    https://img.shields.io/conda/dn/bioconda/prymer.svg?label=Bioconda
+[bioconda-dl-link]:     https://anaconda.org/bioconda/prymer
 [pypi-badge]:           https://badge.fury.io/py/prymer.svg
 [pypi-link]:            https://pypi.python.org/pypi/prymer
 [pypi-downloads-badge]: https://img.shields.io/pypi/dm/prymer
 [pypi-downloads-link]:  https://pypi.python.org/pypi/prymer
+[python-package-badge]: https://github.com/fulcrumgenomics/prymer/workflows/publish/badge.svg
+[python-package-link]:  https://github.com/fulcrumgenomics/prymer/actions?query=workflow%3A%22Python+package%22
 
 ## Quick setup
 
