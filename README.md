@@ -9,6 +9,7 @@
 
 ---
 
+[![install with bioconda][bioconda-badge]][bioconda-link]
 [![Python package][python-package-badge]][python-package-link]
 [![PyPI version][pypi-badge]][pypi-link]
 [![PyPI download total][pypi-downloads-badge]][pypi-downloads-link]
@@ -25,6 +26,8 @@
 [code-coverage-link]:   https://codecov.io/gh/fulcrumgenomics/prymer
 [license-badge]:        http://img.shields.io/badge/license-MIT-blue.svg
 [license-link]:         https://github.com/fulcrumgenomics/prymer/blob/main/LICENSE
+[bioconda-badge]:       https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat
+[bioconda-link]:        http://bioconda.github.io/recipes/prymer/README.html
 [python-package-badge]: https://github.com/fulcrumgenomics/prymer/workflows/publish/badge.svg
 [python-package-link]:  https://github.com/fulcrumgenomics/prymer/actions?query=workflow%3A%22Python+package%22
 [pypi-badge]:           https://badge.fury.io/py/prymer.svg
