@@ -20,7 +20,30 @@ def test_primer_weights_valid() -> None:
     assert test_dict[Primer3InputTag.PRIMER_WT_SIZE_GT] == 0.1
     assert test_dict[Primer3InputTag.PRIMER_WT_TM_LT] == 1.0
     assert test_dict[Primer3InputTag.PRIMER_WT_TM_GT] == 1.0
-    assert len((test_dict.values())) == 13
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SIZE_LT] == 0.25
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SIZE_GT] == 0.25
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_TM_LT] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_TM_GT] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_LT] == 0.5
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_GT] == 0.5
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SELF_ANY] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SELF_END] == 1.0
+    assert len((test_dict.values())) == 21
+
+
+def test_probe_weights_valid() -> None:
+    test_weights = ProbeWeights()
+    test_dict = test_weights.to_input_tags()
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SIZE_LT] == 0.25
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SIZE_GT] == 0.25
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_TM_LT] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_TM_GT] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_LT] == 0.5
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_GT] == 0.5
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SELF_ANY] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SELF_END] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_HAIRPIN_TH] == 1.0
+    assert len((test_dict.values())) == 9
 
 
 def test_probe_weights_valid() -> None:
