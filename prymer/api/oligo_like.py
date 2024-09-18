@@ -1,22 +1,22 @@
 """
-# Class and Methods for primer-like objects
+# Class and Methods for oligo-like objects
 
-The `PrimerLike` class is an abstract base class designed to represent primer-like objects,
-such as individual primers or primer pairs. This class encapsulates common attributes and
+The `OligoLike` class is an abstract base class designed to represent oligo-like objects,
+such as individual primers and probes or primer pairs. This class encapsulates common attributes and
 provides a foundation for more specialized implementations.
 
 In particular, the following methods/attributes need to be implemented:
 
-- [`span()`][prymer.api.primer_like.PrimerLike.span] -- the mapping of the primer-like
+- [`span()`][prymer.api.oligo_like.OligoLike.span] -- the mapping of the oligo-like
     object to the genome.
-- [`bases()`][prymer.api.primer_like.PrimerLike.bases] -- the bases of the primer-like
+- [`bases()`][prymer.api.oligo_like.OligoLike.bases] -- the bases of the oligo-like
     object, or `None` if not available.
-- [`to_bed12_row()`][prymer.api.primer_like.PrimerLike.to_bed12_row] -- the 12-field BED
-    representation of this primer-like object.
+- [`to_bed12_row()`][prymer.api.oligo_like.OligoLike.to_bed12_row] -- the 12-field BED
+    representation of this oligo-like object.
 
 See the following concrete implementations:
 
-- [`Primer`][prymer.api.primer.Primer] -- a class to store an individual primer
+- [`Primer`][prymer.api.oligo.Oligo] -- a class to store an individual oligo
 - [`PrimerPair`][prymer.api.primer_pair.PrimerPair] -- a class to store a primer pair
 
 """
@@ -38,9 +38,9 @@ MISSING_BASES_STRING: str = "*"
 
 
 @dataclass(frozen=True, init=True, slots=True)
-class PrimerLike(ABC):
+class OligoLike(ABC):
     """
-    An abstract base class for primer-like objects, such as individual primers or primer pairs.
+    An abstract base class for oligo-like objects, such as individual primers or primer pairs.
 
     Attributes:
         name: an optional name to use for the primer
@@ -67,12 +67,12 @@ class PrimerLike(ABC):
     @property
     @abstractmethod
     def span(self) -> Span:
-        """Returns the mapping of the primer-like object to a genome."""
+        """Returns the mapping of the oligo-like object to a genome."""
 
     @property
     @abstractmethod
     def bases(self) -> Optional[str]:
-        """Returns the base sequence of the primer-like object."""
+        """Returns the base sequence of the oligo-like object."""
 
     @property
     def percent_gc_content(self) -> float:
@@ -88,7 +88,7 @@ class PrimerLike(ABC):
     @property
     def id(self) -> str:
         """
-        Returns the identifier for the primer-like object. This shall be the `name`
+        Returns the identifier for the oligo-like object. This shall be the `name`
         if one exists, otherwise a generated value based on the location of the object.
         """
         if self.name is not None:
@@ -98,7 +98,7 @@ class PrimerLike(ABC):
 
     @property
     def location_string(self) -> str:
-        """Returns a string representation of the location of the primer-like object."""
+        """Returns a string representation of the location of the oligo-like object."""
         return (
             f"{self.span.refname}_{self.span.start}_"
             + f"{self.span.end}_{self._strand_to_location_string()}"
@@ -107,7 +107,7 @@ class PrimerLike(ABC):
     @abstractmethod
     def to_bed12_row(self) -> str:
         """
-        Formats the primer-like into 12 tab-separated fields matching the BED 12-column spec.
+        Formats the oligo-like into 12 tab-separated fields matching the BED 12-column spec.
         See: https://genome.ucsc.edu/FAQ/FAQformat.html#format1
         """
 
@@ -126,5 +126,5 @@ class PrimerLike(ABC):
                 assert_never(f"Encountered unhandled Strand value: {self.span.strand}")
 
 
-PrimerLikeType = TypeVar("PrimerLikeType", bound=PrimerLike)
-"""Type variable for classes generic over `PrimerLike` types."""
+OligoLikeType = TypeVar("OligoLikeType", bound=OligoLike)
+"""Type variable for classes generic over `OligoLike` types."""

@@ -50,7 +50,7 @@ from pysam import FastaFile
 
 from prymer.api.melting import calculate_long_seq_tm
 from prymer.api.minoptmax import MinOptMax
-from prymer.api.primer import Primer
+from prymer.api.oligo import Oligo
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
 from prymer.ntthal import NtThermoAlign
@@ -146,8 +146,8 @@ def _seq_penalty(start: int, end: int, params: FilteringParams) -> float:
 
 
 def score(
-    left: Primer,
-    right: Primer,
+    left: Oligo,
+    right: Oligo,
     target: Span,
     amplicon: Span,
     amplicon_seq_or_tm: str | float,
@@ -279,8 +279,8 @@ def is_acceptable_primer_pair(primer_pair: PrimerPair, params: FilteringParams) 
 
 
 def build_primer_pairs(
-    lefts: Iterable[Primer],
-    rights: Iterable[Primer],
+    lefts: Iterable[Oligo],
+    rights: Iterable[Oligo],
     target: Span,
     params: FilteringParams,
     fasta: FastaFile,
@@ -411,8 +411,8 @@ def pick_top_primer_pairs(
 
 
 def build_and_pick_primer_pairs(
-    lefts: Iterable[Primer],
-    rights: Iterable[Primer],
+    lefts: Iterable[Oligo],
+    rights: Iterable[Oligo],
     target: Span,
     num_primers: int,
     min_difference: int,

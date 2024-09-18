@@ -8,7 +8,8 @@ from prymer.primer3.primer3_parameters import Primer3Parameters
 from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
 from prymer.primer3.primer3_task import DesignRightPrimersTask
-from prymer.primer3.primer3_weights import Primer3Weights
+from prymer.primer3.primer3_weights import PrimerAndAmpliconWeights
+from prymer.primer3.primer3_weights import ProbeWeights
 
 __all__ = [
     "Primer3",
@@ -21,5 +22,6 @@ __all__ = [
     "DesignPrimerPairsTask",
     "DesignRightPrimersTask",
     "Primer3Parameters",
-    "Primer3Weights",
+    "ProbeWeights",
+    "PrimerAndAmpliconWeights",
 ]

@@ -1,10 +1,11 @@
-from prymer.primer3 import Primer3InputTag
-from prymer.primer3 import Primer3Weights
+from prymer.primer3.primer3_input_tag import Primer3InputTag
+from prymer.primer3.primer3_weights import PrimerAndAmpliconWeights
+from prymer.primer3.primer3_weights import ProbeWeights
 
 
 def test_primer_weights_valid() -> None:
-    """Test instantiation of Primer3Weights object with valid input"""
-    test_weights = Primer3Weights()
+    """Test instantiation of `PrimerAndAmpliconWeights` object with valid input"""
+    test_weights = PrimerAndAmpliconWeights()
     test_dict = test_weights.to_input_tags()
     assert test_dict[Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_SIZE_LT] == 1
     assert test_dict[Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_SIZE_GT] == 1
@@ -22,9 +23,24 @@ def test_primer_weights_valid() -> None:
     assert len((test_dict.values())) == 13
 
 
+def test_probe_weights_valid() -> None:
+    test_weights = ProbeWeights()
+    test_dict = test_weights.to_input_tags()
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SIZE_LT] == 0.25
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SIZE_GT] == 0.25
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_TM_LT] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_TM_GT] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_LT] == 0.5
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_GT] == 0.5
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SELF_ANY] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SELF_END] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_HAIRPIN_TH] == 1.0
+    assert len((test_dict.values())) == 9
+
+
 def test_primer_weights_to_input_tags() -> None:
     """Test results from to_input_tags() with and without default values"""
-    default_map = Primer3Weights().to_input_tags()
+    default_map = PrimerAndAmpliconWeights().to_input_tags()
     assert default_map[Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_SIZE_LT] == 1
-    customized_map = Primer3Weights(product_size_lt=5).to_input_tags()
+    customized_map = PrimerAndAmpliconWeights(product_size_lt=5).to_input_tags()
     assert customized_map[Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_SIZE_LT] == 5

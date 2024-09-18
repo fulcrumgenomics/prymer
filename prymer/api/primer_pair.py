@@ -5,8 +5,8 @@ This module contains the [`PrimerPair`][prymer.api.primer_pair.PrimerPair] class
 class methods to represent a primer pair.  The primer pair is comprised of a left and right primer
 that work together to amplify an amplicon.
 
-Class attributes include each of the primers (represented by a
-[`Primer`][prymer.api.primer.Primer] object), information about the expected amplicon
+Class attributes include each of the primers (represented by an
+[`Oligo`][prymer.api.primer.Oligo] object), information about the expected amplicon
 (positional information about how the amplicon maps to the genome, the sequence, and its melting
 temperature), as well as a score of the primer pair (e.g. as emitted by Primer3).
 
@@ -18,9 +18,9 @@ used to create the pairing.
 ```python
 >>> from prymer.api.span import Strand
 >>> left_span = Span(refname="chr1", start=1, end=20)
->>> left_primer = Primer(tm=70.0, penalty=-123.0, span=left_span, bases="G"*20)
+>>> left_primer = Oligo(tm=70.0, penalty=-123.0, span=left_span, bases="G"*20)
 >>> right_span = Span(refname="chr1", start=101, end=120, strand=Strand.NEGATIVE)
->>> right_primer = Primer(tm=70.0, penalty=-123.0, span=right_span, bases="T"*20)
+>>> right_primer = Oligo(tm=70.0, penalty=-123.0, span=right_span, bases="T"*20)
 >>> primer_pair = PrimerPair( \
     left_primer=left_primer, \
     right_primer=right_primer, \
@@ -37,7 +37,7 @@ Span(refname='chr1', start=1, end=120, strand=<Strand.POSITIVE: '+'>)
 Span(refname='chr1', start=21, end=100, strand=<Strand.POSITIVE: '+'>)
 
 >>> list(primer_pair)
-[Primer(name=None, tm=70.0, penalty=-123.0, span=Span(refname='chr1', start=1, end=20, strand=<Strand.POSITIVE: '+'>), bases='GGGGGGGGGGGGGGGGGGGG', tail=None), Primer(name=None, tm=70.0, penalty=-123.0, span=Span(refname='chr1', start=101, end=120, strand=<Strand.NEGATIVE: '-'>), bases='TTTTTTTTTTTTTTTTTTTT', tail=None)]
+[Oligo(name=None, tm=70.0, penalty=-123.0, span=Span(refname='chr1', start=1, end=20, strand=<Strand.POSITIVE: '+'>), self_any_th=None, self_end_th=None, hairpin_th=None, bases='GGGGGGGGGGGGGGGGGGGG', tail=None), Oligo(name=None, tm=70.0, penalty=-123.0, span=Span(refname='chr1', start=101, end=120, strand=<Strand.NEGATIVE: '-'>), self_any_th=None, self_end_th=None, hairpin_th=None, bases='TTTTTTTTTTTTTTTTTTTT', tail=None)]
 
 ```
 """  # noqa: E501
@@ -50,14 +50,14 @@ from typing import Optional
 
 from fgpyo.fasta.sequence_dictionary import SequenceDictionary
 
-from prymer.api.primer import Primer
-from prymer.api.primer_like import MISSING_BASES_STRING
-from prymer.api.primer_like import PrimerLike
+from prymer.api.oligo import Oligo
+from prymer.api.oligo_like import MISSING_BASES_STRING
+from prymer.api.oligo_like import OligoLike
 from prymer.api.span import Span
 
 
 @dataclass(frozen=True, init=True, kw_only=True, slots=True)
-class PrimerPair(PrimerLike):
+class PrimerPair(OligoLike):
     """
     Represents a pair of primers that work together to amplify an amplicon. The
     coordinates of the amplicon are determined to span from the start of the left
@@ -75,8 +75,8 @@ class PrimerPair(PrimerLike):
         ValueError: if the chromosomes of the left and right primers are not the same
     """
 
-    left_primer: Primer
-    right_primer: Primer
+    left_primer: Oligo
+    right_primer: Oligo
     amplicon_tm: float
     penalty: float
     amplicon_sequence: Optional[str] = None
@@ -215,7 +215,7 @@ class PrimerPair(PrimerLike):
             )
         )
 
-    def __iter__(self) -> Iterator[Primer]:
+    def __iter__(self) -> Iterator[Oligo]:
         """Returns an iterator of left and right primers"""
         return iter([self.left_primer, self.right_primer])
 
@@ -274,9 +274,9 @@ class PrimerPair(PrimerLike):
         if by_amplicon:
             return Span.compare(this=this.amplicon, that=that.amplicon, seq_dict=seq_dict)
         else:
-            retval = Primer.compare(this=this.left_primer, that=that.left_primer, seq_dict=seq_dict)
+            retval = Oligo.compare(this=this.left_primer, that=that.left_primer, seq_dict=seq_dict)
             if retval == 0:
-                retval = Primer.compare(
+                retval = Oligo.compare(
                     this=this.right_primer, that=that.right_primer, seq_dict=seq_dict
                 )
             return retval
