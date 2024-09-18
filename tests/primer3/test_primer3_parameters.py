@@ -43,7 +43,8 @@ def test_primer_amplicon_param_construction_valid(
 def test_probe_param_construction_valid(
     valid_probe_params: ProbeParameters,
 ) -> None:
-    """Test ProbeParameters class instantiation with valid input"""
+    """Test ProbeParameters class instantiation with valid input. Assert that the *_thermo fields
+    (which were not explicitly set) are set to 55 (`valid_probe_params.probe_tms.min` - 10)."""
     assert valid_probe_params.probe_sizes.min == 18
     assert valid_probe_params.probe_sizes.opt == 22
     assert valid_probe_params.probe_sizes.max == 30
@@ -53,6 +54,9 @@ def test_probe_param_construction_valid(
     assert valid_probe_params.probe_gcs.min == 45.0
     assert valid_probe_params.probe_gcs.opt == 55.0
     assert valid_probe_params.probe_gcs.max == 60.0
+    assert valid_probe_params.probe_max_self_any_thermo == 55.0
+    assert valid_probe_params.probe_max_self_end_thermo == 55.0
+    assert valid_probe_params.probe_max_hairpin_thermo == 55.0
 
 
 def test_primer_amplicon_param_construction_raises(

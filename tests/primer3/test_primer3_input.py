@@ -101,8 +101,7 @@ def test_probe_design_only_valid(
     )
     mapped_dict = test_input.to_input_tags(design_region=test_design_region)
     assert mapped_dict[Primer3InputTag.PRIMER_PICK_INTERNAL_OLIGO] == 1
-
-    assert len(mapped_dict.keys()) == 21
+    assert len(mapped_dict.keys()) == 27
 
     # test instantiation of default `ProbeWeights` when they are not provided
     altered_input = Primer3Input(

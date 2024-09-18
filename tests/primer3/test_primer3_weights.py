@@ -32,7 +32,10 @@ def test_probe_weights_valid() -> None:
     assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_TM_GT] == 1.0
     assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_LT] == 0.5
     assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_GT] == 0.5
-    assert len((test_dict.values())) == 6
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SELF_ANY] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SELF_END] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_HAIRPIN_TH] == 1.0
+    assert len((test_dict.values())) == 9
 
 
 def test_primer_weights_to_input_tags() -> None:

@@ -22,6 +22,7 @@ PrimerAndAmpliconWeights(product_size_lt=1, product_size_gt=1, product_tm_lt=0.0
 >>> PrimerAndAmpliconWeights(product_size_lt=5)
 PrimerAndAmpliconWeights(product_size_lt=5, product_size_gt=1, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0)
 
+
 """  # noqa: E501
 
 from dataclasses import dataclass
@@ -104,6 +105,12 @@ class ProbeWeights:
         probe_tm_gt: penalty for probes with a Tm greater than `ProbeParameters.probe_tms.opt`
         probe_gc_lt: penalty for probes with GC content lower than `ProbeParameters.probe_gcs.opt`
         probe_gc_gt: penalty for probes with GC content greater than `ProbeParameters.probe_gcs.opt`
+        probe_wt_self_any: penalty for probe self-complementarity as defined in
+            `ProbeParameters.probe_max_self_any`
+        probe_wt_self_end: penalty for probe 3' complementarity as defined in
+            `ProbeParameters.probe_max_self_end`
+        probe_wt_hairpin_th: penalty for the most stable primer hairpin structure value as defined
+            in `ProbeParameters.probe_max_hairpin_thermo`
 
     """
 
@@ -113,6 +120,9 @@ class ProbeWeights:
     probe_tm_gt: float = 1.0
     probe_gc_lt: float = 0.5
     probe_gc_gt: float = 0.5
+    probe_self_any: float = 1.0
+    probe_self_end: float = 1.0
+    probe_hairpin_th: float = 1.0
 
     def to_input_tags(self) -> dict[Primer3InputTag, Any]:
         """Maps weights to Primer3InputTag to feed directly into Primer3."""
@@ -123,5 +133,8 @@ class ProbeWeights:
             Primer3InputTag.PRIMER_INTERNAL_WT_TM_GT: self.probe_tm_gt,
             Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_LT: self.probe_gc_lt,
             Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_GT: self.probe_gc_gt,
+            Primer3InputTag.PRIMER_INTERNAL_WT_SELF_ANY: self.probe_self_any,
+            Primer3InputTag.PRIMER_INTERNAL_WT_SELF_END: self.probe_self_end,
+            Primer3InputTag.PRIMER_INTERNAL_WT_HAIRPIN_TH: self.probe_hairpin_th,
         }
         return mapped_dict

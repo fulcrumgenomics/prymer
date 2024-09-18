@@ -62,7 +62,9 @@ PRIMER_NUM_RETURN -> 5
 
 import warnings
 from dataclasses import dataclass
+from dataclasses import fields
 from typing import Any
+from typing import Optional
 
 from prymer.api.minoptmax import MinOptMax
 from prymer.primer3.primer3_input_tag import Primer3InputTag
@@ -186,6 +188,14 @@ class ProbeParameters:
 
     Please see the Primer3 manual for additional details: https://primer3.org/manual.html#globalTags
 
+    Primer3 uses both thermodynamic and alignment-based approaches to quantify oligo
+    self-complementarity. In general, these settings are meant to limit problematic oligo
+    self-complementarity and avoid primer-dimers or other nonspecific binding of probes.
+
+    If they are not provided, `probe_max_self_any_thermo`, `probe_max_self_end_thermo`, and
+    `probe_max_hairpin_thermo` will be set to default values as specified in the Primer3 manual.
+    The default value is 10 degrees lower than the minimal melting temperature specified for
+    probe design.
 
     """
 
@@ -196,6 +206,9 @@ class ProbeParameters:
     probe_max_dinuc_bases: int = 4
     probe_max_polyX: int = 5
     probe_max_Ns: int = 0
+    probe_max_self_any_thermo: Optional[float] = None
+    probe_max_self_end_thermo: Optional[float] = None
+    probe_max_hairpin_thermo: Optional[float] = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.probe_sizes.min, int):
@@ -204,6 +217,10 @@ class ProbeParameters:
             raise TypeError("Probe melting temperatures and GC content must be floats")
         if self.probe_max_dinuc_bases % 2 == 1:
             raise ValueError("Max threshold for dinucleotide bases must be an even number of bases")
+        default_thermo_max = self.probe_tms.min - 10
+        for field in fields(self):  # if *_thermo fields are None, set to default
+            if field.type is Optional[float] and getattr(self, field.name) is None:
+                object.__setattr__(self, field.name, default_thermo_max)
 
     def to_input_tags(self) -> dict[Primer3InputTag, Any]:
         """Converts input params to Primer3InputTag to feed directly into Primer3."""
@@ -219,6 +236,9 @@ class ProbeParameters:
             Primer3InputTag.PRIMER_INTERNAL_MAX_GC: self.probe_gcs.max,
             Primer3InputTag.PRIMER_INTERNAL_MAX_POLY_X: self.probe_max_polyX,
             Primer3InputTag.PRIMER_INTERNAL_MAX_NS_ACCEPTED: self.probe_max_Ns,
+            Primer3InputTag.PRIMER_INTERNAL_MAX_SELF_ANY_TH: self.probe_max_self_any_thermo,
+            Primer3InputTag.PRIMER_INTERNAL_MAX_SELF_END_TH: self.probe_max_self_end_thermo,
+            Primer3InputTag.PRIMER_INTERNAL_MAX_HAIRPIN_TH: self.probe_max_hairpin_thermo,
         }
 
         return mapped_dict
