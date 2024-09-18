@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from unittest import mock
 
 import pytest
 
@@ -30,21 +31,32 @@ def test_validate_executable_path_not_executable() -> None:
 
 
 def test_validate_executable_path() -> None:
-    exec = "yes"
-    exec_full_str = f"/usr/bin/{exec}"
-    exec_full_path = Path(exec_full_str)
-    assert exec_full_path.is_absolute()
+    """
+    `validate_executable_path` should find the `yes` executable in the following scenarios:
+    1. when the string "yes" is passed
+    2. when the absolute path to the `yes` executable is passed, either as a string or a Path
+    """
+    executables: list[Path | str] = ["yes", "/usr/bin/yes", Path("/usr/bin/yes")]
+    expected_path = Path("/usr/bin/yes")
 
-    # find it on the PATH
-    assert exec_full_path == ExecutableRunner.validate_executable_path(executable=exec)
-    # find it given an absolute path as a string
-    assert exec_full_path == ExecutableRunner.validate_executable_path(executable=exec_full_str)
-    # find it given an absolute path as a Path
-    assert exec_full_path == ExecutableRunner.validate_executable_path(executable=exec_full_path)
+    with mock.patch.dict(os.environ):
+        # Clear the PATH, in case the user has a local version of `yes` elsewhere on their PATH
+        os.environ.pop("PATH")
 
-    # do not find it on the PATH if given as a Path
+        for executable in executables:
+            validated_path = ExecutableRunner.validate_executable_path(executable=executable)
+            assert validated_path == expected_path
+
+
+def test_validate_executable_path_rejects_paths() -> None:
+    """
+    `validate_executable_path` should not treat non-existent Path objects as valid executables.
+
+    If the user passes the name of an executable on the PATH as a `Path` instead of a string`, it
+    should be treated as a non-existent Path and a `ValueError` should be raised.
+    """
     with pytest.raises(ValueError, match="Executable does not exist"):
-        ExecutableRunner.validate_executable_path(executable=Path(exec))
+        ExecutableRunner.validate_executable_path(executable=Path("yes"))
 
 
 def test_validate_executable_path_new_file() -> None:
