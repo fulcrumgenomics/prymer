@@ -140,3 +140,8 @@ class Primer3Parameters:
     def max_primer_length(self) -> int:
         """Max primer length"""
         return int(self.primer_sizes.max)
+
+    @property
+    def min_primer_length(self) -> int:
+        """Minimum primer length."""
+        return int(self.primer_sizes.min)

@@ -563,11 +563,13 @@ def test_pad_target_region(max_amplicon_length: int, genome_ref: Path) -> None:
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
 
     with Primer3(genome_fasta=genome_ref) as designer:
-        padded_region: Span = designer._pad_target_region(
-            target=target, max_amplicon_length=max_amplicon_length
+        design_region: Span = designer._create_design_region(
+            target=target,
+            max_amplicon_length=max_amplicon_length,
+            min_primer_length=10,
         )
 
-    assert padded_region.length == max_amplicon_length
+    assert design_region.length == 2 * max_amplicon_length - target.length
 
 
 def test_pad_target_region_doesnt_pad(genome_ref: Path) -> None:
@@ -575,6 +577,7 @@ def test_pad_target_region_doesnt_pad(genome_ref: Path) -> None:
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
 
     with Primer3(genome_fasta=genome_ref) as designer:
-        padded_region: Span = designer._pad_target_region(target=target, max_amplicon_length=10)
-
-    assert padded_region == target
+        with pytest.raises(ValueError):
+            designer._create_design_region(
+                target=target, max_amplicon_length=10, min_primer_length=10
+            )
