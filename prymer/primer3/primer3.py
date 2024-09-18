@@ -79,8 +79,8 @@ In this case, there are two failures reasons:
 ```python
 >>> for failure in left_result.failures: \
     print(failure)
-Primer3Failure(reason=<Primer3FailureReason.HIGH_TM: 'high tm'>, count=171)
-Primer3Failure(reason=<Primer3FailureReason.GC_CONTENT: 'GC content failed'>, count=26)
+Primer3Failure(reason=<Primer3FailureReason.HIGH_TM: 'high tm'>, count=406)
+Primer3Failure(reason=<Primer3FailureReason.GC_CONTENT: 'GC content failed'>, count=91)
 
 ```
 
