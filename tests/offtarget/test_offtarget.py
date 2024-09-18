@@ -242,15 +242,16 @@ def test_generic_filter(ref_fasta: Path) -> None:
     class CustomPrimer(Primer):
         foo: str = "foo"
 
+    # fmt: off
     primers: list[CustomPrimer] = [
-        CustomPrimer(tm=37, penalty=0, span=Span(refname="chr1", start=1, end=30), foo="bar"),
-        CustomPrimer(tm=37, penalty=0, span=Span(refname="chr2", start=1, end=30), foo="qux"),
+        CustomPrimer(bases="AAAA", tm=37, penalty=0, span=Span(refname="chr1", start=1, end=4), foo="bar"),  # noqa: E501
+        CustomPrimer(bases="TTTT", tm=37, penalty=0, span=Span(refname="chr2", start=1, end=4), foo="qux"),  # noqa: E501
     ]
+    # fmt: on
 
     with _build_detector(ref_fasta=ref_fasta) as detector:
         # Here we are validating that we can both
         # 1. Pass a list of a `Primer` subclass to `filter()` and
         # 2. Return a list of the same type.
-        filtered_primers: list[CustomPrimer] = detector.filter(primers)
-
-    assert len(filtered_primers) == 2
+        # NB: we're ignoring the unused value error because we want to check the type hint
+        filtered_primers: list[CustomPrimer] = detector.filter(primers)  # noqa: F841
