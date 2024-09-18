@@ -233,8 +233,9 @@ def test_to_amplicons(
 
 def test_generic_filter(ref_fasta: Path) -> None:
     """
-    This test doesn't have any runtime assertions, but verifies that we can apply
-    OverlapDetector.filter to arbitrary subclases of Primer.
+    This test isn't intended to validate any runtime assertions, but is a minimal example for the
+    type checker to ensure that we can apply `OffTargetDetector.filter()` to arbitrary subclases of
+    `Primer`.
     """
 
     @dataclass(frozen=True)
@@ -247,6 +248,9 @@ def test_generic_filter(ref_fasta: Path) -> None:
     ]
 
     with _build_detector(ref_fasta=ref_fasta) as detector:
+        # Here we are validating that we can both
+        # 1. Pass a list of a `Primer` subclass to `filter()` and
+        # 2. Return a list of the same type.
         filtered_primers: list[CustomPrimer] = detector.filter(primers)
 
     assert len(filtered_primers) == 2
