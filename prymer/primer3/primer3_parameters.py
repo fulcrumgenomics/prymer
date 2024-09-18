@@ -1,26 +1,33 @@
 """
-# Primer3Parameters Class and Methods
+# PrimerAndAmpliconParameters and ProbeParameters: Classes and Methods
 
-The [`Primer3Parameters`][prymer.primer3.primer3_parameters.Primer3Parameters] class stores
-user input and maps it to the correct Primer3 fields.
+The [`PrimerAndAmpliconParameters`][prymer.primer3.primer3_parameters.PrimerAndAmpliconParameters]
+class stores user input for primer design and maps it to the correct Primer3 fields.
 
 Primer3 considers many criteria for primer design, including characteristics of candidate primers
 and the resultant amplicon product, as well as potential complications (off-target priming,
 primer dimer formation). Users can specify many of these constraints in Primer3,
 some of which are used to quantify a "score" for each primer design.
 
-The Primer3Parameters class stores commonly used constraints for primer design: GC content, melting
-temperature, and size of both primers and expected amplicon. Additional criteria include the maximum
-homopolymer length, ambiguous bases, and bases in a dinucleotide run within a primer. By default,
-primer design avoids masked bases, returns 5 primers, and sets the GC clamp to be no larger than 5.
+The `PrimerAndAmpliconParameters` class stores commonly used constraints for primer design:
+GC content, melting temperature, and size of both primers and expected amplicon.
+Additional criteria include the maximum homopolymer length, ambiguous bases, and bases in a
+dinucleotide run within a primer. By default, primer design avoids masked bases, returns 5 primers,
+and sets the GC clamp to be no larger than 5.
 
-The `to_input_tags()` method in `Primer3Parameters` converts these parameters into tag-values pairs
-for use when executing `Primer3`.
+The `to_input_tags()` method in `PrimerAndAmpliconParameters` converts these parameters into
+tag-values pairs for use when executing `Primer3`.
+
+The [`ProbeParameters`][prymer.primer3.primer3_parameters.ProbeParameters]
+class stores user input for internal probe design and maps it to the correct Primer3 fields.
+
+Similar to the `PrimerAndAmpliconParameters` class, the `ProbeParameters` class can be used to
+specify the acceptable ranges of probe sizes, melting temperatures, and GC content.
 
 ## Examples
 
 ```python
->>> params = Primer3Parameters( \
+>>> params = PrimerAndAmpliconParameters( \
     amplicon_sizes=MinOptMax(min=100, max=250, opt=200), \
     amplicon_tms=MinOptMax(min=55.0, max=100.0, opt=70.0), \
     primer_sizes=MinOptMax(min=29, max=31, opt=30), \
@@ -29,7 +36,6 @@ for use when executing `Primer3`.
 )
 >>> for tag, value in params.to_input_tags().items(): \
     print(f"{tag.value} -> {value}")
-PRIMER_NUM_RETURN -> 5
 PRIMER_PRODUCT_OPT_SIZE -> 200
 PRIMER_PRODUCT_SIZE_RANGE -> 100-250
 PRIMER_PRODUCT_MIN_TM -> 55.0
@@ -49,10 +55,12 @@ PRIMER_MAX_END_GC -> 5
 PRIMER_MAX_POLY_X -> 5
 PRIMER_MAX_NS_ACCEPTED -> 1
 PRIMER_LOWERCASE_MASKING -> 1
+PRIMER_NUM_RETURN -> 5
 
 ```
 """
 
+import warnings
 from dataclasses import dataclass
 from typing import Any
 
@@ -61,8 +69,8 @@ from prymer.primer3.primer3_input_tag import Primer3InputTag
 
 
 @dataclass(frozen=True, init=True, slots=True)
-class Primer3Parameters:
-    """Holds common primer design options that Primer3 uses to inform primer design.
+class PrimerAndAmpliconParameters:
+    """Holds common primer and amplicon design options that Primer3 uses to inform primer design.
 
     Attributes:
         amplicon_sizes: the min, optimal, and max amplicon size
@@ -105,8 +113,7 @@ class Primer3Parameters:
 
     def to_input_tags(self) -> dict[Primer3InputTag, Any]:
         """Converts input params to Primer3InputTag to feed directly into Primer3."""
-        mapped_dict = {
-            Primer3InputTag.PRIMER_NUM_RETURN: self.number_primers_return,
+        mapped_dict: dict[Primer3InputTag, Any] = {
             Primer3InputTag.PRIMER_PRODUCT_OPT_SIZE: self.amplicon_sizes.opt,
             Primer3InputTag.PRIMER_PRODUCT_SIZE_RANGE: (
                 f"{self.amplicon_sizes.min}-{self.amplicon_sizes.max}"
@@ -128,7 +135,9 @@ class Primer3Parameters:
             Primer3InputTag.PRIMER_MAX_POLY_X: self.primer_max_polyX,
             Primer3InputTag.PRIMER_MAX_NS_ACCEPTED: self.primer_max_Ns,
             Primer3InputTag.PRIMER_LOWERCASE_MASKING: 1 if self.avoid_masked_bases else 0,
+            Primer3InputTag.PRIMER_NUM_RETURN: self.number_primers_return,
         }
+
         return mapped_dict
 
     @property
@@ -145,3 +154,71 @@ class Primer3Parameters:
     def min_primer_length(self) -> int:
         """Minimum primer length."""
         return int(self.primer_sizes.min)
+
+
+@dataclass(frozen=True, init=True, slots=True)
+class Primer3Parameters(PrimerAndAmpliconParameters):
+    """A deprecated alias for `PrimerAndAmpliconParameters` intended to maintain backwards
+    compatibility with earlier releases of `prymer`."""
+
+    warnings.warn(
+        "The Primer3Parameters class was deprecated, use PrimerAndAmpliconParameters instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+
+@dataclass(frozen=True, init=True, slots=True)
+class ProbeParameters:
+    """Holds common primer design options that Primer3 uses to inform internal probe design.
+
+    Attributes:
+        probe_sizes: the min, optimal, and max probe size
+        probe_tms: the min, optimal, and max probe melting temperatures
+        probe_gcs: the min and max GC content for individual probes
+        number_probes_return: the number of probes to return
+        probe_max_dinuc_bases: the max  number of bases in a dinucleotide run in a probe
+        probe_max_polyX: the max homopolymer length acceptable within a probe
+        probe_max_Ns: the max number of ambiguous bases acceptable within a probe
+
+    The attributes that have default values specified take their default values from the
+    Primer3 manual.
+
+    Please see the Primer3 manual for additional details: https://primer3.org/manual.html#globalTags
+
+
+    """
+
+    probe_sizes: MinOptMax[int]
+    probe_tms: MinOptMax[float]
+    probe_gcs: MinOptMax[float]
+    number_probes_return: int = 5
+    probe_max_dinuc_bases: int = 4
+    probe_max_polyX: int = 5
+    probe_max_Ns: int = 0
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.probe_sizes.min, int):
+            raise TypeError("Probe sizes must be integers")
+        if not isinstance(self.probe_tms.min, float) or not isinstance(self.probe_gcs.min, float):
+            raise TypeError("Probe melting temperatures and GC content must be floats")
+        if self.probe_max_dinuc_bases % 2 == 1:
+            raise ValueError("Max threshold for dinucleotide bases must be an even number of bases")
+
+    def to_input_tags(self) -> dict[Primer3InputTag, Any]:
+        """Converts input params to Primer3InputTag to feed directly into Primer3."""
+        mapped_dict: dict[Primer3InputTag, Any] = {
+            Primer3InputTag.PRIMER_INTERNAL_MIN_SIZE: self.probe_sizes.min,
+            Primer3InputTag.PRIMER_INTERNAL_OPT_SIZE: self.probe_sizes.opt,
+            Primer3InputTag.PRIMER_INTERNAL_MAX_SIZE: self.probe_sizes.max,
+            Primer3InputTag.PRIMER_INTERNAL_MIN_TM: self.probe_tms.min,
+            Primer3InputTag.PRIMER_INTERNAL_OPT_TM: self.probe_tms.opt,
+            Primer3InputTag.PRIMER_INTERNAL_MAX_TM: self.probe_tms.max,
+            Primer3InputTag.PRIMER_INTERNAL_MIN_GC: self.probe_gcs.min,
+            Primer3InputTag.PRIMER_INTERNAL_OPT_GC_PERCENT: self.probe_gcs.opt,
+            Primer3InputTag.PRIMER_INTERNAL_MAX_GC: self.probe_gcs.max,
+            Primer3InputTag.PRIMER_INTERNAL_MAX_POLY_X: self.probe_max_polyX,
+            Primer3InputTag.PRIMER_INTERNAL_MAX_NS_ACCEPTED: self.probe_max_Ns,
+        }
+
+        return mapped_dict

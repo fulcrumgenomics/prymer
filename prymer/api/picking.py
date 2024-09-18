@@ -35,7 +35,7 @@ Contains the following public classes and methods:
 - [`pick_top_primer_pairs()`][prymer.api.picking.pick_top_primer_pairs] -- Selects up to
     the given number of primer pairs from the given list of primer pairs.
 - [`build_and_pick_primer_pairs()`][prymer.api.picking.build_and_pick_primer_pairs] --
-    Builds primer pairs from individual left and primers and selects up to the given number of
+    Builds primer pairs from individual left and right primers and selects up to the given number of
     primer pairs from the given list of primer pairs.
 
 """
@@ -50,7 +50,7 @@ from pysam import FastaFile
 
 from prymer.api.melting import calculate_long_seq_tm
 from prymer.api.minoptmax import MinOptMax
-from prymer.api.primer import Primer
+from prymer.api.oligo import Oligo
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
 from prymer.ntthal import NtThermoAlign
@@ -146,8 +146,8 @@ def _seq_penalty(start: int, end: int, params: FilteringParams) -> float:
 
 
 def score(
-    left: Primer,
-    right: Primer,
+    left_primer: Oligo,
+    right_primer: Oligo,
     target: Span,
     amplicon: Span,
     amplicon_seq_or_tm: str | float,
@@ -168,8 +168,8 @@ def score(
        by the corresponding weight.  Is zero when the amplicon is at most the read length.
 
     Args:
-        left: the left primer
-        right: the right primer
+        left_primer: the left primer
+        right_primer: the right primer
         target: the target mapping
         amplicon: the amplicon mapping
         amplicon_seq_or_tm: either the melting temperature of the amplicon, or the amplicon sequence
@@ -208,18 +208,26 @@ def score(
         tm_penalty = (params.amplicon_tms.opt - tm) * params.product_tm_lt
 
     # Penalize primers whose innermost base is closer than some minimum distance from the target
-    left_dist_penalty: float = _dist_penalty(start=left.span.end, end=target.start, params=params)
-    right_dist_penalty: float = _dist_penalty(start=target.end, end=right.span.start, params=params)
+    left_dist_penalty: float = _dist_penalty(
+        start=left_primer.span.end, end=target.start, params=params
+    )
+    right_dist_penalty: float = _dist_penalty(
+        start=target.end, end=right_primer.span.start, params=params
+    )
 
     # Penalize amplicons where the target cannot be fully sequenced at the given read length
     # starting from both ends of the amplicon.
-    left_seq_penalty: float = _seq_penalty(start=left.span.start, end=target.end, params=params)
-    right_seq_penalty: float = _seq_penalty(start=target.start, end=right.span.end, params=params)
+    left_seq_penalty: float = _seq_penalty(
+        start=left_primer.span.start, end=target.end, params=params
+    )
+    right_seq_penalty: float = _seq_penalty(
+        start=target.start, end=right_primer.span.end, params=params
+    )
 
     # Put it all together
     return (
-        left.penalty
-        + right.penalty
+        left_primer.penalty
+        + right_primer.penalty
         + size_penalty
         + tm_penalty
         + left_dist_penalty
@@ -279,8 +287,8 @@ def is_acceptable_primer_pair(primer_pair: PrimerPair, params: FilteringParams) 
 
 
 def build_primer_pairs(
-    lefts: Iterable[Primer],
-    rights: Iterable[Primer],
+    left_primers: Iterable[Oligo],
+    right_primers: Iterable[Oligo],
     target: Span,
     params: FilteringParams,
     fasta: FastaFile,
@@ -288,8 +296,8 @@ def build_primer_pairs(
     """Builds primer pairs from individual left and primers.
 
     Args:
-        lefts: the left primers
-        rights: the right primers
+        left_primers: the left primers
+        right_primers: the right primers
         target: the genome mapping for the target
         params: the parameters used for filtering
         fasta: the FASTA file from which the amplicon sequence will be retrieved.
@@ -299,31 +307,32 @@ def build_primer_pairs(
     """
     # generate all the primer pairs
     primer_pairs: list[PrimerPair] = []
-    for left in lefts:
-        for right in rights:
-            if left.span.refname != right.span.refname:
+    for left_primer in left_primers:
+        for right_primer in right_primers:
+            if left_primer.span.refname != right_primer.span.refname:
                 raise ValueError(
                     "Cannot create a primer pair from left and right primers on different"
-                    f"references: left: '{left.span.refname}' right: '{right.span.refname}'"
+                    f" references: left: '{left_primer.span.refname}'"
+                    f" right: '{right_primer.span.refname}'"
                 )
             amplicon_mapping = Span(
-                refname=target.refname, start=left.span.start, end=right.span.end
+                refname=target.refname, start=left_primer.span.start, end=right_primer.span.end
             )
             amplicon_bed = amplicon_mapping.get_bedlike_coords()  # since fasta.fetch is 0-based
             amplicon_sequence = fasta.fetch(
                 reference=target.refname, start=amplicon_bed.start, end=amplicon_bed.end
             )
             amplicon_penalty = score(
-                left=left,
-                right=right,
+                left_primer=left_primer,
+                right_primer=right_primer,
                 target=target,
                 amplicon=amplicon_mapping,
                 amplicon_seq_or_tm=amplicon_sequence,
                 params=params,
             )
             pp = PrimerPair(
-                left_primer=left,
-                right_primer=right,
+                left_primer=left_primer,
+                right_primer=right_primer,
                 amplicon_sequence=amplicon_sequence,
                 amplicon_tm=calculate_long_seq_tm(amplicon_sequence),
                 penalty=amplicon_penalty,
@@ -411,8 +420,8 @@ def pick_top_primer_pairs(
 
 
 def build_and_pick_primer_pairs(
-    lefts: Iterable[Primer],
-    rights: Iterable[Primer],
+    left_primers: Iterable[Oligo],
+    right_primers: Iterable[Oligo],
     target: Span,
     num_primers: int,
     min_difference: int,
@@ -424,8 +433,8 @@ def build_and_pick_primer_pairs(
     """Picks up to `num_primers` primer pairs.
 
     Args:
-        lefts: the left primers
-        rights: the right primers
+        left_primers: the left primers
+        right_primers: the right primers
         target: the genome mapping for the target
         num_primers: the number of primer pairs to return for the target.
         min_difference: the minimum base difference between two primers that we will tolerate.
@@ -439,7 +448,11 @@ def build_and_pick_primer_pairs(
     """
     # build the list of primer pairs
     primer_pairs = build_primer_pairs(
-        lefts=lefts, rights=rights, target=target, params=params, fasta=fasta
+        left_primers=left_primers,
+        right_primers=right_primers,
+        target=target,
+        params=params,
+        fasta=fasta,
     )
 
     # select the primer pairs

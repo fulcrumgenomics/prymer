@@ -7,13 +7,17 @@ input to Primer3.
 
 The module uses:
 
-1. [`Primer3Parameters`][prymer.primer3.primer3_parameters.Primer3Parameters]
-to specify user-specified criteria for primer design
-2. [`Primer3Weights`][prymer.primer3.primer3_weights.Primer3Weights] to establish penalties
-based on those criteria
-3. [`Primer3Task`][prymer.primer3.primer3_task.Primer3Task] to organize task-specific
+1. [`PrimerAndAmpliconParameters`][prymer.primer3.primer3_parameters.Primer3Parameters]
+    to specify user-specified criteria for primer design
+2. [`ProbeParameters`][prymer.primer3.primer3_parameters.ProbeParameters]
+    to specify user-specified criteria for probe design
+3. [`PrimerAndAmpliconWeights`][prymer.primer3.primer3_weights.PrimerAndAmpliconWeights]
+    to establish penalties based on those criteria
+4. [`ProbeWeights`][prymer.primer3.primer3_weights.ProbeWeights] to specify penalties based on probe
+    design criteria
+5. [`Primer3Task`][prymer.primer3.primer3_task.Primer3Task] to organize task-specific
     logic.
-4. [`Span`](index.md#prymer.api.span.Span] to specify the target region.
+6. [`Span`](index.md#prymer.api.span.Span] to specify the target region.
 
 The `Primer3Input.to_input_tags(]` method
 The main purpose of this class is to generate the
@@ -29,14 +33,18 @@ The following examples builds the `Primer3` tags for designing left primers:
 >>> from prymer.primer3 import DesignLeftPrimersTask
 >>> target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
 >>> design_region = Span(refname="chr1", start=150, end=300, strand=Strand.POSITIVE)
->>> params = Primer3Parameters( \
+>>> params = PrimerAndAmpliconParameters( \
     amplicon_sizes=MinOptMax(min=100, max=250, opt=200), \
     amplicon_tms=MinOptMax(min=55.0, max=100.0, opt=70.0), \
     primer_sizes=MinOptMax(min=29, max=31, opt=30), \
     primer_tms=MinOptMax(min=63.0, max=67.0, opt=65.0), \
     primer_gcs=MinOptMax(min=30.0, max=65.0, opt=45.0), \
-)
->>> design_input = Primer3Input(target=target, params=params, task=DesignLeftPrimersTask())
+    )
+>>> design_input = Primer3Input(target=target, \
+                            primer_and_amplicon_params=params, \
+                            task=DesignLeftPrimersTask() \
+    )
+
 >>> for tag, value in design_input.to_input_tags(design_region=design_region).items(): \
     print(f"{tag.value} -> {value}")
 PRIMER_TASK -> pick_primer_list
@@ -44,7 +52,6 @@ PRIMER_PICK_LEFT_PRIMER -> 1
 PRIMER_PICK_RIGHT_PRIMER -> 0
 PRIMER_PICK_INTERNAL_OLIGO -> 0
 SEQUENCE_INCLUDED_REGION -> 1,51
-PRIMER_NUM_RETURN -> 5
 PRIMER_PRODUCT_OPT_SIZE -> 200
 PRIMER_PRODUCT_SIZE_RANGE -> 100-250
 PRIMER_PRODUCT_MIN_TM -> 55.0
@@ -66,6 +73,7 @@ PRIMER_MAX_NS_ACCEPTED -> 1
 PRIMER_LOWERCASE_MASKING -> 1
 PRIMER_PAIR_WT_PRODUCT_SIZE_LT -> 1.0
 PRIMER_PAIR_WT_PRODUCT_SIZE_GT -> 1.0
+PRIMER_NUM_RETURN -> 5
 PRIMER_PAIR_WT_PRODUCT_TM_LT -> 0.0
 PRIMER_PAIR_WT_PRODUCT_TM_GT -> 0.0
 PRIMER_WT_END_STABILITY -> 0.25
@@ -79,24 +87,63 @@ PRIMER_WT_TM_LT -> 1.0
 PRIMER_WT_TM_GT -> 1.0
 """
 
+from dataclasses import MISSING
 from dataclasses import dataclass
+from dataclasses import fields
 from typing import Any
+from typing import Optional
 
 from prymer.api.span import Span
 from prymer.primer3.primer3_input_tag import Primer3InputTag
-from prymer.primer3.primer3_parameters import Primer3Parameters
+from prymer.primer3.primer3_parameters import PrimerAndAmpliconParameters
+from prymer.primer3.primer3_parameters import ProbeParameters
 from prymer.primer3.primer3_task import Primer3TaskType
-from prymer.primer3.primer3_weights import Primer3Weights
+from prymer.primer3.primer3_weights import PrimerAndAmpliconWeights
+from prymer.primer3.primer3_weights import ProbeWeights
 
 
 @dataclass(frozen=True, init=True, slots=True)
 class Primer3Input:
-    """Assembles necessary inputs for Primer3 to orchestrate primer and/or primer pair design."""
+    """Assembles necessary inputs for Primer3 to orchestrate primer, primer pair, and/or internal
+    probe design.
+
+    At least one set of design parameters (either `PrimerAndAmpliconParameters`
+    or `ProbeParameters`) must be specified.
+
+    If `PrimerAndAmpliconParameters` is provided but `PrimerAndAmpliconWeights` is not provided,
+    default `PrimerAndAmpliconWeights` will be used.
+
+    Similarly, if `ProbeParameters` is provided but `ProbeWeights` is not provided, default
+    `ProbeWeights` will be used.
+
+    Please see primer3_parameters.py for details on the defaults.
+
+
+    Raises:
+        ValueError: if neither the primer or  probe parameters are specified
+    """
 
     target: Span
     task: Primer3TaskType
-    params: Primer3Parameters
-    weights: Primer3Weights = Primer3Weights()
+    primer_and_amplicon_params: Optional[PrimerAndAmpliconParameters] = None
+    probe_params: Optional[ProbeParameters] = None
+    primer_weights: Optional[PrimerAndAmpliconWeights] = None
+    probe_weights: Optional[ProbeWeights] = None
+
+    def __post_init__(self) -> None:
+        # check for at least one set of params
+        # for the set of params given, check that weights were given; use defaults if not given
+        if self.primer_and_amplicon_params is None and self.probe_params is None:
+            raise ValueError(
+                "Primer3 requires at least one set of parameters"
+                " for either primer or probe design"
+            )
+
+        if self.primer_and_amplicon_params is not None and self.primer_weights is None:
+            object.__setattr__(self, "primer_weights", PrimerAndAmpliconWeights())
+
+        if self.probe_params is not None and self.probe_weights is None:
+            object.__setattr__(self, "probe_weights", ProbeWeights())
 
     def to_input_tags(self, design_region: Span) -> dict[Primer3InputTag, Any]:
         """Assembles `Primer3InputTag` and values for input to `Primer3`
@@ -113,9 +160,15 @@ class Primer3Input:
         primer3_task_params = self.task.to_input_tags(
             design_region=design_region, target=self.target
         )
-        assembled_tags = {
-            **primer3_task_params,
-            **self.params.to_input_tags(),
-            **self.weights.to_input_tags(),
+        assembled_tags: dict[Primer3InputTag, Any] = {**primer3_task_params}
+
+        optional_attributes = {
+            field.name: getattr(self, field.name)
+            for field in fields(self)
+            if field.default is not MISSING
         }
+        for settings in optional_attributes.values():
+            if settings is not None:
+                assembled_tags.update(settings.to_input_tags())
+
         return assembled_tags

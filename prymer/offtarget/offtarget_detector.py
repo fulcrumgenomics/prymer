@@ -13,8 +13,8 @@ to the genome.
 >>> from pathlib import Path
 >>> from prymer.api.span import Strand
 >>> ref_fasta = Path("./tests/offtarget/data/miniref.fa")
->>> left_primer =  Primer(bases="AAAAA", tm=37, penalty=0, span=Span("chr1", start=67, end=71))
->>> right_primer = Primer(bases="TTTTT", tm=37, penalty=0, span=Span("chr1", start=75, end=79, strand=Strand.NEGATIVE))
+>>> left_primer =  Oligo(bases="AAAAA", tm=37, penalty=0, span=Span("chr1", start=67, end=71))
+>>> right_primer = Oligo(bases="TTTTT", tm=37, penalty=0, span=Span("chr1", start=75, end=79, strand=Strand.NEGATIVE))
 >>> detector = OffTargetDetector(ref=ref_fasta, max_primer_hits=204, max_primer_pair_hits=1, three_prime_region_length=20, max_mismatches_in_three_prime_region=0, max_mismatches=0, max_amplicon_size=250)
 >>> len(detector.filter(primers=[left_primer, right_primer]))  # keep all
 2
@@ -55,8 +55,8 @@ Finally, the [`mappings_of()`][prymer.offtarget.offtarget_detector.OffTargetDete
 method maps individual primers (`Primer`s).
 
 ```python
->>> p1: Primer = Primer(tm=37, penalty=0, span=Span(refname="chr1", start=1, end=30), bases="CAGGTGGATCATGAGGTCAGGAGTTCAAGA")
->>> p2: Primer = Primer(tm=37, penalty=0, span=Span(refname="chr1", start=61, end=93, strand=Strand.NEGATIVE), bases="CATGCCCAGCTAATTTTTTGTATTTTTAGTAGA")
+>>> p1: Oligo = Oligo(tm=37, penalty=0, span=Span(refname="chr1", start=1, end=30), bases="CAGGTGGATCATGAGGTCAGGAGTTCAAGA")
+>>> p2: Oligo = Oligo(tm=37, penalty=0, span=Span(refname="chr1", start=61, end=93, strand=Strand.NEGATIVE), bases="CATGCCCAGCTAATTTTTTGTATTTTTAGTAGA")
 >>> results_dict: dict[str, BwaResult] = detector.mappings_of(primers=[p1, p2])
 >>> list(results_dict.keys())
 ['CAGGTGGATCATGAGGTCAGGAGTTCAAGA', 'CATGCCCAGCTAATTTTTTGTATTTTTAGTAGA']
@@ -87,7 +87,7 @@ from typing import TypeVar
 
 from ordered_set import OrderedSet
 
-from prymer.api.primer import Primer
+from prymer.api.oligo import Oligo
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
 from prymer.offtarget.bwa import BwaAlnInteractive
@@ -95,7 +95,7 @@ from prymer.offtarget.bwa import BwaHit
 from prymer.offtarget.bwa import BwaResult
 from prymer.offtarget.bwa import Query
 
-PrimerType = TypeVar("PrimerType", bound=Primer)
+PrimerType = TypeVar("PrimerType", bound=Oligo)
 
 
 @dataclass(init=True, frozen=True)

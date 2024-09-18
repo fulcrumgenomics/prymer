@@ -6,7 +6,7 @@ import pytest
 from fgpyo.fasta.sequence_dictionary import SequenceDictionary
 from fgpyo.sequence import reverse_complement
 
-from prymer.api.primer import Primer
+from prymer.api.oligo import Oligo
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
 from prymer.api.span import Strand
@@ -35,13 +35,13 @@ class PrimerPairTestCase:
     str_fields: list[str]
 
     @staticmethod
-    def primer_pair_from_left_primer(left: Primer, right_offset: int = 50) -> PrimerPair:
+    def primer_pair_from_left_primer(left: Oligo, right_offset: int = 50) -> PrimerPair:
         """
         Generates a PrimerPair for use in unit tests. Will first generate
         a right primer using a standard formula, and then calculates the
         PrimerPair fields based on the left & right primers.
         """
-        right: Primer = PrimerPairTestCase.right_primer_from_left_primer(
+        right: Oligo = PrimerPairTestCase.right_primer_from_left_primer(
             left=left, right_offset=right_offset
         )
 
@@ -63,7 +63,7 @@ class PrimerPairTestCase:
         )
 
     @staticmethod
-    def right_primer_from_left_primer(left: Primer, right_offset: int) -> Primer:
+    def right_primer_from_left_primer(left: Oligo, right_offset: int) -> Oligo:
         """
         Provides a standard conversion for a left primer to a right primer for use in
         tests of PrimerPair.
@@ -110,7 +110,7 @@ def build_primer_pair_test_cases() -> list[PrimerPairTestCase]:
     return [
         PrimerPairTestCase(
             primer_pair=PrimerPairTestCase.primer_pair_from_left_primer(
-                left=Primer(
+                left=Oligo(
                     bases="GATTACA",
                     tm=12.34,
                     penalty=56.78,
@@ -150,7 +150,7 @@ def build_primer_pair_test_cases() -> list[PrimerPairTestCase]:
         ),
         PrimerPairTestCase(
             primer_pair=PrimerPairTestCase.primer_pair_from_left_primer(
-                left=Primer(
+                left=Oligo(
                     bases="TGTAATC",
                     tm=87.65,
                     penalty=43.21,
@@ -190,7 +190,7 @@ def build_primer_pair_test_cases() -> list[PrimerPairTestCase]:
         ),
         PrimerPairTestCase(
             primer_pair=PrimerPairTestCase.primer_pair_from_left_primer(
-                left=Primer(
+                left=Oligo(
                     bases=None,
                     tm=12.34,
                     penalty=56.78,
@@ -230,7 +230,7 @@ def build_primer_pair_test_cases() -> list[PrimerPairTestCase]:
         ),
         PrimerPairTestCase(
             primer_pair=PrimerPairTestCase.primer_pair_from_left_primer(
-                left=Primer(
+                left=Oligo(
                     bases="GGGGGGG",
                     tm=12.34,
                     penalty=56.78,
@@ -273,13 +273,13 @@ def build_primer_pair_test_cases() -> list[PrimerPairTestCase]:
         # overlap
         PrimerPairTestCase(
             primer_pair=PrimerPair(
-                left_primer=Primer(
+                left_primer=Oligo(
                     bases="GATTACA",
                     tm=12.34,
                     penalty=56.78,
                     span=Span(refname="chr1", start=1, end=7, strand=Strand.POSITIVE),
                 ),
-                right_primer=Primer(
+                right_primer=Oligo(
                     bases="TGTAATC",
                     tm=87.65,
                     penalty=43.21,
@@ -471,7 +471,7 @@ def test_iter() -> None:
         # same primer
         (
             PrimerPairTestCase.primer_pair_from_left_primer(
-                Primer(
+                Oligo(
                     bases="GATTACA",
                     tm=1.0,
                     penalty=2.0,
@@ -479,7 +479,7 @@ def test_iter() -> None:
                 )
             ),
             PrimerPairTestCase.primer_pair_from_left_primer(
-                Primer(
+                Oligo(
                     bases="GATTACA",
                     tm=1.0,
                     penalty=2.0,
@@ -492,7 +492,7 @@ def test_iter() -> None:
         # different primer (chromosome)
         (
             PrimerPairTestCase.primer_pair_from_left_primer(
-                Primer(
+                Oligo(
                     bases="GATTACA",
                     tm=1.0,
                     penalty=2.0,
@@ -500,7 +500,7 @@ def test_iter() -> None:
                 )
             ),
             PrimerPairTestCase.primer_pair_from_left_primer(
-                Primer(
+                Oligo(
                     bases="GATTACA",
                     tm=1.0,
                     penalty=2.0,
@@ -513,7 +513,7 @@ def test_iter() -> None:
         # same primer when by amplicon, but different by primer
         (
             PrimerPairTestCase.primer_pair_from_left_primer(
-                Primer(
+                Oligo(
                     bases="GATTAC",
                     tm=1.0,
                     penalty=2.0,
@@ -522,7 +522,7 @@ def test_iter() -> None:
                 right_offset=51,
             ),
             PrimerPairTestCase.primer_pair_from_left_primer(
-                Primer(
+                Oligo(
                     bases="GATTACA",
                     tm=1.0,
                     penalty=2.0,

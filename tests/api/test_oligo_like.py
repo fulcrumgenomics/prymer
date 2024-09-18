@@ -3,12 +3,12 @@ from typing import Optional
 
 import pytest
 
-from prymer.api.primer_like import PrimerLike
+from prymer.api.oligo_like import OligoLike
 from prymer.api.span import Span
 
 
 @dataclass(frozen=True, init=True, kw_only=True, slots=True)
-class PrimerLikeTester(PrimerLike):
+class OligoLikeTester(OligoLike):
     """A simple class that inherits from PrimerLike for testing purposes."""
 
     span: Span
@@ -31,13 +31,13 @@ def test_id_generation(
     expected_id: str,
 ) -> None:
     """Asserts that the id field is correctly generated based on the name and name_prefix fields."""
-    test_primer = PrimerLikeTester(name=name, bases="AATCGATCCA", span=test_span)
+    test_primer = OligoLikeTester(name=name, bases="AATCGATCCA", span=test_span)
     assert test_primer.id == expected_id
 
 
 def test_to_bed12_row_exists(test_span: Span) -> None:
     """Asserts that the to_bed12_row method exists and returns the expected value."""
-    test_primer = PrimerLikeTester(
+    test_primer = OligoLikeTester(
         name="test",
         bases="AATCGATCCA",
         span=test_span,
