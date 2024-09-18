@@ -30,22 +30,21 @@ def test_validate_executable_path_not_executable() -> None:
             ExecutableRunner.validate_executable_path(executable=tmpfile.name)
 
 
-def test_validate_executable_path() -> None:
+@pytest.mark.parametrize("executable", ["yes", "/usr/bin/yes", Path("/usr/bin/yes")])
+def test_validate_executable_path(executable: str | Path) -> None:
     """
     `validate_executable_path` should find the `yes` executable in the following scenarios:
     1. when the string "yes" is passed
     2. when the absolute path to the `yes` executable is passed, either as a string or a Path
     """
-    executables: list[Path | str] = ["yes", "/usr/bin/yes", Path("/usr/bin/yes")]
     expected_path = Path("/usr/bin/yes")
 
     with mock.patch.dict(os.environ):
         # Clear the PATH, in case the user has a local version of `yes` elsewhere on their PATH
         os.environ.pop("PATH")
 
-        for executable in executables:
-            validated_path = ExecutableRunner.validate_executable_path(executable=executable)
-            assert validated_path == expected_path
+        validated_path = ExecutableRunner.validate_executable_path(executable=executable)
+        assert validated_path == expected_path
 
 
 def test_validate_executable_path_rejects_paths() -> None:
