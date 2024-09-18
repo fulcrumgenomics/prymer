@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -228,3 +229,24 @@ def test_to_amplicons(
     with _build_detector(ref_fasta=ref_fasta, cache_results=cache_results) as detector:
         actual = detector._to_amplicons(lefts=[left], rights=[right], max_len=250)
         assert actual == expected, test_id
+
+
+def test_generic_filter(ref_fasta: Path) -> None:
+    """
+    This test doesn't have any runtime assertions, but verifies that we can apply
+    OverlapDetector.filter to arbitrary subclases of Primer.
+    """
+
+    @dataclass(frozen=True)
+    class CustomPrimer(Primer):
+        foo: str = "foo"
+
+    primers: list[CustomPrimer] = [
+        CustomPrimer(tm=37, penalty=0, span=Span(refname="chr1", start=1, end=30), foo="bar"),
+        CustomPrimer(tm=37, penalty=0, span=Span(refname="chr2", start=1, end=30), foo="qux"),
+    ]
+
+    with _build_detector(ref_fasta=ref_fasta) as detector:
+        filtered_primers: list[CustomPrimer] = detector.filter(primers)
+
+    assert len(filtered_primers) == 2
