@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -228,3 +229,29 @@ def test_to_amplicons(
     with _build_detector(ref_fasta=ref_fasta, cache_results=cache_results) as detector:
         actual = detector._to_amplicons(lefts=[left], rights=[right], max_len=250)
         assert actual == expected, test_id
+
+
+def test_generic_filter(ref_fasta: Path) -> None:
+    """
+    This test isn't intended to validate any runtime assertions, but is a minimal example for the
+    type checker to ensure that we can apply `OffTargetDetector.filter()` to arbitrary subclases of
+    `Primer`.
+    """
+
+    @dataclass(frozen=True)
+    class CustomPrimer(Primer):
+        foo: str = "foo"
+
+    # fmt: off
+    primers: list[CustomPrimer] = [
+        CustomPrimer(bases="AAAA", tm=37, penalty=0, span=Span(refname="chr1", start=1, end=4), foo="bar"),  # noqa: E501
+        CustomPrimer(bases="TTTT", tm=37, penalty=0, span=Span(refname="chr2", start=1, end=4), foo="qux"),  # noqa: E501
+    ]
+    # fmt: on
+
+    with _build_detector(ref_fasta=ref_fasta) as detector:
+        # Here we are validating that we can both
+        # 1. Pass a list of a `Primer` subclass to `filter()` and
+        # 2. Return a list of the same type.
+        # NB: we're ignoring the unused value error because we want to check the type hint
+        filtered_primers: list[CustomPrimer] = detector.filter(primers)  # noqa: F841

@@ -82,6 +82,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Optional
 from typing import Self
+from typing import TypeVar
 
 from ordered_set import OrderedSet
 
@@ -92,6 +93,8 @@ from prymer.offtarget.bwa import BwaAlnInteractive
 from prymer.offtarget.bwa import BwaHit
 from prymer.offtarget.bwa import BwaResult
 from prymer.offtarget.bwa import Query
+
+PrimerType = TypeVar("PrimerType", bound=Primer)
 
 
 @dataclass(init=True, frozen=True)
@@ -188,7 +191,7 @@ class OffTargetDetector:
         self._keep_spans: bool = keep_spans
         self._keep_primer_spans: bool = keep_primer_spans
 
-    def filter(self, primers: list[Primer]) -> list[Primer]:
+    def filter(self, primers: list[PrimerType]) -> list[PrimerType]:
         """Filters an iterable of Primers to return only those that have less than
         `max_primer_hits` mappings to the genome."""
         results: dict[str, BwaResult] = self.mappings_of(primers)
@@ -282,13 +285,13 @@ class OffTargetDetector:
 
         return result
 
-    def mappings_of(self, primers: list[Primer]) -> dict[str, BwaResult]:
+    def mappings_of(self, primers: list[PrimerType]) -> dict[str, BwaResult]:
         """Function to take a set of primers and map any that are not cached, and return mappings
         for all of them.  Note: the genomics sequence of the returned mappings are on the opposite
         strand of that of the strand of the primer.  I.e. we map the complementary bases (reversed)
         to that of the primer."""
 
-        primers_to_map: list[Primer]
+        primers_to_map: list[PrimerType]
         if not self._cache_results:
             primers_to_map = primers
         else:
