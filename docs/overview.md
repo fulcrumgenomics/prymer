@@ -22,10 +22,10 @@ Designing primers (left or right) or primer pairs using Primer3 is primarily per
 for a single target. The `Primer3` instance is intended to be re-used to design primers across multiple targets, or 
 re-design (after changing parameters) for the same target, or both!
 
-Common input parameters are specified in [`Primer3Parameters()`][prymer.primer3.primer3_parameters.Primer3Parameters] and 
-[`Primer3Weights()`][prymer.primer3.primer3_weights.Primer3Weights], while the task type (left primer,
+Common input parameters for designing primers are specified in [`Primer3Parameters()`][prymer.primer3.primer3_parameters.Primer3Parameters] and 
+[`PrimerAndAmpliconWeights()`][prymer.primer3.primer3_weights.PrimerAndAmpliconWeights], while the task type (left primer,
 right primer, or primer pair design) is specified with the corresponding 
-[`Primer3Task`][prymer.primer3.primer3_task.Primer3Task].
+[`Primer3Task`][prymer.primer3.primer3_task.Primer3Task]. Penalty weights for designing internal probes are specified in [`ProbeWeights()`][prymer.primer3.primer3_weights.ProbeWeights]
 
 The result of a primer design is encapsulated in the [`Primer3Result`][prymer.primer3.primer3.Primer3Result] class.  It
 provides the primers (or primer pairs) that were designed, as well as a list of reasons some primers were not returned, 

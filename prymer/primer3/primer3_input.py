@@ -8,12 +8,14 @@ input to Primer3.
 The module uses:
 
 1. [`Primer3Parameters`][prymer.primer3.primer3_parameters.Primer3Parameters]
-to specify user-specified criteria for primer design
-2. [`Primer3Weights`][prymer.primer3.primer3_weights.Primer3Weights] to establish penalties
-based on those criteria
-3. [`Primer3Task`][prymer.primer3.primer3_task.Primer3Task] to organize task-specific
+    to specify user-specified criteria for primer design
+2. [`PrimerAndAmpliconWeights`][prymer.primer3.primer3_weights.PrimerAndAmpliconWeights]
+    to establish penalties based on those criteria
+3. [`ProbeWeights`][prymer.primer3.primer3_weights.ProbeWeights] to specify penalties based on probe
+    design criteria
+4. [`Primer3Task`][prymer.primer3.primer3_task.Primer3Task] to organize task-specific
     logic.
-4. [`Span`](index.md#prymer.api.span.Span] to specify the target region.
+5. [`Span`](index.md#prymer.api.span.Span] to specify the target region.
 
 The `Primer3Input.to_input_tags(]` method
 The main purpose of this class is to generate the
@@ -81,12 +83,14 @@ PRIMER_WT_TM_GT -> 1.0
 
 from dataclasses import dataclass
 from typing import Any
+from typing import Optional
 
 from prymer.api.span import Span
 from prymer.primer3.primer3_input_tag import Primer3InputTag
 from prymer.primer3.primer3_parameters import Primer3Parameters
 from prymer.primer3.primer3_task import Primer3TaskType
-from prymer.primer3.primer3_weights import Primer3Weights
+from prymer.primer3.primer3_weights import PrimerAndAmpliconWeights
+from prymer.primer3.primer3_weights import ProbeWeights
 
 
 @dataclass(frozen=True, init=True, slots=True)
@@ -96,7 +100,8 @@ class Primer3Input:
     target: Span
     task: Primer3TaskType
     params: Primer3Parameters
-    weights: Primer3Weights = Primer3Weights()
+    primer_weights: Optional[PrimerAndAmpliconWeights] = PrimerAndAmpliconWeights()
+    probe_weights: Optional[ProbeWeights] = None
 
     def to_input_tags(self, design_region: Span) -> dict[Primer3InputTag, Any]:
         """Assembles `Primer3InputTag` and values for input to `Primer3`
@@ -116,6 +121,7 @@ class Primer3Input:
         assembled_tags = {
             **primer3_task_params,
             **self.params.to_input_tags(),
-            **self.weights.to_input_tags(),
+            **self.primer_weights.to_input_tags(),
+            **(self.probe_weights.to_input_tags() if self.probe_weights is not None else {}),
         }
         return assembled_tags
