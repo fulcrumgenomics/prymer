@@ -41,8 +41,8 @@ def test_validate_executable_path_not_executable() -> None:
 def test_validate_executable_path(tmp_path: Path) -> None:
     """
     `validate_executable_path` should return the `yes` executable in the following scenarios:
-    1. When the name of the executable is passed as a string.
-    2. When the absolute path to the executable is passed, either as a string or a Path.
+    1. The name of the executable is passed as a string, and the executable is on the user's PATH.
+    2. The absolute path to the executable is passed, either as a string or a Path.
     """
     expected_path = tmp_path / "yes"
     expected_path.touch()  # create the file
