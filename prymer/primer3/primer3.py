@@ -373,7 +373,7 @@ class Primer3(ExecutableRunner):
             )
 
         design_region: Span = self._create_design_region(
-            target=design_input.target,
+            target_region=design_input.target,
             max_amplicon_length=design_input.params.max_amplicon_length,
             min_primer_length=design_input.params.min_primer_length,
         )
@@ -713,7 +713,7 @@ class Primer3(ExecutableRunner):
 
     def _create_design_region(
         self,
-        target: Span,
+        target_region: Span,
         max_amplicon_length: int,
         min_primer_length: int,
     ) -> Span:
@@ -730,19 +730,22 @@ class Primer3(ExecutableRunner):
             ValueError: If the target region is too large to be padded.
 
         """
-        padding: int = max_amplicon_length - target.length
-        contig_length: int = self._dict[target.refname].length
-
-        if padding < min_primer_length:
-            raise ValueError(
-                f"Target region {target} is too large to design an amplicon of maximum "
-                f"length {max_amplicon_length}."
-            )
+        padding: int = max_amplicon_length - target_region.length
+        contig_length: int = self._dict[target_region.refname].length
 
         design_region: Span = replace(
-            target,
-            start=max(1, target.start - padding),
-            end=min(target.end + padding, contig_length),
+            target_region,
+            start=max(1, target_region.start - padding),
+            end=min(target_region.end + padding, contig_length),
         )
+
+        left_design_window: int = target_region.start - design_region.start
+        right_design_window: int = design_region.end - target_region.end
+
+        if left_design_window < min_primer_length or right_design_window < min_primer_length:
+            raise ValueError(
+                f"Target region {target_region} is too large to design an amplicon of maximum "
+                f"length {max_amplicon_length}."
+            )
 
         return design_region
