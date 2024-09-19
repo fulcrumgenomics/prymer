@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 from unittest import mock
 
 import pytest
@@ -19,23 +18,27 @@ def test_close_twice() -> None:
     assert exec.close() is False
 
 
-def test_validate_executable_path_does_not_exist() -> None:
+def test_validate_executable_path_does_not_exist(tmp_path: Path) -> None:
     """
     `validate_executable_path` should raise a ValueError when the provided executable does not
     exist.
     """
+    bad_path: Path = tmp_path / "nowhere"
+
     with pytest.raises(ValueError, match="Executable does not exist"):
-        ExecutableRunner.validate_executable_path(executable="/path/to/nowhere")
+        ExecutableRunner.validate_executable_path(executable=bad_path)
 
 
-def test_validate_executable_path_not_executable() -> None:
+def test_validate_executable_path_not_executable(tmp_path: Path) -> None:
     """
     `validate_executable_path` should raise a ValueError when the provided executable does not have
     execute permissions.
     """
-    with NamedTemporaryFile(suffix=".exe", mode="w", delete=True) as tmpfile:
-        with pytest.raises(ValueError, match="is not executable"):
-            ExecutableRunner.validate_executable_path(executable=tmpfile.name)
+    bad_path: Path = tmp_path / "not_executable"
+    bad_path.touch()
+
+    with pytest.raises(ValueError, match="is not executable"):
+        ExecutableRunner.validate_executable_path(executable=bad_path)
 
 
 def test_validate_executable_path(tmp_path: Path) -> None:
@@ -67,20 +70,3 @@ def test_validate_executable_path_rejects_paths() -> None:
     """
     with pytest.raises(ValueError, match="Executable does not exist"):
         ExecutableRunner.validate_executable_path(executable=Path("yes"))
-
-
-def test_validate_executable_path_new_file() -> None:
-    with NamedTemporaryFile(suffix=".exe", mode="w", delete=True) as tmpfile:
-        exec_str: str = tmpfile.name
-        exec_path: Path = Path(exec_str)
-        # not an executable
-        with pytest.raises(ValueError, match="is not executable"):
-            ExecutableRunner.validate_executable_path(executable=exec_str)
-        # make it executable and test again
-        os.chmod(exec_str, 755)
-        exec_full_path: Path = exec_path.absolute()
-        assert exec_full_path == ExecutableRunner.validate_executable_path(executable=exec_str)
-        assert exec_full_path == ExecutableRunner.validate_executable_path(executable=exec_path)
-        assert exec_full_path == ExecutableRunner.validate_executable_path(
-            executable=exec_full_path
-        )
