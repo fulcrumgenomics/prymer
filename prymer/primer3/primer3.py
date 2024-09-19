@@ -48,10 +48,10 @@ The `design_primers()` method on `Primer3` is used to design the primers given a
 parameters and target region.
 
 ```python
->>> from prymer.primer3.primer3_parameters import Primer3Parameters
+>>> from prymer.primer3.primer3_parameters import PrimerAndAmpliconParameters
 >>> from prymer.api import MinOptMax
 >>> target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
->>> params = Primer3Parameters( \
+>>> params = PrimerAndAmpliconParameters( \
     amplicon_sizes=MinOptMax(min=100, max=250, opt=200), \
     amplicon_tms=MinOptMax(min=55.0, max=100.0, opt=70.0), \
     primer_sizes=MinOptMax(min=29, max=31, opt=30), \
@@ -60,7 +60,7 @@ parameters and target region.
 )
 >>> design_input = Primer3Input( \
     target=target, \
-    params=params, \
+    primer_and_amplicon_params=params, \
     task=DesignLeftPrimersTask(), \
 )
 >>> left_result = designer.design_primers(design_input=design_input)
@@ -312,7 +312,7 @@ class Primer3(ExecutableRunner):
     def _is_valid_primer(design_input: Primer3Input, primer_design: Primer) -> bool:
         return (
             primer_design.longest_dinucleotide_run_length()
-            <= design_input.params.primer_max_dinuc_bases
+            <= design_input.primer_and_amplicon_params.primer_max_dinuc_bases
         )
 
     @staticmethod
@@ -335,13 +335,13 @@ class Primer3(ExecutableRunner):
             valid: bool = True
             if (
                 primer_pair.left_primer.longest_dinucleotide_run_length()
-                > design_input.params.primer_max_dinuc_bases
+                > design_input.primer_and_amplicon_params.primer_max_dinuc_bases
             ):  # if the left primer has too many dinucleotide bases, fail it
                 dinuc_pair_failures.append(primer_pair.left_primer)
                 valid = False
             if (
                 primer_pair.right_primer.longest_dinucleotide_run_length()
-                > design_input.params.primer_max_dinuc_bases
+                > design_input.primer_and_amplicon_params.primer_max_dinuc_bases
             ):  # if the right primer has too many dinucleotide bases, fail it
                 dinuc_pair_failures.append(primer_pair.right_primer)
                 valid = False
@@ -374,8 +374,8 @@ class Primer3(ExecutableRunner):
 
         design_region: Span = self._create_design_region(
             target_region=design_input.target,
-            max_amplicon_length=design_input.params.max_amplicon_length,
-            min_primer_length=design_input.params.min_primer_length,
+            max_amplicon_length=design_input.primer_and_amplicon_params.max_amplicon_length,
+            min_primer_length=design_input.primer_and_amplicon_params.min_primer_length,
         )
 
         soft_masked, hard_masked = self.get_design_sequences(design_region)
