@@ -79,8 +79,8 @@ In this case, there are two failures reasons:
 ```python
 >>> for failure in left_result.failures: \
     print(failure)
-Primer3Failure(reason=<Primer3FailureReason.HIGH_TM: 'high tm'>, count=171)
-Primer3Failure(reason=<Primer3FailureReason.GC_CONTENT: 'GC content failed'>, count=26)
+Primer3Failure(reason=<Primer3FailureReason.HIGH_TM: 'high tm'>, count=406)
+Primer3Failure(reason=<Primer3FailureReason.GC_CONTENT: 'GC content failed'>, count=91)
 
 ```
 
@@ -372,12 +372,13 @@ class Primer3(ExecutableRunner):
                 f"terminated, return code {self._subprocess.returncode}"
             )
 
-        region: Span = self._pad_target_region(
-            target=design_input.target,
+        design_region: Span = self._create_design_region(
+            target_region=design_input.target,
             max_amplicon_length=design_input.params.max_amplicon_length,
+            min_primer_length=design_input.params.min_primer_length,
         )
 
-        soft_masked, hard_masked = self.get_design_sequences(region)
+        soft_masked, hard_masked = self.get_design_sequences(design_region)
         global_primer3_params = {
             Primer3InputTag.PRIMER_FIRST_BASE_INDEX: 1,
             Primer3InputTag.PRIMER_EXPLAIN_FLAG: 1,
@@ -386,7 +387,7 @@ class Primer3(ExecutableRunner):
 
         assembled_primer3_tags = {
             **global_primer3_params,
-            **design_input.to_input_tags(design_region=region),
+            **design_input.to_input_tags(design_region=design_region),
         }
 
         # Submit inputs to primer3
@@ -444,7 +445,7 @@ class Primer3(ExecutableRunner):
                 all_pair_results: list[PrimerPair] = Primer3._build_primer_pairs(
                     design_input=design_input,
                     design_results=primer3_results,
-                    design_region=region,
+                    design_region=design_region,
                     unmasked_design_seq=soft_masked,
                 )
                 return Primer3._assemble_primer_pairs(
@@ -457,7 +458,7 @@ class Primer3(ExecutableRunner):
                 all_single_results = Primer3._build_primers(
                     design_input=design_input,
                     design_results=primer3_results,
-                    design_region=region,
+                    design_region=design_region,
                     design_task=design_input.task,
                     unmasked_design_seq=soft_masked,
                 )
@@ -710,21 +711,52 @@ class Primer3(ExecutableRunner):
             by_fail_count[Primer3FailureReason.LONG_DINUC] = num_dinuc_failures
         return [Primer3Failure(reason, count) for reason, count in by_fail_count.most_common()]
 
-    def _pad_target_region(self, target: Span, max_amplicon_length: int) -> Span:
+    def _create_design_region(
+        self,
+        target_region: Span,
+        max_amplicon_length: int,
+        min_primer_length: int,
+    ) -> Span:
         """
-        If the target region is smaller than the max amplicon length, pad to fit.
+        Construct a design region surrounding the target region.
 
-        When the max amplicon length is odd, the left side of the target region will be padded with
-        one more base than the right side.
+        The target region is padded on both sides by the maximum amplicon length, minus the length
+        of the target region itself.
+
+        If the target region cannot be padded by at least the minimum primer length on both sides,
+        a `ValueError` is raised.
+
+        Raises:
+            ValueError: If the target region is too large to be padded.
+
         """
-        contig_length: int = self._dict[target.refname].length
-        padding_right: int = max(0, int((max_amplicon_length - target.length) / 2))
-        padding_left: int = max(0, max_amplicon_length - target.length - padding_right)
+        # Pad the target region on both sides by the maximum amplicon length (minus the length of
+        # the target). This ensures that the design region covers the complete window of potentially
+        # valid primer pairs.
+        padding: int = max_amplicon_length - target_region.length
 
-        region: Span = replace(
-            target,
-            start=max(1, target.start - padding_left),
-            end=min(target.end + padding_right, contig_length),
+        # Apply the padding, ensuring that we don't run out-of-bounds on the target contig.
+        contig_length: int = self._dict[target_region.refname].length
+        design_start: int = max(1, target_region.start - padding)
+        design_end: int = min(target_region.end + padding, contig_length)
+
+        # Validate that our design window includes sufficient space for a primer to be designed on
+        # each side of the target region.
+        left_design_window: int = target_region.start - design_start
+        right_design_window: int = design_end - target_region.end
+        if left_design_window < min_primer_length or right_design_window < min_primer_length:
+            raise ValueError(
+                f"Target region {target_region} exceeds the maximum size compatible with a "
+                f"maximum amplicon length of {max_amplicon_length} and a minimum primer length of "
+                f"{min_primer_length}. The maximum amplicon length should exceed the length of "
+                "the target region by at least twice the minimum primer length."
+            )
+
+        # Return the validated design region.
+        design_region: Span = replace(
+            target_region,
+            start=design_start,
+            end=design_end,
         )
 
-        return region
+        return design_region

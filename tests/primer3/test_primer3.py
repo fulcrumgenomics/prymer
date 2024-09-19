@@ -558,23 +558,48 @@ def test_primer3_result_as_primer_pair_result_exception(
 
 
 @pytest.mark.parametrize("max_amplicon_length", [100, 101])
-def test_pad_target_region(max_amplicon_length: int, genome_ref: Path) -> None:
+def test_create_design_region(max_amplicon_length: int, genome_ref: Path) -> None:
     """If the target region is shorter than the max amplicon length, it should be padded to fit."""
-    target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
+    target_region = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
 
     with Primer3(genome_fasta=genome_ref) as designer:
-        padded_region: Span = designer._pad_target_region(
-            target=target, max_amplicon_length=max_amplicon_length
+        design_region: Span = designer._create_design_region(
+            target_region=target_region,
+            max_amplicon_length=max_amplicon_length,
+            min_primer_length=10,
         )
 
-    assert padded_region.length == max_amplicon_length
+    assert design_region.length == 2 * max_amplicon_length - target_region.length
 
 
-def test_pad_target_region_doesnt_pad(genome_ref: Path) -> None:
-    """If the target region is larger than the max amplicon length, no padding should occur."""
-    target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
+def test_create_design_region_raises_when_target_region_exceeds_max_amplicon_length(
+    genome_ref: Path,
+) -> None:
+    """
+    `_create_design_region()` should raise a ValueError when the target region is larger than the
+    max amplicon length.
+    """
+    target_region = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
 
     with Primer3(genome_fasta=genome_ref) as designer:
-        padded_region: Span = designer._pad_target_region(target=target, max_amplicon_length=10)
+        with pytest.raises(ValueError, match="exceeds the maximum size"):
+            designer._create_design_region(
+                target_region=target_region, max_amplicon_length=10, min_primer_length=10
+            )
 
-    assert padded_region == target
+
+def test_create_design_region_raises_when_primers_would_not_fit_in_design_region(
+    genome_ref: Path,
+) -> None:
+    """
+    `_create_design_region()` should raise a ValueError when the design region does not include
+    sufficient space flanking the target for a primer to be designed. (i.e. when this space is less
+    than the specified minimum primer length.)
+    """
+    target_region = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
+
+    with Primer3(genome_fasta=genome_ref) as designer:
+        with pytest.raises(ValueError, match="exceeds the maximum size"):
+            designer._create_design_region(
+                target_region=target_region, max_amplicon_length=55, min_primer_length=10
+            )
