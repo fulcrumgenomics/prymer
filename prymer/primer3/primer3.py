@@ -730,22 +730,33 @@ class Primer3(ExecutableRunner):
             ValueError: If the target region is too large to be padded.
 
         """
+        # Pad the target region on both sides by the maximum amplicon length (minus the length of
+        # the target). This ensures that the design region covers the complete window of potentially
+        # valid primer pairs.
         padding: int = max_amplicon_length - target_region.length
+
+        # Apply the padding, ensuring that we don't run out-of-bounds on the target contig.
         contig_length: int = self._dict[target_region.refname].length
+        design_start: int = max(1, target_region.start - padding)
+        design_end: int = min(target_region.end + padding, contig_length)
 
-        design_region: Span = replace(
-            target_region,
-            start=max(1, target_region.start - padding),
-            end=min(target_region.end + padding, contig_length),
-        )
-
-        left_design_window: int = target_region.start - design_region.start
-        right_design_window: int = design_region.end - target_region.end
-
+        # Validate that our design window includes sufficient space for a primer to be designed on
+        # each side of the target region.
+        left_design_window: int = target_region.start - design_start
+        right_design_window: int = design_end - target_region.end
         if left_design_window < min_primer_length or right_design_window < min_primer_length:
             raise ValueError(
-                f"Target region {target_region} is too large to design an amplicon of maximum "
-                f"length {max_amplicon_length}."
+                f"Target region {target_region} exceeds the maximum size compatible with a "
+                f"maximum amplicon length of {max_amplicon_length} and a minimum primer length of "
+                f"{min_primer_length}. The maximum amplicon length should exceed the length of "
+                "the target region by at least twice the minimum primer length."
             )
+
+        # Return the validated design region.
+        design_region: Span = replace(
+            target_region,
+            start=design_start,
+            end=design_end,
+        )
 
         return design_region
