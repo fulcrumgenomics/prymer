@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from tempfile import NamedTemporaryFile
+from unittest import mock
 
 import pytest
 
@@ -18,47 +18,55 @@ def test_close_twice() -> None:
     assert exec.close() is False
 
 
-def test_validate_executable_path_does_not_eexist() -> None:
+def test_validate_executable_path_does_not_exist(tmp_path: Path) -> None:
+    """
+    `validate_executable_path` should raise a ValueError when the provided executable does not
+    exist.
+    """
+    bad_path: Path = tmp_path / "nowhere"
+
     with pytest.raises(ValueError, match="Executable does not exist"):
-        ExecutableRunner.validate_executable_path(executable="/path/to/nowhere")
+        ExecutableRunner.validate_executable_path(executable=bad_path)
 
 
-def test_validate_executable_path_not_executable() -> None:
-    with NamedTemporaryFile(suffix=".exe", mode="w", delete=True) as tmpfile:
-        with pytest.raises(ValueError, match="is not executable"):
-            ExecutableRunner.validate_executable_path(executable=tmpfile.name)
+def test_validate_executable_path_not_executable(tmp_path: Path) -> None:
+    """
+    `validate_executable_path` should raise a ValueError when the provided executable does not have
+    execute permissions.
+    """
+    bad_path: Path = tmp_path / "not_executable"
+    bad_path.touch()
+
+    with pytest.raises(ValueError, match="is not executable"):
+        ExecutableRunner.validate_executable_path(executable=bad_path)
 
 
-def test_validate_executable_path() -> None:
-    exec = "yes"
-    exec_full_str = f"/usr/bin/{exec}"
-    exec_full_path = Path(exec_full_str)
-    assert exec_full_path.is_absolute()
+def test_validate_executable_path(tmp_path: Path) -> None:
+    """
+    `validate_executable_path` should return the `yes` executable in the following scenarios:
+    1. The name of the executable is passed as a string, and the executable is on the user's PATH.
+    2. The absolute path to the executable is passed, either as a string or a Path.
+    """
+    expected_path = tmp_path / "yes"
+    expected_path.touch()
+    expected_path.chmod(755)
 
-    # find it on the PATH
-    assert exec_full_path == ExecutableRunner.validate_executable_path(executable=exec)
-    # find it given an absolute path as a string
-    assert exec_full_path == ExecutableRunner.validate_executable_path(executable=exec_full_str)
-    # find it given an absolute path as a Path
-    assert exec_full_path == ExecutableRunner.validate_executable_path(executable=exec_full_path)
+    # Clear the PATH, to override any local versions of `yes` on the user's PATH
+    with mock.patch.dict(os.environ, clear=True):
+        os.environ["PATH"] = str(tmp_path)
 
-    # do not find it on the PATH if given as a Path
+        executables: list[str | Path] = ["yes", expected_path, str(expected_path)]
+        for executable in executables:
+            validated_path: Path = ExecutableRunner.validate_executable_path(executable=executable)
+            assert validated_path == expected_path
+
+
+def test_validate_executable_path_rejects_paths() -> None:
+    """
+    `validate_executable_path` should not treat non-existent Path objects as valid executables.
+
+    Specifically, if the user passes the name of an executable on the PATH as a `Path` instead of a
+    string, it should be treated as a non-existent Path and a `ValueError` should be raised.
+    """
     with pytest.raises(ValueError, match="Executable does not exist"):
-        ExecutableRunner.validate_executable_path(executable=Path(exec))
-
-
-def test_validate_executable_path_new_file() -> None:
-    with NamedTemporaryFile(suffix=".exe", mode="w", delete=True) as tmpfile:
-        exec_str: str = tmpfile.name
-        exec_path: Path = Path(exec_str)
-        # not an executable
-        with pytest.raises(ValueError, match="is not executable"):
-            ExecutableRunner.validate_executable_path(executable=exec_str)
-        # make it executable and test again
-        os.chmod(exec_str, 755)
-        exec_full_path: Path = exec_path.absolute()
-        assert exec_full_path == ExecutableRunner.validate_executable_path(executable=exec_str)
-        assert exec_full_path == ExecutableRunner.validate_executable_path(executable=exec_path)
-        assert exec_full_path == ExecutableRunner.validate_executable_path(
-            executable=exec_full_path
-        )
+        ExecutableRunner.validate_executable_path(executable=Path("yes"))
