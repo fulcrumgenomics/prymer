@@ -19,12 +19,20 @@ def test_close_twice() -> None:
     assert exec.close() is False
 
 
-def test_validate_executable_path_does_not_eexist() -> None:
+def test_validate_executable_path_does_not_exist() -> None:
+    """
+    `validate_executable_path` should raise a ValueError when the provided executable does not
+    exist.
+    """
     with pytest.raises(ValueError, match="Executable does not exist"):
         ExecutableRunner.validate_executable_path(executable="/path/to/nowhere")
 
 
 def test_validate_executable_path_not_executable() -> None:
+    """
+    `validate_executable_path` should raise a ValueError when the provided executable does not have
+    execute permissions.
+    """
     with NamedTemporaryFile(suffix=".exe", mode="w", delete=True) as tmpfile:
         with pytest.raises(ValueError, match="is not executable"):
             ExecutableRunner.validate_executable_path(executable=tmpfile.name)
@@ -38,9 +46,9 @@ def test_validate_executable_path_returns_existing_paths(executable: str | Path)
     """
     expected_path: Path = Path("/usr/bin/yes")
 
-    with mock.patch.dict(os.environ):
-        # Clear the PATH, in case the user has a local version of `yes` elsewhere on their PATH
-        os.environ.pop("PATH")
+    # Clear the PATH, in case the user has a local version of `yes` elsewhere on their PATH
+    with mock.patch.dict(os.environ, clear=True):
+        os.environ["PATH"] = "/usr/bin"
 
         validated_path: Path = ExecutableRunner.validate_executable_path(executable=executable)
         assert validated_path == expected_path
@@ -62,8 +70,8 @@ def test_validate_executable_path_rejects_paths() -> None:
     """
     `validate_executable_path` should not treat non-existent Path objects as valid executables.
 
-    If the user passes the name of an executable on the PATH as a `Path` instead of a string`, it
-    should be treated as a non-existent Path and a `ValueError` should be raised.
+    Specifically, if the user passes the name of an executable on the PATH as a `Path` instead of a
+    string, it should be treated as a non-existent Path and a `ValueError` should be raised.
     """
     with pytest.raises(ValueError, match="Executable does not exist"):
         ExecutableRunner.validate_executable_path(executable=Path("yes"))
