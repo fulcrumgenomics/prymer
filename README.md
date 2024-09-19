@@ -35,8 +35,8 @@
 [pypi-link]:            https://pypi.python.org/pypi/prymer
 [pypi-downloads-badge]: https://img.shields.io/pypi/dm/prymer
 [pypi-downloads-link]:  https://pypi.python.org/pypi/prymer
-[python-package-badge]: https://github.com/fulcrumgenomics/prymer/workflows/publish/badge.svg
-[python-package-link]:  https://github.com/fulcrumgenomics/prymer/actions?query=workflow%3A%22Python+package%22
+[python-package-badge]: https://github.com/fulcrumgenomics/prymer/workflows/publish_prymer/badge.svg
+[python-package-link]:  https://github.com/fulcrumgenomics/prymer/actions/workflows/publish_prymer.yml
 
 ## Quick setup
 
