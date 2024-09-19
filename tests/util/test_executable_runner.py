@@ -45,10 +45,10 @@ def test_validate_executable_path(tmp_path: Path) -> None:
     2. The absolute path to the executable is passed, either as a string or a Path.
     """
     expected_path = tmp_path / "yes"
-    expected_path.touch()  # create the file
-    expected_path.chmod(755)  # make it executable
+    expected_path.touch()
+    expected_path.chmod(755)
 
-    # Clear the PATH, in case the user has a local version of `yes` elsewhere on their PATH
+    # Clear the PATH, to override any local versions of `yes` on the user's PATH
     with mock.patch.dict(os.environ, clear=True):
         os.environ["PATH"] = str(tmp_path)
 
