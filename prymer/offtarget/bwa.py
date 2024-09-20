@@ -15,7 +15,13 @@ return a [`BwaResult`][prymer.offtarget.bwa.BwaResult], which represents zero or
 hits in the "XA" tag than the total number hits reported in the "HN".  This occurs when BWA finds more
 hits than `max_hits` (see `bwt aln -X`).
 
- ## Example
+Use of this module requires installation of a custom version of BWA named `bwa-aln-interactive`.
+See:
+
+    - https://github.com/fulcrumgenomics/bwa/tree/interactive_aln
+    - https://bioconda.github.io/recipes/bwa-aln-interactive/README.html
+
+## Example
 
 ```python
 >>> from pathlib import Path
@@ -193,7 +199,10 @@ class BwaAlnInteractive(ExecutableRunner):
     the process running and be able to send it chunks of reads periodically and get alignments
     back without waiting for a full batch of reads to be sent.
 
-    See: https://github.com/fulcrumgenomics/bwa/tree/interactive_aln
+    See:
+        - https://bioconda.github.io/recipes/bwa-aln-interactive/README.html
+        - https://github.com/fulcrumgenomics/bwa/tree/interactive_aln
+
 
     Attributes:
         max_hits: the maximum number of hits to report - if more than this number of seed hits
@@ -207,7 +216,7 @@ class BwaAlnInteractive(ExecutableRunner):
         self,
         ref: Path,
         max_hits: int,
-        executable: str | Path = "bwa",
+        executable: str | Path = "bwa-aln-interactive",
         max_mismatches: int = 3,
         max_mismatches_in_seed: int = 3,
         max_gap_opens: int = 0,
@@ -222,7 +231,7 @@ class BwaAlnInteractive(ExecutableRunner):
             ref: the path to the reference FASTA, which must be indexed with bwa.
             max_hits: the maximum number of hits to report - if more than this number of seed hits
                       are found, report only the count and not each hit.
-            executable: string or Path representation of the `bwa` executable path
+            executable: string or Path representation of the `bwa-aln-interactive` executable path
             max_mismatches: the maximum number of mismatches allowed in the full query sequence
             max_mismatches_in_seed: the maximum number of mismatches allowed in the seed region
             max_gap_opens: the maximum number of gap opens allowed in the full query sequence
@@ -252,7 +261,7 @@ class BwaAlnInteractive(ExecutableRunner):
             else:
                 message = "BWA index file does not exist:\n\t"
             message += "\t\n".join(f"{p}" for p in missing_aux_paths)
-            raise FileNotFoundError(f"{message}\nPlease index with: `bwa index {ref}`")
+            raise FileNotFoundError(f"{message}\nPlease index with: `{executable_path} index {ref}`")
 
         # -N = non-iterative mode: search for all n-difference hits (slooow)
         # -S = output SAM (run samse)

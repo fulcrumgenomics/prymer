@@ -123,7 +123,7 @@ class OffTargetResult:
 
 class OffTargetDetector:
     """A class for detecting off-target mappings of primers and primer pairs that uses a custom
-    version of "bwa aln".
+    version of "bwa aln" named "bwa-aln-interactive".
 
     The off-target detection is faster and more sensitive than traditional isPCR and in addition can
     correctly detect primers that are repetitive and contain many thousands or millions of mappings
@@ -146,7 +146,7 @@ class OffTargetDetector:
         threads: Optional[int] = None,
         keep_spans: bool = True,
         keep_primer_spans: bool = True,
-        executable: str | Path = "bwa",
+        executable: str | Path = "bwa-aln-interactive",
     ) -> None:
         """
         Args:

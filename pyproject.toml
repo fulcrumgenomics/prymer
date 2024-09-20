@@ -125,6 +125,11 @@ minversion = "7.4"
 addopts    = [
     "--ignore=docs/scripts",
     "--color=yes",
+    "--cov",
+    "--cov-report=xml",
+    "--cov-branch",
+    "--doctest-plus",
+    "--doctest-modules",
     "--mypy",
     "--ruff",
     "--doctest-plus",
