@@ -24,11 +24,11 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - name: Build wheels
-        run: pip wheel -w wheelhouse .
+        run: pip wheel --no-deps -w wheelhouse .
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: prymer-wheels-${{ matrix.python }}
-          path: ./wheelhouse/*.whl
+          path: ./wheelhouse/prymer*.whl
           if-no-files-found: error
