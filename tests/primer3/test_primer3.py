@@ -168,7 +168,7 @@ def test_internal_probe_valid_designs(
     genome_ref: Path,
     valid_probe_params_no_exclude: ProbeParameters,
 ) -> None:
-    """Test that left primer designs are within the specified design specifications."""
+    """Test that internal probe designs are within the specified design specifications."""
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
     assert valid_probe_params_no_exclude is not None
     design_input = Primer3Input(
@@ -177,9 +177,18 @@ def test_internal_probe_valid_designs(
         task=PickHybProbeOnly(),
     )
     with Primer3(genome_fasta=genome_ref) as designer:
-        print(designer.get_design_sequences(target))
-        valid_probes = designer.design_oligos(design_input=design_input)
-    print(valid_probes)
+        primer3_result = designer.design_oligos(design_input=design_input)
+    assert len(primer3_result.filtered_designs) == 5
+    for probe_design in primer3_result.filtered_designs:
+        assert probe_design.self_any_th < valid_probe_params_no_exclude.probe_max_self_any_thermo
+        assert probe_design.self_end_th < valid_probe_params_no_exclude.probe_max_self_end_thermo
+        assert probe_design.hairpin_th < valid_probe_params_no_exclude.probe_max_hairpin_thermo
+        assert (
+            probe_design.longest_dinucleotide_run_length()
+            <= valid_probe_params_no_exclude.probe_max_dinuc_bases
+        )
+        assert probe_design.span.start >= target.start
+        assert probe_design.span.end <= target.end
 
 
 def test_left_primer_valid_designs(
