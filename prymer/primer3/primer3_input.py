@@ -122,12 +122,19 @@ class Primer3Input:
                 "Primer3 requires at least one set of parameters"
                 " for either primer or probe design"
             )
-
-        if self.primer_and_amplicon_params is not None and self.primer_weights is None:
-            object.__setattr__(self, "primer_weights", PrimerAndAmpliconWeights())
-
-        if self.probe_params is not None and self.probe_weights is None:
-            object.__setattr__(self, "probe_weights", ProbeWeights())
+        if self.task.requires_primer_amplicon_params:
+            if self.primer_and_amplicon_params is None:
+                raise ValueError("Primer and amplicon params are required for"
+                                 " a primer design task!")
+            else:
+                if self.primer_weights is None:
+                    object.__setattr__(self, "primer_weights", PrimerAndAmpliconWeights())
+        if self.task.requires_probe_params:
+            if self.probe_params is None:
+                raise ValueError("Probe paramas are required for a probe design task!")
+            else:
+                if self.probe_weights is None:
+                    object.__setattr__(self, "probe_weights", ProbeWeights())
 
     def to_input_tags(self, design_region: Span) -> dict[Primer3InputTag, Any]:
         """Assembles `Primer3InputTag` and values for input to `Primer3`
