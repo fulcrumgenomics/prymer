@@ -63,7 +63,7 @@ parameters and target region.
     primer_and_amplicon_params=params, \
     task=DesignLeftPrimersTask(), \
 )
->>> left_result = designer.design_primers(design_input=design_input)
+>>> left_result = designer.design_oligos(design_input=design_input)
 
 ```
 
@@ -140,6 +140,7 @@ from fgpyo.sequence import reverse_complement
 from fgpyo.util.metric import Metric
 
 from prymer.api.primer import Primer
+from prymer.api.probe import Probe
 from prymer.api.primer_like import PrimerLike
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
@@ -152,6 +153,7 @@ from prymer.primer3.primer3_input_tag import Primer3InputTag
 from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
 from prymer.primer3.primer3_task import DesignRightPrimersTask
+from prymer.primer3.primer3_task import PickHybProbeOnly
 from prymer.util.executable_runner import ExecutableRunner
 
 
@@ -309,13 +311,6 @@ class Primer3(ExecutableRunner):
         return soft_masked, hard_masked
 
     @staticmethod
-    def _is_valid_primer(design_input: Primer3Input, primer_design: Primer) -> bool:
-        return (
-            primer_design.longest_dinucleotide_run_length()
-            <= design_input.primer_and_amplicon_params.primer_max_dinuc_bases
-        )
-
-    @staticmethod
     def _screen_pair_results(
         design_input: Primer3Input, designed_primer_pairs: list[PrimerPair]
     ) -> tuple[list[PrimerPair], list[Primer]]:
@@ -349,8 +344,8 @@ class Primer3(ExecutableRunner):
                 valid_primer_pair_designs.append(primer_pair)
         return valid_primer_pair_designs, dinuc_pair_failures
 
-    def design_primers(self, design_input: Primer3Input) -> Primer3Result:  # noqa: C901
-        """Designs primers or primer pairs given a target region.
+    def design_oligos(self, design_input: Primer3Input) -> Primer3Result:  # noqa: C901
+        """Designs primers, primer pairs, and/or internal probes given a target region.
 
         Args:
             design_input: encapsulates the target region, design task, specifications, and scoring
@@ -371,12 +366,15 @@ class Primer3(ExecutableRunner):
                 f"Error, trying to use a subprocess that has already been "
                 f"terminated, return code {self._subprocess.returncode}"
             )
-
-        design_region: Span = self._create_design_region(
-            target_region=design_input.target,
-            max_amplicon_length=design_input.primer_and_amplicon_params.max_amplicon_length,
-            min_primer_length=design_input.primer_and_amplicon_params.min_primer_length,
-        )
+        match design_input.task:
+            case PickHybProbeOnly():
+                design_region: Span = design_input.target
+            case _:
+                design_region: Span = self._create_design_region(
+                    target_region=design_input.target,
+                    max_amplicon_length=design_input.primer_and_amplicon_params.max_amplicon_length,
+                    min_primer_length=design_input.primer_and_amplicon_params.min_primer_length,
+                )
 
         soft_masked, hard_masked = self.get_design_sequences(design_region)
         global_primer3_params = {
@@ -389,7 +387,6 @@ class Primer3(ExecutableRunner):
             **global_primer3_params,
             **design_input.to_input_tags(design_region=design_region),
         }
-
         # Submit inputs to primer3
         for tag, value in assembled_primer3_tags.items():
             self._subprocess.stdin.write(f"{tag}={value}")
@@ -441,6 +438,19 @@ class Primer3(ExecutableRunner):
             primer3_error("Primer3 failed")
 
         match design_input.task:
+            case PickHybProbeOnly(): # Probe design
+                all_probe_results: list[Probe] = Primer3._build_probes(
+                    design_input=design_input,
+                    design_results=primer3_results,
+                    design_region=design_region,
+                    unmasked_design_seq=soft_masked)
+
+                return Primer3._assemble_single_designs(
+                    design_input=design_input,
+                    design_results=primer3_results,
+                    unfiltered_designs=all_probe_results,
+                )
+
             case DesignPrimerPairsTask():  # Primer pair design
                 all_pair_results: list[PrimerPair] = Primer3._build_primer_pairs(
                     design_input=design_input,
@@ -462,7 +472,7 @@ class Primer3(ExecutableRunner):
                     design_task=design_input.task,
                     unmasked_design_seq=soft_masked,
                 )
-                return Primer3._assemble_primers(
+                return Primer3._assemble_single_designs(
                     design_input=design_input,
                     design_results=primer3_results,
                     unfiltered_designs=all_single_results,
@@ -470,6 +480,46 @@ class Primer3(ExecutableRunner):
 
             case _ as unreachable:
                 assert_never(unreachable)
+
+    @staticmethod
+    def _build_probes(
+            design_input: Primer3Input,
+            design_results: dict[str, str],
+            design_region: Span,
+            unmasked_design_seq: str,
+    ) -> list[Probe]:
+        count: int = _check_design_results(design_input, design_results)
+        task_key = design_input.task.task_type
+        probes: list[Probe] = []
+        for idx in range(count):
+            key = f"PRIMER_{task_key}_{idx}"
+            str_position, str_length = design_results[key].split(",", maxsplit=1)
+            position, length = int(str_position), int(str_length)  # position is 1-based
+
+            span = design_region.get_subspan(
+                offset=position - 1, subspan_length=length, strand=design_region.strand
+            )
+
+            slice_offset = design_region.get_offset(span.start)
+            slice_end = design_region.get_offset(span.end) + 1
+
+            # remake the primer sequence from the un-masked genome sequence just in case
+            bases = unmasked_design_seq[slice_offset:slice_end]
+            if span.strand == Strand.NEGATIVE:
+                bases = reverse_complement(bases)
+
+            probes.append(
+                Probe(
+                    bases=bases,
+                    tm=float(design_results[f"{key}_TM"]),
+                    penalty=float(design_results[f"{key}_PENALTY"]),
+                    span=span,
+                    self_any_th=float(design_results[f"{key}_SELF_ANY_TH"]),
+                    self_end_th=float(design_results[f"{key}_SELF_END_TH"]),
+                    hairpin_th=float(design_results[f"{key}_HAIRPIN_TH"]),
+                )
+            )
+        return probes
 
     @staticmethod
     def _build_primers(
@@ -495,18 +545,9 @@ class Primer3(ExecutableRunner):
         Raises:
             ValueError: if Primer3 does not return primer designs
         """
-        count_tag = design_input.task.count_tag
+        count: int = _check_design_results(design_input, design_results)
 
-        maybe_count: Optional[str] = design_results.get(count_tag)
-        if maybe_count is None:  # no count tag was found
-            if "PRIMER_ERROR" in design_results:
-                primer_error = design_results["PRIMER_ERROR"]
-                raise ValueError(f"Primer3 returned an error: {primer_error}")
-            else:
-                raise ValueError(f"Primer3 did not return the count tag: {count_tag}")
-        count: int = int(maybe_count)
-
-        primers = []
+        primers: list[Primer] = []
         for idx in range(count):
             key = f"PRIMER_{design_task.task_type}_{idx}"
             str_position, str_length = design_results[key].split(",", maxsplit=1)
@@ -544,41 +585,28 @@ class Primer3(ExecutableRunner):
         return primers
 
     @staticmethod
-    def _assemble_primers(
-        design_input: Primer3Input, design_results: dict[str, str], unfiltered_designs: list[Primer]
+    def _assemble_single_designs(design_input: Primer3Input, design_results: dict[str, str], unfiltered_designs: Union[list[Primer], list[Probe]]
     ) -> Primer3Result:
-        """Helper function to organize primer designs into valid and failed designs.
+        """Screens oligo designs (primers or probes) emitted by Primer3 for acceptable dinucleotide runs and extracts failure reasons for failed designs."""
 
-        Wraps `Primer3._is_valid_primer()` and `Primer3._build_failures()` to filter out designs
-        with dinucleotide runs that are too long and extract additional failure reasons emitted by
-        Primer3.
-
-        Args:
-            design_input: encapsulates the target region, design task, specifications,
-             and scoring penalties
-            unfiltered_designs: list of primers emitted from Primer3
-             design_results: key-value pairs of results reported by Primer3
-
-        Returns:
-            primer_designs: a `Primer3Result` that encapsulates valid and failed designs
-        """
-        valid_primer_designs = [
+        valid_oligo_designs = [
             design
             for design in unfiltered_designs
-            if Primer3._is_valid_primer(primer_design=design, design_input=design_input)
+            if _has_acceptable_dinuc_run(oligo_design=design, design_input=design_input)
         ]
         dinuc_failures = [
             design
             for design in unfiltered_designs
-            if not Primer3._is_valid_primer(primer_design=design, design_input=design_input)
+            if not _has_acceptable_dinuc_run(oligo_design=design, design_input=design_input)
         ]
 
         failure_strings = [design_results[f"PRIMER_{design_input.task.task_type}_EXPLAIN"]]
         failures = Primer3._build_failures(dinuc_failures, failure_strings)
-        primer_designs: Primer3Result = Primer3Result(
-            filtered_designs=valid_primer_designs, failures=failures
+        design_candidates: Primer3Result = Primer3Result(
+            filtered_designs=valid_oligo_designs, failures=failures
         )
-        return primer_designs
+        return design_candidates
+
 
     @staticmethod
     def _build_primer_pairs(
@@ -684,7 +712,7 @@ class Primer3(ExecutableRunner):
 
     @staticmethod
     def _build_failures(
-        dinuc_failures: list[Primer],
+        dinuc_failures: Union[list[Primer], list[Probe]],
         failure_strings: list[str],
     ) -> list[Primer3Failure]:
         """Extracts the reasons why designs that were considered by Primer3 failed
@@ -760,3 +788,28 @@ class Primer3(ExecutableRunner):
         )
 
         return design_region
+
+def _check_design_results(design_input: Primer3Input, design_results: dict[str, str]) -> int:
+    """Checks for any additional Primer3 errors and reports out the count of designs emitted by Primer3."""
+    count_tag = design_input.task.count_tag
+    maybe_count: Optional[str] = design_results.get(count_tag)
+    if maybe_count is None:  # no count tag was found
+        if "PRIMER_ERROR" in design_results:
+            primer_error = design_results["PRIMER_ERROR"]
+            raise ValueError(f"Primer3 returned an error: {primer_error}")
+        else:
+            raise ValueError(f"Primer3 did not return the count tag: {count_tag}")
+    count: int = int(maybe_count)
+
+    return count
+
+def _has_acceptable_dinuc_run(design_input: Primer3Input, oligo_design: Union[Primer, Probe]) -> bool:
+    if type(oligo_design) is Primer:
+        max_dinuc_bases: int = design_input.primer_and_amplicon_params.primer_max_dinuc_bases
+    elif type(oligo_design) is Probe:
+        max_dinuc_bases: int = design_input.probe_params.probe_max_dinuc_bases
+
+    return (
+            oligo_design.longest_dinucleotide_run_length()
+            <= max_dinuc_bases
+    )
