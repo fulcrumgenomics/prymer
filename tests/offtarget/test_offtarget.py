@@ -8,10 +8,10 @@ from prymer.api.primer import Primer
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
 from prymer.api.span import Strand
+from prymer.offtarget import OffTargetDetector
+from prymer.offtarget import OffTargetResult
 from prymer.offtarget.bwa import BwaHit
 from prymer.offtarget.bwa import BwaResult
-from prymer.offtarget.offtarget_detector import OffTargetDetector
-from prymer.offtarget.offtarget_detector import OffTargetResult
 
 
 def _build_detector(

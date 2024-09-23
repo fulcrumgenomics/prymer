@@ -26,7 +26,7 @@ from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
 from prymer.api.span import Strand
 from prymer.ntthal import NtThermoAlign
-from prymer.offtarget.offtarget_detector import OffTargetDetector
+from prymer.offtarget import OffTargetDetector
 
 
 @pytest.fixture
