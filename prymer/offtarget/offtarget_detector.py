@@ -107,8 +107,9 @@ class OffTargetResult:
             pair would generate an acceptable number of amplicons in the reference genome (i.e.
             `min_primer_pair_hits <= num_amplicons <= max_primer_pair_hits`). False otherwise.
         cached: True if this result is part of a cache, False otherwise.  This is useful for testing
-        spans: the set of mappings of the primer pair to the genome or an empty list if mappings
-            were not retained
+        spans: The set of mappings of the primer pair to the genome (i.e., the region spanned by the
+            inferred amplicon). This list will be empty if the generating [[OffTargetDetector]] was
+            constructed with `keep_spans=False`.
         left_primer_spans: the list of mappings for the left primer, independent of the pair
             mappings, or an empty list
         right_primer_spans: the list of mappings for the right primer, independent of the pair
