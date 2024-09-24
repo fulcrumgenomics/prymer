@@ -54,7 +54,7 @@ from prymer.api.primer import Primer
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
 from prymer.ntthal import NtThermoAlign
-from prymer.offtarget.offtarget_detector import OffTargetDetector
+from prymer.offtarget import OffTargetDetector
 
 
 @dataclass(frozen=True, init=True, slots=True)

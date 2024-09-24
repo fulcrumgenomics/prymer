@@ -10,23 +10,23 @@ import pysam
 import pytest
 from fgpyo.sequence import reverse_complement
 
+from prymer.api import FilteringParams
+from prymer.api import MinOptMax
+from prymer.api import Primer
+from prymer.api import PrimerPair
+from prymer.api import Span
+from prymer.api import Strand
+from prymer.api import build_and_pick_primer_pairs
+from prymer.api import build_primer_pairs
+from prymer.api import pick_top_primer_pairs
 from prymer.api.melting import calculate_long_seq_tm
-from prymer.api.minoptmax import MinOptMax
-from prymer.api.picking import FilteringParams
 from prymer.api.picking import _dist_penalty
 from prymer.api.picking import _seq_penalty
-from prymer.api.picking import build_and_pick_primer_pairs
-from prymer.api.picking import build_primer_pairs
 from prymer.api.picking import check_primer_overlap
 from prymer.api.picking import is_acceptable_primer_pair
-from prymer.api.picking import pick_top_primer_pairs
 from prymer.api.picking import score as picking_score
-from prymer.api.primer import Primer
-from prymer.api.primer_pair import PrimerPair
-from prymer.api.span import Span
-from prymer.api.span import Strand
 from prymer.ntthal import NtThermoAlign
-from prymer.offtarget.offtarget_detector import OffTargetDetector
+from prymer.offtarget import OffTargetDetector
 
 
 @pytest.fixture
