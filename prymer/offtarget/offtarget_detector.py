@@ -142,6 +142,7 @@ class OffTargetDetector:
         max_mismatches_in_three_prime_region: int,
         max_mismatches: int,
         max_amplicon_size: int,
+        min_primer_pair_hits: int = 1,
         cache_results: bool = True,
         threads: Optional[int] = None,
         keep_spans: bool = True,
@@ -156,6 +157,12 @@ class OffTargetDetector:
                 primer failed.
             max_primer_pair_hits: the maximum number of amplicons a primer pair can make and be
                 considered passing
+            min_primer_pair_hits: The minimum number of amplicons a primer pair can make and be
+                considered passing. (In most cases, this is the number of amplicons a primer pair is
+                expected to generate.) The default is 1, which is appropriate when the primer pair
+                is being evaluated for off-target hits against the same reference genome from which
+                the primers were generated. If the primer pair was generated from a different
+                reference sequence, it may be appropriate to set this value to 0.
             three_prime_region_length: the number of bases at the 3' end of the primer in which the
                 parameter max_mismatches_in_three_prime_region is evaluated
             max_mismatches_in_three_prime_region: the maximum number of mismatches that are
@@ -186,6 +193,7 @@ class OffTargetDetector:
         )
         self._max_primer_hits = max_primer_hits
         self._max_primer_pair_hits: int = max_primer_pair_hits
+        self._min_primer_pair_hits: int = min_primer_pair_hits
         self._max_amplicon_size: int = max_amplicon_size
         self._cache_results: bool = cache_results
         self._keep_spans: bool = keep_spans
@@ -270,7 +278,7 @@ class OffTargetDetector:
             amplicons = self._to_amplicons(p1.hits, p2.hits, self._max_amplicon_size)
             result = OffTargetResult(
                 primer_pair=primer_pair,
-                passes=0 < len(amplicons) <= self._max_primer_pair_hits,
+                passes=self._min_primer_pair_hits <= len(amplicons) <= self._max_primer_pair_hits,
                 spans=amplicons if self._keep_spans else [],
                 left_primer_spans=(
                     [self._hit_to_span(h) for h in p1.hits] if self._keep_primer_spans else []
