@@ -358,10 +358,27 @@ class OffTargetDetector:
         return result
 
     def mappings_of(self, primers: list[PrimerType]) -> dict[str, BwaResult]:
-        """Function to take a set of primers and map any that are not cached, and return mappings
-        for all of them.  Note: the genomics sequence of the returned mappings are on the opposite
-        strand of that of the strand of the primer.  I.e. we map the complementary bases (reversed)
-        to that of the primer."""
+        """
+        Map primers to the reference genome using `bwa aln`.
+
+        Alignment results may be optionally cached for efficiency. Set `cache_results` to `True`
+        when instantiating the [[OffTargetDetector]] to enable caching.
+
+        Any primers without cached results, or all primers when `cache_results` is `False`, will be
+        mapped to the reference genome using `bwa aln` and the specified alignment parameters.
+
+        **Note**: The reverse complement of each primer sequence is used for mapping. The `query`
+        sequence in each `BwaResult` will match the input primer sequence, as will the sequences
+        used as keys in the output dictionary. However, the coordinates reported in each `BwaHit`
+        associated with a result will correspond to complementary sequence.
+
+        Args:
+            primers: A list of primers to map.
+
+        Returns:
+            A dictionary mapping each primer's sequence to its alignment results.
+            See `BwaResult` for details regarding the attributes included in each result.
+        """
 
         primers_to_map: list[PrimerType]
         if not self._cache_results:
