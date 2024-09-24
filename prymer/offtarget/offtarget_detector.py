@@ -165,6 +165,19 @@ class OffTargetDetector:
         executable: str | Path = "bwa",
     ) -> None:
         """
+        Initialize an [[OffTargetDetector]].
+
+        This class accepts a large number of parameters to control the behavior of the off-target
+        detection. The parameters are used in the various aspects of off-target detection as
+        follows:
+
+        1. Alignment (off-target hit detection): `ref`, `executable`, `threads`,
+           `three_prime_region_length`, `max_mismatches_in_three_prime_region`, `max_mismatches`,
+           and `max_primer_hits`.
+        2. Filtering of individual primers: `max_primer_hits`.
+        3. Checking of primer pairs: `max_primer_hits`, `min_primer_pair_hits`,
+           `max_primer_pair_hits`, and `max_amplicon_size`.
+
         Args:
             ref: the reference genome fasta file (must be indexed with BWA)
             max_primer_hits: the maximum number of hits an individual primer can have in the genome
@@ -188,10 +201,10 @@ class OffTargetDetector:
             max_amplicon_size: the maximum amplicon size to consider amplifiable
             cache_results: if True, cache results for faster re-querying
             threads: the number of threads to use when invoking bwa
-            keep_spans: if True, [[OffTargetResult]] objects will have amplicon spans
+            keep_spans: if True, [[OffTargetResult]] objects will be reported with amplicon spans
                 populated, otherwise not
-            keep_primer_spans: if True, [[OffTargetResult]] objects will have left and right
-                primer spans
+            keep_primer_spans: if True, [[OffTargetResult]] objects will be reported with left and
+                right primer spans
             executable: string or Path representation of the `bwa` executable path
         """
         self._primer_cache: dict[str, BwaResult] = {}
