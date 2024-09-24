@@ -1,5 +1,5 @@
-from prymer.primer3.primer3_input_tag import Primer3InputTag
-from prymer.primer3.primer3_weights import Primer3Weights
+from prymer.primer3 import Primer3InputTag
+from prymer.primer3 import Primer3Weights
 
 
 def test_primer_weights_valid() -> None:

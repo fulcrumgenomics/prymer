@@ -6,20 +6,20 @@ import pysam
 import pytest
 from fgpyo.sequence import reverse_complement
 
-from prymer.api.minoptmax import MinOptMax
-from prymer.api.primer import Primer
-from prymer.api.primer_pair import PrimerPair
-from prymer.api.span import Span
-from prymer.api.span import Strand
-from prymer.api.variant_lookup import cached
-from prymer.primer3.primer3 import Primer3
-from prymer.primer3.primer3 import Primer3Failure
-from prymer.primer3.primer3 import Primer3Result
-from prymer.primer3.primer3_input import Primer3Input
-from prymer.primer3.primer3_parameters import Primer3Parameters
-from prymer.primer3.primer3_task import DesignLeftPrimersTask
-from prymer.primer3.primer3_task import DesignPrimerPairsTask
-from prymer.primer3.primer3_task import DesignRightPrimersTask
+from prymer.api import MinOptMax
+from prymer.api import Primer
+from prymer.api import PrimerPair
+from prymer.api import Span
+from prymer.api import Strand
+from prymer.api import cached
+from prymer.primer3 import DesignLeftPrimersTask
+from prymer.primer3 import DesignPrimerPairsTask
+from prymer.primer3 import DesignRightPrimersTask
+from prymer.primer3 import Primer3
+from prymer.primer3 import Primer3Failure
+from prymer.primer3 import Primer3Input
+from prymer.primer3 import Primer3Parameters
+from prymer.primer3 import Primer3Result
 
 
 @pytest.fixture(scope="session")
