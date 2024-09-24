@@ -233,7 +233,7 @@ class OffTargetDetector:
 
         This method maps each primer to the specified reference with `bwa aln` to search for
         off-target hits. Note that when the reference includes the sequence from which the primers
-        were design, the on-target hit will be included in the hit count. `max_primer_hits` should
+        were designed, the on-target hit will be included in the hit count. `max_primer_hits` should
         be set to at least 1 in this case.
 
         Args:
