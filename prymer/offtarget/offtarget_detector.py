@@ -158,10 +158,11 @@ class OffTargetDetector:
             max_primer_pair_hits: the maximum number of amplicons a primer pair can make and be
                 considered passing
             min_primer_pair_hits: The minimum number of amplicons a primer pair can make and be
-                considered passing. The default is 1, which is appropriate when the primer pair is
-                being evaluated for off-target hits against the same reference genome from which the
-                primers were generated. If the primer pair was generated from a different reference
-                sequence, it may be appropriate to set this value to 0.
+                considered passing. (In most cases, this is the number of amplicons a primer pair is
+                expected to generate.) The default is 1, which is appropriate when the primer pair
+                is being evaluated for off-target hits against the same reference genome from which
+                the primers were generated. If the primer pair was generated from a different
+                reference sequence, it may be appropriate to set this value to 0.
             three_prime_region_length: the number of bases at the 3' end of the primer in which the
                 parameter max_mismatches_in_three_prime_region is evaluated
             max_mismatches_in_three_prime_region: the maximum number of mismatches that are
