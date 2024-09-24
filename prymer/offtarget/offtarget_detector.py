@@ -136,7 +136,7 @@ class OffTargetDetector:
     Note that while this class invokes BWA with multiple threads, it is not itself thread-safe.
     Only one thread at a time should invoke methods on this class without external synchronization.
 
-    Off-target detection may be performed for individual primers or primer pairs.
+    Off-target detection may be performed for individual primers and/or primer pairs.
 
     To detect off-target hits for individual primers, use the `OffTargetDetector.filters()` method,
     which will remove any primers that have more than the specified number of maximum hits against
