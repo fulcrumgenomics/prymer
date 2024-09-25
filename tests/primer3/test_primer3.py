@@ -12,9 +12,10 @@ from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
 from prymer.api.span import Strand
 from prymer.api.variant_lookup import cached
-from prymer.primer3.primer3 import Primer3, _has_acceptable_dinuc_run
+from prymer.primer3.primer3 import Primer3
 from prymer.primer3.primer3 import Primer3Failure
 from prymer.primer3.primer3 import Primer3Result
+from prymer.primer3.primer3 import _has_acceptable_dinuc_run
 from prymer.primer3.primer3_input import Primer3Input
 from prymer.primer3.primer3_parameters import PrimerAndAmpliconParameters
 from prymer.primer3.primer3_parameters import ProbeParameters
@@ -179,6 +180,7 @@ def test_internal_probe_valid_designs(
         print(designer.get_design_sequences(target))
         valid_probes = designer.design_oligos(design_input=design_input)
     print(valid_probes)
+
 
 def test_left_primer_valid_designs(
     genome_ref: Path,

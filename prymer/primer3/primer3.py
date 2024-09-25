@@ -140,9 +140,9 @@ from fgpyo.sequence import reverse_complement
 from fgpyo.util.metric import Metric
 
 from prymer.api.primer import Primer
-from prymer.api.probe import Probe
 from prymer.api.primer_like import PrimerLike
 from prymer.api.primer_pair import PrimerPair
+from prymer.api.probe import Probe
 from prymer.api.span import Span
 from prymer.api.span import Strand
 from prymer.api.variant_lookup import SimpleVariant
@@ -366,11 +366,12 @@ class Primer3(ExecutableRunner):
                 f"Error, trying to use a subprocess that has already been "
                 f"terminated, return code {self._subprocess.returncode}"
             )
+        design_region: Span
         match design_input.task:
             case PickHybProbeOnly():
-                design_region: Span = design_input.target
+                design_region = design_input.target
             case _:
-                design_region: Span = self._create_design_region(
+                design_region = self._create_design_region(
                     target_region=design_input.target,
                     max_amplicon_length=design_input.primer_and_amplicon_params.max_amplicon_length,
                     min_primer_length=design_input.primer_and_amplicon_params.min_primer_length,
@@ -438,12 +439,13 @@ class Primer3(ExecutableRunner):
             primer3_error("Primer3 failed")
 
         match design_input.task:
-            case PickHybProbeOnly(): # Probe design
+            case PickHybProbeOnly():  # Probe design
                 all_probe_results: list[Probe] = Primer3._build_probes(
                     design_input=design_input,
                     design_results=primer3_results,
                     design_region=design_region,
-                    unmasked_design_seq=soft_masked)
+                    unmasked_design_seq=soft_masked,
+                )
 
                 return Primer3._assemble_single_designs(
                     design_input=design_input,
@@ -483,10 +485,10 @@ class Primer3(ExecutableRunner):
 
     @staticmethod
     def _build_probes(
-            design_input: Primer3Input,
-            design_results: dict[str, str],
-            design_region: Span,
-            unmasked_design_seq: str,
+        design_input: Primer3Input,
+        design_results: dict[str, str],
+        design_region: Span,
+        unmasked_design_seq: str,
     ) -> list[Probe]:
         count: int = _check_design_results(design_input, design_results)
         task_key = design_input.task.task_type
@@ -585,9 +587,13 @@ class Primer3(ExecutableRunner):
         return primers
 
     @staticmethod
-    def _assemble_single_designs(design_input: Primer3Input, design_results: dict[str, str], unfiltered_designs: Union[list[Primer], list[Probe]]
+    def _assemble_single_designs(
+        design_input: Primer3Input,
+        design_results: dict[str, str],
+        unfiltered_designs: Union[list[Primer], list[Probe]],
     ) -> Primer3Result:
-        """Screens oligo designs (primers or probes) emitted by Primer3 for acceptable dinucleotide runs and extracts failure reasons for failed designs."""
+        """Screens oligo designs (primers or probes) emitted by Primer3 for acceptable dinucleotide
+        runs and extracts failure reasons for failed designs."""
 
         valid_oligo_designs = [
             design
@@ -606,7 +612,6 @@ class Primer3(ExecutableRunner):
             filtered_designs=valid_oligo_designs, failures=failures
         )
         return design_candidates
-
 
     @staticmethod
     def _build_primer_pairs(
@@ -789,8 +794,9 @@ class Primer3(ExecutableRunner):
 
         return design_region
 
+
 def _check_design_results(design_input: Primer3Input, design_results: dict[str, str]) -> int:
-    """Checks for any additional Primer3 errors and reports out the count of designs emitted by Primer3."""
+    """Checks for any additional Primer3 errors and reports out the count of emitted designs."""
     count_tag = design_input.task.count_tag
     maybe_count: Optional[str] = design_results.get(count_tag)
     if maybe_count is None:  # no count tag was found
@@ -803,13 +809,14 @@ def _check_design_results(design_input: Primer3Input, design_results: dict[str, 
 
     return count
 
-def _has_acceptable_dinuc_run(design_input: Primer3Input, oligo_design: Union[Primer, Probe]) -> bool:
-    if type(oligo_design) is Primer:
-        max_dinuc_bases: int = design_input.primer_and_amplicon_params.primer_max_dinuc_bases
-    elif type(oligo_design) is Probe:
-        max_dinuc_bases: int = design_input.probe_params.probe_max_dinuc_bases
 
-    return (
-            oligo_design.longest_dinucleotide_run_length()
-            <= max_dinuc_bases
-    )
+def _has_acceptable_dinuc_run(
+    design_input: Primer3Input, oligo_design: Union[Primer, Probe]
+) -> bool:
+    max_dinuc_bases: int
+    if type(oligo_design) is Primer:
+        max_dinuc_bases = design_input.primer_and_amplicon_params.primer_max_dinuc_bases
+    elif type(oligo_design) is Probe:
+        max_dinuc_bases = design_input.probe_params.probe_max_dinuc_bases
+
+    return oligo_design.longest_dinucleotide_run_length() <= max_dinuc_bases
