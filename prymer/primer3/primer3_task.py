@@ -194,7 +194,7 @@ class DesignPrimerPairsTask(Primer3Task, task_type=TaskType.PAIR):
             Primer3InputTag.PRIMER_PICK_RIGHT_PRIMER: 1,
             Primer3InputTag.PRIMER_PICK_INTERNAL_OLIGO: 0,
             Primer3InputTag.SEQUENCE_TARGET: f"{target.start - design_region.start + 1},"
-                                             f"{target.length}",
+            f"{target.length}",
         }
 
     @property
