@@ -18,7 +18,7 @@ amplicons prior to primer design.
 Designing primers (left or right) or primer pairs using Primer3 is primarily performed using the 
 [`Primer3`][prymer.primer3.primer3.Primer3] class, which wraps the
 [`primer3` command line tool](https://github.com/primer3-org/primer3).  The 
-[`design_primers()`][prymer.primer3.primer3.Primer3.design_primers] facilitates the design of single and paired primers 
+[`design_oligos()`][prymer.primer3.primer3.Primer3.design_oligos] facilitates the design of primers (single and paired) and/or internal probes 
 for a single target. The `Primer3` instance is intended to be re-used to design primers across multiple targets, or 
 re-design (after changing parameters) for the same target, or both!
 

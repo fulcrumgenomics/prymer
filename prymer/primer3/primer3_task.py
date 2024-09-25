@@ -8,7 +8,7 @@ Primer3 can design single primers ("left" and "right") as well as primer pairs.
 The design task "type" dictates which type of primers to pick and informs the design region.
 These parameters are aligned to the correct Primer3 settings and fed directly into Primer3.
 
-Three types of tasks are available:
+Four types of tasks are available:
 
 1. [`DesignPrimerPairsTask`][prymer.primer3.primer3_task.DesignPrimerPairsTask] -- task
     for designing _primer pairs_.
@@ -16,6 +16,8 @@ Three types of tasks are available:
     for designing primers to the _left_ (5') of the design region on the top/positive strand.
 3. [`DesignRightPrimersTask`][prymer.primer3.primer3_task.DesignRightPrimersTask] -- task
     for designing primers to the _right_ (3') of the design region on the bottom/negative strand.
+4. [`PickHybProbeOnly`][prymer.primer3.primer3_task.PickHybProbeOnly] -- task for designing an
+    internal probe for hybridization-based technologies
 
 The main purpose of these classes are to generate the
 [`Primer3InputTag`s][prymer.primer3.primer3_input_tag.Primer3InputTag]s required by
@@ -103,15 +105,15 @@ from prymer.api.span import Span
 from prymer.primer3.primer3_input_tag import Primer3InputTag
 
 Primer3TaskType: TypeAlias = Union[
-    "DesignPrimerPairsTask", "DesignLeftPrimersTask", "DesignRightPrimersTask"
+    "DesignPrimerPairsTask", "DesignLeftPrimersTask", "DesignRightPrimersTask", "PickHybProbeOnly"
 ]
 """Type alias for all `Primer3Task`s, to enable exhaustiveness checking."""
 
 
 @unique
 class TaskType(UppercaseStrEnum):
-    """Represents the type of design task, either design primer pairs, or individual primers
-    (left or right)."""
+    """Represents the type of design task: design primer pairs, individual primers
+    (left or right), or an internal hybridization probe."""
 
     # Developer Note: the names of this enum are important, as they are used as-is for the
     # count_tag in `Primer3Task`.
@@ -119,6 +121,7 @@ class TaskType(UppercaseStrEnum):
     PAIR = auto()
     LEFT = auto()
     RIGHT = auto()
+    INTERNAL = auto()
 
 
 class Primer3Task(ABC):
@@ -191,8 +194,16 @@ class DesignPrimerPairsTask(Primer3Task, task_type=TaskType.PAIR):
             Primer3InputTag.PRIMER_PICK_RIGHT_PRIMER: 1,
             Primer3InputTag.PRIMER_PICK_INTERNAL_OLIGO: 0,
             Primer3InputTag.SEQUENCE_TARGET: f"{target.start - design_region.start + 1},"
-            f"{target.length}",
+                                             f"{target.length}",
         }
+
+    @property
+    def requires_primer_amplicon_params(self) -> bool:
+        return True
+
+    @property
+    def requires_probe_params(self) -> bool:
+        return False
 
 
 class DesignLeftPrimersTask(Primer3Task, task_type=TaskType.LEFT):
@@ -207,6 +218,14 @@ class DesignLeftPrimersTask(Primer3Task, task_type=TaskType.LEFT):
             Primer3InputTag.PRIMER_PICK_INTERNAL_OLIGO: 0,
             Primer3InputTag.SEQUENCE_INCLUDED_REGION: f"1,{target.start - design_region.start}",
         }
+
+    @property
+    def requires_primer_amplicon_params(self) -> bool:
+        return True
+
+    @property
+    def requires_probe_params(self) -> bool:
+        return False
 
 
 class DesignRightPrimersTask(Primer3Task, task_type=TaskType.RIGHT):
@@ -223,3 +242,32 @@ class DesignRightPrimersTask(Primer3Task, task_type=TaskType.RIGHT):
             Primer3InputTag.PRIMER_PICK_INTERNAL_OLIGO: 0,
             Primer3InputTag.SEQUENCE_INCLUDED_REGION: f"{start},{length}",
         }
+
+    @property
+    def requires_primer_amplicon_params(self) -> bool:
+        return True
+
+    @property
+    def requires_probe_params(self) -> bool:
+        return False
+
+
+class PickHybProbeOnly(Primer3Task, task_type=TaskType.INTERNAL):
+    """Stores task-specific characteristics for designing an internal hybridization probe."""
+
+    @classmethod
+    def _to_input_tags(cls, target: Span, design_region: Span) -> dict[Primer3InputTag, Any]:
+        return {
+            Primer3InputTag.PRIMER_TASK: "generic",
+            Primer3InputTag.PRIMER_PICK_LEFT_PRIMER: 0,
+            Primer3InputTag.PRIMER_PICK_RIGHT_PRIMER: 0,
+            Primer3InputTag.PRIMER_PICK_INTERNAL_OLIGO: 1,
+        }
+
+    @property
+    def requires_primer_amplicon_params(self) -> bool:
+        return False
+
+    @property
+    def requires_probe_params(self) -> bool:
+        return True
