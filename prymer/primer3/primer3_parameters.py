@@ -171,8 +171,8 @@ class ProbeParameters:
     Attributes:
         probe_sizes: the min, optimal, and max probe size
         probe_tms: the min, optimal, and max probe melting temperatures
-        probe_gcs: the min and maximal GC content for individual probes
-        probe_excluded_region: the excluded region (start, length) that probes shall not overlap
+        probe_gcs: the min and max GC content for individual probes
+        probe_max_dinuc_bases: the max  number of bases in a dinucleotide run in a probe
         probe_max_polyX: the max homopolymer length acceptable within a probe
         probe_max_Ns: the max number of ambiguous bases acceptable within a probe
         probe_max_self_any: max allowable local alignment score when evaluating an individual probe
@@ -185,6 +185,8 @@ class ProbeParameters:
             to evaluate a probe for self-complementarity
         probe_max_hairpin_thermo: most stable monomer structure as calculated by a thermodynamic
             approach
+        probe_excluded_region: the excluded region (start, length) that probes shall not overlap
+
 
     Defaults in this class are set as recommended by the Primer3 manual.
     Please see the Primer3 manual for additional details: https://primer3.org/manual.html#globalTags
@@ -199,6 +201,7 @@ class ProbeParameters:
     probe_sizes: MinOptMax[int]
     probe_tms: MinOptMax[float]
     probe_gcs: MinOptMax[float]
+    probe_max_dinuc_bases: int = 4
     probe_max_polyX: int = 5
     probe_max_Ns: int = 0
     probe_max_self_any: float = 12.0
@@ -213,6 +216,8 @@ class ProbeParameters:
             raise TypeError("Probe sizes must be integers")
         if not isinstance(self.probe_tms.min, float) or not isinstance(self.probe_gcs.min, float):
             raise TypeError("Probe melting temperatures and GC content must be floats")
+        if self.probe_max_dinuc_bases % 2 == 1:
+            raise ValueError("Max threshold for dinucleotide bases must be an even number of bases")
         if self.probe_excluded_region is not None:
             # if probe_excluded regions are provided, ensure it matches tuple[int, int]
             if not (
