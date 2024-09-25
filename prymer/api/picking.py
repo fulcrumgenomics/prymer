@@ -40,6 +40,7 @@ Contains the following public classes and methods:
 
 """
 
+import warnings
 from dataclasses import dataclass
 from typing import Callable
 from typing import Iterable
@@ -367,6 +368,13 @@ def pick_top_primer_pairs(
     Returns:
         Up to `num_primers` primer pairs
     """
+    warnings.warn(
+        "pick_top_primer_pairs is deprecated. Picking algorithms should be implemented on "
+        "a per-context basis, considering the needs of the specific application.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     selected: list[PrimerPair] = []
     pp_iter = PeekableIterator(primer_pairs)
     last_pp: Optional[PrimerPair] = None
@@ -437,6 +445,13 @@ def build_and_pick_primer_pairs(
     Returns:
         the list of primer pairs, sorted by penalty (increasing)
     """
+    warnings.warn(
+        "build_and_pick_primer_pairs is deprecated. Picking algorithms should be implemented on "
+        "a per-context basis, considering the needs of the specific application.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     # build the list of primer pairs
     primer_pairs = build_primer_pairs(
         lefts=lefts, rights=rights, target=target, params=params, fasta=fasta
