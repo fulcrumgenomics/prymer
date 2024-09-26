@@ -15,6 +15,7 @@ from prymer.api.variant_lookup import cached
 from prymer.primer3.primer3 import Primer3
 from prymer.primer3.primer3 import Primer3Failure
 from prymer.primer3.primer3 import Primer3Result
+from prymer.primer3.primer3 import _has_acceptable_dinuc_run
 from prymer.primer3.primer3_input import Primer3Input
 from prymer.primer3.primer3_parameters import PrimerAndAmpliconParameters
 from prymer.primer3.primer3_task import DesignLeftPrimersTask
@@ -130,11 +131,11 @@ def valid_primer_pairs(
     return primer_pairs
 
 
-def test_design_primers_raises(
+def test_design_oligos_raises(
     genome_ref: Path,
     single_primer_params: PrimerAndAmpliconParameters,
 ) -> None:
-    """Test that design_primers() raises when given an invalid argument."""
+    """Test that design_oligos() raises when given an invalid argument."""
 
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
 
@@ -148,7 +149,7 @@ def test_design_primers_raises(
         task=DesignLeftPrimersTask(),
     )
     with pytest.raises(ValueError, match="Primer3 failed"):
-        Primer3(genome_fasta=genome_ref).design_primers(design_input=invalid_design_input)
+        Primer3(genome_fasta=genome_ref).design_oligos(design_input=invalid_design_input)
     # TODO: add other Value Errors
 
 
@@ -166,7 +167,7 @@ def test_left_primer_valid_designs(
 
     with Primer3(genome_fasta=genome_ref) as designer:
         for _ in range(10):  # run many times to ensure we can re-use primer3
-            left_result = designer.design_primers(design_input=design_input)
+            left_result = designer.design_oligos(design_input=design_input)
             designed_lefts: list[Oligo] = left_result.primers()
             assert all(isinstance(design, Oligo) for design in designed_lefts)
             for actual_design in designed_lefts:
@@ -213,7 +214,7 @@ def test_right_primer_valid_designs(
     )
     with Primer3(genome_fasta=genome_ref) as designer:
         for _ in range(10):  # run many times to ensure we can re-use primer3
-            right_result: Primer3Result = designer.design_primers(design_input=design_input)
+            right_result: Primer3Result = designer.design_oligos(design_input=design_input)
             designed_rights: list[Oligo] = right_result.primers()
             assert all(isinstance(design, Oligo) for design in designed_rights)
 
@@ -261,7 +262,7 @@ def test_primer_pair_design(
         task=DesignPrimerPairsTask(),
     )
     with Primer3(genome_fasta=genome_ref) as designer:
-        pair_result: Primer3Result = designer.design_primers(design_input=design_input)
+        pair_result: Primer3Result = designer.design_oligos(design_input=design_input)
         designed_pairs: list[PrimerPair] = pair_result.primer_pairs()
         assert all(isinstance(design, PrimerPair) for design in designed_pairs)
         lefts = [primer_pair.left_primer for primer_pair in designed_pairs]
@@ -351,7 +352,7 @@ def test_fasta_close_valid(
     with pytest.raises(
         RuntimeError, match="Error, trying to use a subprocess that has already been terminated"
     ):
-        designer.design_primers(design_input=design_input)
+        designer.design_oligos(design_input=design_input)
 
 
 @pytest.mark.parametrize(
@@ -406,7 +407,7 @@ def test_screen_pair_results(
     genome_ref: Path,
     pair_primer_params: PrimerAndAmpliconParameters,
 ) -> None:
-    """Test that `_is_valid_primer()` and `_screen_pair_results()` use
+    """Test that `_has_acceptable_dinuc_run()` and `_screen_pair_results()` use
     `Primer3Parameters.primer_max_dinuc_bases` to disqualify primers when applicable.
     Create 2 sets of design input, the only difference being the length of allowable dinucleotide
     run in a primer (high_threshold = 6, low_threshold = 2).
@@ -431,6 +432,7 @@ def test_screen_pair_results(
             design_input=design_input, designed_primer_pairs=valid_primer_pairs
         )
         assert len(base_dinuc_pair_failures) == 0
+        assert design_input.primer_and_amplicon_params is not None
         for primer_pair in base_primer_pair_designs:
             assert (
                 primer_pair.left_primer.longest_dinucleotide_run_length()
@@ -440,11 +442,11 @@ def test_screen_pair_results(
                 primer_pair.right_primer.longest_dinucleotide_run_length()
                 <= design_input.primer_and_amplicon_params.primer_max_dinuc_bases
             )
-            assert Primer3._is_valid_primer(
-                design_input=design_input, primer_design=primer_pair.left_primer
+            assert _has_acceptable_dinuc_run(
+                design_input=design_input, oligo_design=primer_pair.left_primer
             )
-            assert Primer3._is_valid_primer(
-                design_input=design_input, primer_design=primer_pair.right_primer
+            assert _has_acceptable_dinuc_run(
+                design_input=design_input, oligo_design=primer_pair.right_primer
             )
 
         # 1 primer from every pair will fail lowered dinuc threshold of 2
@@ -452,6 +454,7 @@ def test_screen_pair_results(
         altered_designs, altered_dinuc_failures = designer._screen_pair_results(
             design_input=altered_design_input, designed_primer_pairs=valid_primer_pairs
         )
+        assert altered_design_input.primer_and_amplicon_params is not None
         assert [
             design.longest_dinucleotide_run_length()
             > altered_design_input.primer_and_amplicon_params.primer_max_dinuc_bases
@@ -554,7 +557,7 @@ def test_primer3_result_primer_pairs_exception(
 ) -> None:
     primers: list[Oligo] = valid_left_primers + valid_right_primers
     result = Primer3Result(filtered_designs=primers, failures=[])
-    with pytest.raises(ValueError, match="Cannot call `primer_pairs` on `Primer` results"):
+    with pytest.raises(ValueError, match="Cannot call `primer_pairs` on `Oligo` results"):
         result.primer_pairs()
 
 
@@ -563,7 +566,7 @@ def test_primer3_result_as_primer_pair_result_exception(
 ) -> None:
     primers: list[Oligo] = valid_left_primers + valid_right_primers
     result = Primer3Result(filtered_designs=primers, failures=[])
-    with pytest.raises(ValueError, match="Cannot call `as_primer_pair_result` on `Primer` results"):
+    with pytest.raises(ValueError, match="Cannot call `as_primer_pair_result` on `Oligo` results"):
         result.as_primer_pair_result()
 
 
