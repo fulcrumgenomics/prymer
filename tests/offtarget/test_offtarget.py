@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from fgpyo.sam import Cigar
 
-from prymer.api.primer import Primer
+from prymer.api.oligo import Oligo
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
 from prymer.api.span import Strand
@@ -43,13 +43,13 @@ def _build_detector(
 def multimap_primer_pair() -> PrimerPair:
     """A primer pair that maps to many locations (204 for each primer, 856 as a pair)"""
     return PrimerPair(
-        left_primer=Primer(
+        left_primer=Oligo(
             bases="AAAAA",
             tm=37,
             penalty=0,
             span=Span("chr1", start=67, end=71),
         ),
-        right_primer=Primer(
+        right_primer=Oligo(
             bases="TTTTT",
             tm=37,
             penalty=0,
@@ -137,7 +137,7 @@ def test_check_too_many_primer_pair_hits(
 @pytest.mark.parametrize("cache_results", [True, False])
 def test_mappings_of(ref_fasta: Path, cache_results: bool) -> None:
     with _build_detector(ref_fasta=ref_fasta, cache_results=cache_results) as detector:
-        p1: Primer = Primer(
+        p1: Oligo = Oligo(
             tm=37,
             penalty=0,
             span=Span(refname="chr1", start=1, end=30),
@@ -148,7 +148,7 @@ def test_mappings_of(ref_fasta: Path, cache_results: bool) -> None:
             refname="chr1", start=1, negative=False, cigar=Cigar.from_cigarstring("30M"), edits=0
         )
 
-        p2: Primer = Primer(
+        p2: Oligo = Oligo(
             tm=37,
             penalty=0,
             span=Span(refname="chr1", start=61, end=93, strand=Strand.NEGATIVE),
@@ -239,7 +239,7 @@ def test_generic_filter(ref_fasta: Path) -> None:
     """
 
     @dataclass(frozen=True)
-    class CustomPrimer(Primer):
+    class CustomPrimer(Oligo):
         foo: str = "foo"
 
     # fmt: off

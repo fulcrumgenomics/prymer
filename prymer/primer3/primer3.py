@@ -139,8 +139,8 @@ from fgpyo.sam import reader
 from fgpyo.sequence import reverse_complement
 from fgpyo.util.metric import Metric
 
-from prymer.api.primer import Primer
-from prymer.api.primer_like import PrimerLike
+from prymer.api.oligo import Oligo
+from prymer.api.oligo_like import OligoLike
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
 from prymer.api.span import Strand
@@ -170,7 +170,7 @@ class Primer3Failure(Metric["Primer3Failure"]):
     count: int
 
 
-PrimerLikeType = TypeVar("PrimerLikeType", bound=PrimerLike)
+PrimerLikeType = TypeVar("PrimerLikeType", bound=OligoLike)
 """Type variable for a `Primer3Result`, which must implement `PrimerLike`"""
 
 
@@ -188,11 +188,11 @@ class Primer3Result(Generic[PrimerLikeType]):
     filtered_designs: list[PrimerLikeType]
     failures: list[Primer3Failure]
 
-    def as_primer_result(self) -> "Primer3Result[Primer]":
+    def as_primer_result(self) -> "Primer3Result[Oligo]":
         """Returns this Primer3Result assuming the design results are of type `Primer`."""
-        if len(self.filtered_designs) > 0 and not isinstance(self.filtered_designs[0], Primer):
+        if len(self.filtered_designs) > 0 and not isinstance(self.filtered_designs[0], Oligo):
             raise ValueError("Cannot call `as_primer_result` on `PrimerPair` results")
-        return typing.cast(Primer3Result[Primer], self)
+        return typing.cast(Primer3Result[Oligo], self)
 
     def as_primer_pair_result(self) -> "Primer3Result[PrimerPair]":
         """Returns this Primer3Result assuming the design results are of type `PrimerPair`."""
@@ -200,7 +200,7 @@ class Primer3Result(Generic[PrimerLikeType]):
             raise ValueError("Cannot call `as_primer_pair_result` on `Primer` results")
         return typing.cast(Primer3Result[PrimerPair], self)
 
-    def primers(self) -> list[Primer]:
+    def primers(self) -> list[Oligo]:
         """Returns the design results as a list `Primer`s"""
         try:
             return self.as_primer_result().filtered_designs
@@ -309,7 +309,7 @@ class Primer3(ExecutableRunner):
         return soft_masked, hard_masked
 
     @staticmethod
-    def _is_valid_primer(design_input: Primer3Input, primer_design: Primer) -> bool:
+    def _is_valid_primer(design_input: Primer3Input, primer_design: Oligo) -> bool:
         return (
             primer_design.longest_dinucleotide_run_length()
             <= design_input.primer_and_amplicon_params.primer_max_dinuc_bases
@@ -318,7 +318,7 @@ class Primer3(ExecutableRunner):
     @staticmethod
     def _screen_pair_results(
         design_input: Primer3Input, designed_primer_pairs: list[PrimerPair]
-    ) -> tuple[list[PrimerPair], list[Primer]]:
+    ) -> tuple[list[PrimerPair], list[Oligo]]:
         """Screens primer pair designs emitted by Primer3 for dinucleotide run length.
 
         Args:
@@ -330,7 +330,7 @@ class Primer3(ExecutableRunner):
             dinuc_pair_failures: single primer designs that failed the `max_dinuc_bases` threshold
         """
         valid_primer_pair_designs: list[PrimerPair] = []
-        dinuc_pair_failures: list[Primer] = []
+        dinuc_pair_failures: list[Oligo] = []
         for primer_pair in designed_primer_pairs:
             valid: bool = True
             if (
@@ -478,7 +478,7 @@ class Primer3(ExecutableRunner):
         design_region: Span,
         design_task: Union[DesignLeftPrimersTask, DesignRightPrimersTask],
         unmasked_design_seq: str,
-    ) -> list[Primer]:
+    ) -> list[Oligo]:
         """
         Builds a list of left or right primers from Primer3 output.
 
@@ -534,7 +534,7 @@ class Primer3(ExecutableRunner):
                 bases = reverse_complement(bases)
 
             primers.append(
-                Primer(
+                Oligo(
                     bases=bases,
                     tm=float(design_results[f"PRIMER_{design_task.task_type}_{idx}_TM"]),
                     penalty=float(design_results[f"PRIMER_{design_task.task_type}_{idx}_PENALTY"]),
@@ -545,7 +545,7 @@ class Primer3(ExecutableRunner):
 
     @staticmethod
     def _assemble_primers(
-        design_input: Primer3Input, design_results: dict[str, str], unfiltered_designs: list[Primer]
+        design_input: Primer3Input, design_results: dict[str, str], unfiltered_designs: list[Oligo]
     ) -> Primer3Result:
         """Helper function to organize primer designs into valid and failed designs.
 
@@ -618,7 +618,7 @@ class Primer3(ExecutableRunner):
             unmasked_design_seq=unmasked_design_seq,
         )
 
-        def _build_primer_pair(num: int, primer_pair: tuple[Primer, Primer]) -> PrimerPair:
+        def _build_primer_pair(num: int, primer_pair: tuple[Oligo, Oligo]) -> PrimerPair:
             """Builds the `PrimerPair` object from input left and right primers."""
             left_primer = primer_pair[0]
             right_primer = primer_pair[1]
@@ -665,7 +665,7 @@ class Primer3(ExecutableRunner):
             primer_designs: a `Primer3Result` that encapsulates valid and failed designs
         """
         valid_primer_pair_designs: list[PrimerPair]
-        dinuc_pair_failures: list[Primer]
+        dinuc_pair_failures: list[Oligo]
         valid_primer_pair_designs, dinuc_pair_failures = Primer3._screen_pair_results(
             design_input=design_input, designed_primer_pairs=unfiltered_designs
         )
@@ -684,7 +684,7 @@ class Primer3(ExecutableRunner):
 
     @staticmethod
     def _build_failures(
-        dinuc_failures: list[Primer],
+        dinuc_failures: list[Oligo],
         failure_strings: list[str],
     ) -> list[Primer3Failure]:
         """Extracts the reasons why designs that were considered by Primer3 failed

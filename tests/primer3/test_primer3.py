@@ -7,7 +7,7 @@ import pytest
 from fgpyo.sequence import reverse_complement
 
 from prymer.api.minoptmax import MinOptMax
-from prymer.api.primer import Primer
+from prymer.api.oligo import Oligo
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
 from prymer.api.span import Strand
@@ -69,8 +69,8 @@ def design_fail_gen_primer3_params() -> PrimerAndAmpliconParameters:
     )
 
 
-def make_primer(bases: str, refname: str, start: int, end: int) -> Primer:
-    return Primer(
+def make_primer(bases: str, refname: str, start: int, end: int) -> Oligo:
+    return Oligo(
         bases=bases,
         tm=55,
         penalty=5,
@@ -78,7 +78,7 @@ def make_primer(bases: str, refname: str, start: int, end: int) -> Primer:
     )
 
 
-def make_primer_pair(left: Primer, right: Primer, genome_ref: Path) -> PrimerPair:
+def make_primer_pair(left: Oligo, right: Oligo, genome_ref: Path) -> PrimerPair:
     ref = pysam.FastaFile(str(genome_ref))  # pysam expects a str instead of Path
     amplicon_span = Span(
         refname=left.span.refname,
@@ -98,8 +98,8 @@ def make_primer_pair(left: Primer, right: Primer, genome_ref: Path) -> PrimerPai
 
 
 @pytest.fixture(scope="session")
-def valid_left_primers() -> list[Primer]:
-    lefts: list[Primer] = [
+def valid_left_primers() -> list[Oligo]:
+    lefts: list[Oligo] = [
         make_primer(bases="ACATTTGCTTCTGACACAAC", refname="chr1", start=1, end=20),
         make_primer(bases="TGTGTTCACTAGCAACCTCA", refname="chr1", start=21, end=40),
     ]
@@ -107,8 +107,8 @@ def valid_left_primers() -> list[Primer]:
 
 
 @pytest.fixture(scope="session")
-def valid_right_primers() -> list[Primer]:
-    rights: list[Primer] = [
+def valid_right_primers() -> list[Oligo]:
+    rights: list[Oligo] = [
         make_primer(
             bases=reverse_complement("TCAAGGTTACAAGACAGGTT"), refname="chr1", start=150, end=169
         ),
@@ -121,7 +121,7 @@ def valid_right_primers() -> list[Primer]:
 
 @pytest.fixture(scope="session")
 def valid_primer_pairs(
-    valid_left_primers: list[Primer], valid_right_primers: list[Primer], genome_ref: Path
+    valid_left_primers: list[Oligo], valid_right_primers: list[Oligo], genome_ref: Path
 ) -> list[PrimerPair]:
     primer_pairs = [
         make_primer_pair(left=left, right=right, genome_ref=genome_ref)
@@ -167,8 +167,8 @@ def test_left_primer_valid_designs(
     with Primer3(genome_fasta=genome_ref) as designer:
         for _ in range(10):  # run many times to ensure we can re-use primer3
             left_result = designer.design_primers(design_input=design_input)
-            designed_lefts: list[Primer] = left_result.primers()
-            assert all(isinstance(design, Primer) for design in designed_lefts)
+            designed_lefts: list[Oligo] = left_result.primers()
+            assert all(isinstance(design, Oligo) for design in designed_lefts)
             for actual_design in designed_lefts:
                 assert (
                     actual_design.longest_dinucleotide_run_length()
@@ -214,8 +214,8 @@ def test_right_primer_valid_designs(
     with Primer3(genome_fasta=genome_ref) as designer:
         for _ in range(10):  # run many times to ensure we can re-use primer3
             right_result: Primer3Result = designer.design_primers(design_input=design_input)
-            designed_rights: list[Primer] = right_result.primers()
-            assert all(isinstance(design, Primer) for design in designed_rights)
+            designed_rights: list[Oligo] = right_result.primers()
+            assert all(isinstance(design, Oligo) for design in designed_rights)
 
             for actual_design in designed_rights:
                 assert (
@@ -525,9 +525,9 @@ def test_build_failures_debugs(
 
 
 def test_primer3_result_primers_ok(
-    valid_left_primers: list[Primer], valid_right_primers: list[Primer]
+    valid_left_primers: list[Oligo], valid_right_primers: list[Oligo]
 ) -> None:
-    primers: list[Primer] = valid_left_primers + valid_right_primers
+    primers: list[Oligo] = valid_left_primers + valid_right_primers
     assert primers == Primer3Result(filtered_designs=primers, failures=[]).primers()
 
 
@@ -550,18 +550,18 @@ def test_primer3_result_primer_pairs_ok(valid_primer_pairs: list[PrimerPair]) ->
 
 
 def test_primer3_result_primer_pairs_exception(
-    valid_left_primers: list[Primer], valid_right_primers: list[Primer]
+    valid_left_primers: list[Oligo], valid_right_primers: list[Oligo]
 ) -> None:
-    primers: list[Primer] = valid_left_primers + valid_right_primers
+    primers: list[Oligo] = valid_left_primers + valid_right_primers
     result = Primer3Result(filtered_designs=primers, failures=[])
     with pytest.raises(ValueError, match="Cannot call `primer_pairs` on `Primer` results"):
         result.primer_pairs()
 
 
 def test_primer3_result_as_primer_pair_result_exception(
-    valid_left_primers: list[Primer], valid_right_primers: list[Primer]
+    valid_left_primers: list[Oligo], valid_right_primers: list[Oligo]
 ) -> None:
-    primers: list[Primer] = valid_left_primers + valid_right_primers
+    primers: list[Oligo] = valid_left_primers + valid_right_primers
     result = Primer3Result(filtered_designs=primers, failures=[])
     with pytest.raises(ValueError, match="Cannot call `as_primer_pair_result` on `Primer` results"):
         result.as_primer_pair_result()
