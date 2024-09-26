@@ -88,25 +88,32 @@ class Oligo(OligoLike, Metric["Oligo"]):
     The penalty for a primer is set by the combination of `PrimerAndAmpliconParameters` and
     `PrimerWeights`, whereas a probe penalty is set by `ProbeParameters` and `ProbeWeights`.
 
+    The values for `self_any`, `self_any_th`, `self_end`, `self_end_th`, and `hairpin_th`
+    are emitted by Primer3 as part of oligo design. These attributes are optional to maintain
+    flexibility for reading in and writing `Oligo` objects, espeically when design settings are
+    inconsistent.
+
     Attributes:
         tm: the calculated melting temperature of the oligo
         penalty: the penalty or score for the oligo
         span: the mapping of the primer to the genome
-        self_any_th: self-complementarity throughout the probe as calculated by Primer3
-        self_end_th: 3' end complementarity of the probe as calculated by Primer3
-        hairpin_th: hairpin formation thermodynamics of the probe as calculated by Primer3
+        self_any: probe self-complementarity, expressed as local alignment score
+        self_any_th: probe self-complementarity, expressed as melting temperature
+        self_end: 3' end complementarity, expressed as local alignment score
+        self_end_th: 3' end complementarity, expressed as melting temperature
+        hairpin_th: hairpin formation thermodynamics of the oligo as calculated by Primer3
         bases: the base sequence of the oligo (excluding any tail)
         tail: an optional tail sequence to put on the 5' end of the primer
         name: an optional name to use for the primer
-
-
 
     """
 
     tm: float
     penalty: float
     span: Span
+    self_any: Optional[float] = None
     self_any_th: Optional[float] = None
+    self_end: Optional[float] = None
     self_end_th: Optional[float] = None
     hairpin_th: Optional[float] = None
     bases: Optional[str] = None
