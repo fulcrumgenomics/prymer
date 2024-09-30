@@ -129,7 +129,6 @@ class Oligo(OligoLike, Metric["Oligo"]):
         else:
             return longest_homopolymer_length(self.bases)
 
-
     @property
     def length(self) -> int:
         """Length of un-tailed oligo."""
