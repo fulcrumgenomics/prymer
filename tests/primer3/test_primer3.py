@@ -18,9 +18,11 @@ from prymer.primer3.primer3 import Primer3Result
 from prymer.primer3.primer3 import _has_acceptable_dinuc_run
 from prymer.primer3.primer3_input import Primer3Input
 from prymer.primer3.primer3_parameters import PrimerAndAmpliconParameters
+from prymer.primer3.primer3_parameters import ProbeParameters
 from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
 from prymer.primer3.primer3_task import DesignRightPrimersTask
+from prymer.primer3.primer3_task import PickHybProbeOnly
 
 
 @pytest.fixture(scope="session")
@@ -67,6 +69,15 @@ def design_fail_gen_primer3_params() -> PrimerAndAmpliconParameters:
         primer_sizes=MinOptMax(min=24, max=27, opt=26),
         primer_tms=MinOptMax(min=65.0, max=75.0, opt=74.0),
         primer_gcs=MinOptMax(min=55.0, max=65.0, opt=62.0),
+    )
+
+
+@pytest.fixture
+def valid_probe_params() -> ProbeParameters:
+    return ProbeParameters(
+        probe_sizes=MinOptMax(min=18, opt=22, max=30),
+        probe_tms=MinOptMax(min=65.0, opt=70.0, max=75.0),
+        probe_gcs=MinOptMax(min=45.0, opt=55.0, max=60.0),
     )
 
 
@@ -531,24 +542,24 @@ def test_primer3_result_primers_ok(
     valid_left_primers: list[Oligo], valid_right_primers: list[Oligo]
 ) -> None:
     primers: list[Oligo] = valid_left_primers + valid_right_primers
-    assert primers == Primer3Result(filtered_designs=primers, failures=[]).primers()
+    assert primers == Primer3Result(designs=primers, failures=[]).primers()
 
 
 def test_primer3_result_primers_exception(valid_primer_pairs: list[PrimerPair]) -> None:
-    result = Primer3Result(filtered_designs=valid_primer_pairs, failures=[])
+    result = Primer3Result(designs=valid_primer_pairs, failures=[])
     with pytest.raises(ValueError, match="Cannot call `primers` on `PrimerPair` results"):
         result.primers()
 
 
 def test_primer3_result_as_primer_result_exception(valid_primer_pairs: list[PrimerPair]) -> None:
-    result = Primer3Result(filtered_designs=valid_primer_pairs, failures=[])
+    result = Primer3Result(designs=valid_primer_pairs, failures=[])
     with pytest.raises(ValueError, match="Cannot call `as_primer_result` on `PrimerPair` results"):
         result.as_primer_result()
 
 
 def test_primer3_result_primer_pairs_ok(valid_primer_pairs: list[PrimerPair]) -> None:
     assert valid_primer_pairs == (
-        Primer3Result(filtered_designs=valid_primer_pairs, failures=[]).primer_pairs()
+        Primer3Result(designs=valid_primer_pairs, failures=[]).primer_pairs()
     )
 
 
@@ -556,7 +567,7 @@ def test_primer3_result_primer_pairs_exception(
     valid_left_primers: list[Oligo], valid_right_primers: list[Oligo]
 ) -> None:
     primers: list[Oligo] = valid_left_primers + valid_right_primers
-    result = Primer3Result(filtered_designs=primers, failures=[])
+    result = Primer3Result(designs=primers, failures=[])
     with pytest.raises(ValueError, match="Cannot call `primer_pairs` on `Oligo` results"):
         result.primer_pairs()
 
@@ -565,7 +576,7 @@ def test_primer3_result_as_primer_pair_result_exception(
     valid_left_primers: list[Oligo], valid_right_primers: list[Oligo]
 ) -> None:
     primers: list[Oligo] = valid_left_primers + valid_right_primers
-    result = Primer3Result(filtered_designs=primers, failures=[])
+    result = Primer3Result(designs=primers, failures=[])
     with pytest.raises(ValueError, match="Cannot call `as_primer_pair_result` on `Oligo` results"):
         result.as_primer_pair_result()
 
@@ -616,3 +627,18 @@ def test_create_design_region_raises_when_primers_would_not_fit_in_design_region
             designer._create_design_region(
                 target_region=target_region, max_amplicon_length=55, min_primer_length=10
             )
+
+
+def test_probe_design_raises(genome_ref: Path, valid_probe_params: ProbeParameters) -> None:
+    """Test that we raise an error when the target region is smaller than the minimal probe size."""
+    target = Span(refname="chr1", start=201, end=217, strand=Strand.POSITIVE)
+    design_input = Primer3Input(
+        target=target,
+        probe_params=valid_probe_params,
+        task=PickHybProbeOnly(),
+    )
+    with Primer3(genome_fasta=genome_ref) as designer:
+        with pytest.raises(
+            ValueError, match="Target region required to be at least as large as the"
+        ):
+            designer.design_oligos(design_input=design_input)

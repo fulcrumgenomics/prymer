@@ -21,9 +21,9 @@ primer (if applicable).
 20
 >>> primer.name is None
 True
->>> primer = Oligo(tm=70.0, penalty=-123.0, span=primer_span, bases="GACGG"*4)
+>>> primer = Oligo(tm=70.0, penalty=-123.0, span=primer_span)
 >>> primer.longest_hp_length()
-3
+0
 >>> primer.untailed_length()
 20
 >>> primer.tailed_length()
@@ -45,9 +45,9 @@ Primers may also be written to a file and subsequently read back in, as the `Pri
 ```python
 >>> from pathlib import Path
 >>> left_span = Span(refname="chr1", start=1, end=20)
->>> left = Oligo(tm=70.0, penalty=-123.0, span=left_span, bases="G"*20)
+>>> left = Oligo(tm=70.0, penalty=-123.0, span=left_span)
 >>> right_span = Span(refname="chr1", start=101, end=120)
->>> right = Oligo(tm=70.0, penalty=-123.0, span=right_span, bases="T"*20)
+>>> right = Oligo(tm=70.0, penalty=-123.0, span=right_span)
 >>> path = Path("/tmp/path/to/primers.txt")
 >>> Oligo.write(path, left, right)  # doctest: +SKIP
 >>> primers = Oligo.read(path)  # doctest: +SKIP

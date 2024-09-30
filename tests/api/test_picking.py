@@ -321,8 +321,8 @@ def test_zero_score(
 ) -> None:
     assert (
         picking_score(
-            left=score_input.left,
-            right=score_input.right,
+            left_primer=score_input.left,
+            right_primer=score_input.right,
             target=score_input.target,
             amplicon=score_input.amplicon,
             amplicon_seq_or_tm=score_input.amplicon_sequence,
@@ -339,8 +339,8 @@ def test_zero_score_with_amplicon_tm(
     amplicon_tm: float = calculate_long_seq_tm(score_input.amplicon_sequence)
     assert (
         picking_score(
-            left=score_input.left,
-            right=score_input.right,
+            left_primer=score_input.left,
+            right_primer=score_input.right,
             target=score_input.target,
             amplicon=score_input.amplicon,
             amplicon_seq_or_tm=amplicon_tm,
@@ -398,8 +398,8 @@ def test_score(
     params = replace(zero_score_filtering_params, **kwargs)
     assert (
         picking_score(
-            left=score_input.left,
-            right=score_input.right,
+            left_primer=score_input.left,
+            right_primer=score_input.right,
             target=score_input.target,
             amplicon=score_input.amplicon,
             amplicon_seq_or_tm=score_input.amplicon_sequence,
@@ -421,8 +421,8 @@ def test_score_primer_primer_penalties(
     left = replace(score_input.left, penalty=left_penalty)
     right = replace(score_input.right, penalty=right_penalty)
     assert picking_score(
-        left=left,
-        right=right,
+        left_primer=left,
+        right_primer=right,
         target=score_input.target,
         amplicon=score_input.amplicon,
         amplicon_seq_or_tm=score_input.amplicon_sequence,
@@ -437,8 +437,8 @@ def test_primer_pairs(
     target = Span(refname="chr1", start=100, end=250)
 
     # tile some left primers
-    lefts = []
-    rights = []
+    left_primers = []
+    right_primers = []
     for offset in range(0, 50, 5):
         # left
         left_end = target.start - offset
@@ -446,7 +446,7 @@ def test_primer_pairs(
         left = Oligo(
             penalty=-offset, tm=0, span=Span(refname=target.refname, start=left_start, end=left_end)
         )
-        lefts.append(left)
+        left_primers.append(left)
         # right
         right_start = target.end + offset
         right_end = right_start + primer_length
@@ -455,22 +455,22 @@ def test_primer_pairs(
             tm=0,
             span=Span(refname=target.refname, start=right_start, end=right_end),
         )
-        rights.append(right)
+        right_primers.append(right)
 
     with pysam.FastaFile(f"{genome_ref}") as fasta:
         primer_pairs = build_primer_pairs(
-            lefts=lefts,
-            rights=rights,
+            left_primers=left_primers,
+            right_primers=right_primers,
             target=target,
             params=zero_score_filtering_params,
             fasta=fasta,
         )
-        assert len(primer_pairs) == len(lefts) * len(rights)
+        assert len(primer_pairs) == len(left_primers) * len(right_primers)
         last_penalty = primer_pairs[0].penalty
         primer_counter: Counter[Oligo] = Counter()
         for pp in primer_pairs:
-            assert pp.left_primer in lefts
-            assert pp.right_primer in rights
+            assert pp.left_primer in left_primers
+            assert pp.right_primer in right_primers
             primer_counter[pp.left_primer] += 1
             primer_counter[pp.right_primer] += 1
             # by design, only the left/right penalties contribute to the primer pair penalty
@@ -484,7 +484,9 @@ def test_primer_pairs(
             last_penalty = pp.penalty
         # make sure we see all the primers the same # of times!
         items = primer_counter.items()
-        assert len(set(i[0] for i in items)) == len(lefts) + len(rights)  # same primers
+        assert len(set(i[0] for i in items)) == len(left_primers) + len(
+            right_primers
+        )  # same primers
         assert len(set(i[1] for i in items)) == 1  # same counts for each primer
 
 
@@ -498,8 +500,8 @@ def test_primer_pairs_except_different_references(
             # change the reference for the right primer
             right = replace(score_input.right, span=Span(refname="Y", start=195, end=225))
             build_primer_pairs(
-                lefts=[score_input.left],
-                rights=[right],
+                left_primers=[score_input.left],
+                right_primers=[right],
                 target=score_input.target,
                 params=zero_score_filtering_params,
                 fasta=fasta,
@@ -896,8 +898,8 @@ def test_and_pick_primer_pairs(
 
     with pysam.FastaFile(f"{picking_ref}") as fasta:
         designed_primer_pairs = build_and_pick_primer_pairs(
-            lefts=[pp.left_primer],
-            rights=[pp.right_primer],
+            left_primers=[pp.left_primer],
+            right_primers=[pp.right_primer],
             target=target,
             num_primers=1,
             min_difference=1,

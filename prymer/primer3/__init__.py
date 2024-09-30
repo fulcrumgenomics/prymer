@@ -4,7 +4,8 @@ from prymer.primer3.primer3 import Primer3Result
 from prymer.primer3.primer3_failure_reason import Primer3FailureReason
 from prymer.primer3.primer3_input import Primer3Input
 from prymer.primer3.primer3_input_tag import Primer3InputTag
-from prymer.primer3.primer3_parameters import Primer3Parameters
+from prymer.primer3.primer3_parameters import PrimerAndAmpliconParameters
+from prymer.primer3.primer3_parameters import ProbeParameters
 from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
 from prymer.primer3.primer3_task import DesignRightPrimersTask
@@ -21,7 +22,8 @@ __all__ = [
     "DesignLeftPrimersTask",
     "DesignPrimerPairsTask",
     "DesignRightPrimersTask",
-    "Primer3Parameters",
+    "PrimerAndAmpliconParameters",
+    "ProbeParameters",
     "ProbeWeights",
     "PrimerAndAmpliconWeights",
 ]

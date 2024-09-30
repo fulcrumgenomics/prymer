@@ -30,7 +30,7 @@ Design specifications for designing probes are stored in [`ProbeParameters()`][p
 Penalty weights for designing internal probes are specified in [`ProbeWeights()`][prymer.primer3.primer3_weights.ProbeWeights].
 
 The result of a primer design is encapsulated in the [`Primer3Result`][prymer.primer3.primer3.Primer3Result] class.  It
-provides the single oligos or primer pairs that were designed, as well as a list of reasons some primers were not returned, 
+provides the primers, probes, or primer pairs that were designed, as well as a list of reasons some primers were not returned, 
 for example exceeding the melting temperature threshold, too high GC content, and so on.  These failures are 
 encapsulated in the [`Primer3Failures`][prymer.primer3.primer3.Primer3Failure] class.
 

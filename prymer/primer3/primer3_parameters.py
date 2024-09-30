@@ -76,7 +76,6 @@ import warnings
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
-from typing import Optional
 
 from prymer.api.minoptmax import MinOptMax
 from prymer.primer3.primer3_input_tag import Primer3InputTag
@@ -243,7 +242,6 @@ class ProbeParameters:
             resulting from aligning the 3' end of the probe
         probe_max_hairpin_thermo: most stable monomer structure as calculated by a thermodynamic
             approach
-        probe_excluded_region: the excluded region (start, length) that probes shall not overlap
 
     The attributes that have default values specified take their default values from the
     Primer3 manual.
@@ -285,7 +283,6 @@ class ProbeParameters:
     probe_max_self_end: float = 12.0
     probe_max_self_end_thermo: float = field(init=False)
     probe_max_hairpin_thermo: float = field(init=False)
-    probe_excluded_region: Optional[tuple[int, int]] = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.probe_sizes.min, int):
@@ -294,16 +291,7 @@ class ProbeParameters:
             raise TypeError("Probe melting temperatures and GC content must be floats")
         if self.probe_max_dinuc_bases % 2 == 1:
             raise ValueError("Max threshold for dinucleotide bases must be an even number of bases")
-        if self.probe_excluded_region is not None:
-            # if probe_excluded regions are provided, ensure it matches tuple[int, int]
-            if not (
-                isinstance(self.probe_excluded_region, tuple)
-                and all(isinstance(param, int) for param in self.probe_excluded_region)
-            ):
-                raise TypeError(
-                    "Excluded region for probe design must be given as a tuple[int, int]"
-                    "for start and length of region (e.g., (10,20))"
-                )
+
         # Set melting temperature thresholds to be 10 degrees less than the minimum primer tm
         default_thermo_tm: float = self.probe_tms.min - 10.0
         object.__setattr__(self, "probe_max_self_any_thermo", default_thermo_tm)
@@ -330,9 +318,5 @@ class ProbeParameters:
             Primer3InputTag.PRIMER_INTERNAL_MAX_SELF_END_TH: self.probe_max_self_end_thermo,
             Primer3InputTag.PRIMER_INTERNAL_MAX_HAIRPIN_TH: self.probe_max_hairpin_thermo,
         }
-        if self.probe_excluded_region is not None:
-            mapped_dict[Primer3InputTag.SEQUENCE_INTERNAL_EXCLUDED_REGION] = (
-                f"{self.probe_excluded_region[0]},{self.probe_excluded_region[1]}"
-            )
 
         return mapped_dict

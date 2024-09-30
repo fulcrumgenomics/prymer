@@ -5,7 +5,7 @@ This module contains a class and class methods to represent an oligo designed by
 
 Oligos can represent single primer and/or internal probe designs.
 
-Class attributes include the primer sequence, melting temperature, and the score of the oligo. The
+Class attributes include the base sequence, melting temperature, and the score of the oligo. The
 mapping of the oligo to the genome is also stored.
 
 Optional attributes include naming information and a tail sequence to attach to the 5' end of the
@@ -16,9 +16,9 @@ oligo (if applicable). Optional attributes also include the thermodynamic result
 ```python
 >>> from prymer.api.span import Span, Strand
 >>> oligo_span = Span(refname="chr1", start=1, end=20)
->>> oligo = Oligo(tm=70.0, penalty=-123.0, span=oligo_span)
+>>> oligo = Oligo(tm=70.0, penalty=-123.0, span=oligo_span, bases="AGCT" * 5)
 >>> oligo.longest_hp_length()
-0
+1
 >>> oligo.length
 20
 >>> oligo.name is None
@@ -129,6 +129,7 @@ class Oligo(OligoLike, Metric["Oligo"]):
         else:
             return longest_homopolymer_length(self.bases)
 
+
     @property
     def length(self) -> int:
         """Length of un-tailed oligo."""
@@ -162,10 +163,8 @@ class Oligo(OligoLike, Metric["Oligo"]):
         """
         Returns the sequence of the oligo prepended by the tail.
 
-        If either `bases` or `tail` are None, they shall be excluded. Return None if both are None.
+        If `tail` is None, only return `bases`.
         """
-        if self.bases is None:
-            return None if self.tail is None else self.tail
         if self.tail is None:
             return self.bases
         return f"{self.tail}{self.bases}"

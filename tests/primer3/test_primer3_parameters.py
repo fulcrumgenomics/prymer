@@ -28,16 +28,6 @@ def valid_probe_params() -> ProbeParameters:
     )
 
 
-@pytest.fixture
-def valid_probe_params_with_exclude_regions() -> ProbeParameters:
-    return ProbeParameters(
-        probe_sizes=MinOptMax(min=18, opt=22, max=30),
-        probe_tms=MinOptMax(min=65.0, opt=70.0, max=75.0),
-        probe_gcs=MinOptMax(min=45.0, opt=55.0, max=60.0),
-        probe_excluded_region=(1, 10),
-    )
-
-
 def test_primer_amplicon_param_construction_valid(
     valid_primer_amplicon_params: PrimerAndAmpliconParameters,
 ) -> None:
@@ -68,17 +58,6 @@ def test_probe_param_construction_valid(
     mapped_dict = valid_probe_params.to_input_tags()
     # because `probe_excluded_region` is not given, we do not expect a key in `mapped_dict`
     assert Primer3InputTag.SEQUENCE_INTERNAL_EXCLUDED_REGION not in mapped_dict
-
-
-def test_probe_param_exclude_regions_construction_valid(
-    valid_probe_params_with_exclude_regions: ProbeParameters,
-) -> None:
-    """Test ProbeParameters class instantiation with valid input for
-    `SEQUENCE_INTERNAL_EXCLUDED_REGION` and ensure `to_input_tags() generates
-    corresponding key/value pair."""
-    assert valid_probe_params_with_exclude_regions.probe_excluded_region == (1, 10)  # expect tuple
-    mapped_dict = valid_probe_params_with_exclude_regions.to_input_tags()
-    assert mapped_dict[Primer3InputTag.SEQUENCE_INTERNAL_EXCLUDED_REGION] == "1,10"  # expect string
 
 
 def test_primer_amplicon_param_construction_raises(
@@ -114,16 +93,6 @@ def test_primer_probe_param_construction_raises(
         )
     with pytest.raises(TypeError, match="Probe melting temperatures and GC content must be floats"):
         replace(valid_probe_params, probe_tms=MinOptMax(min=55, opt=60, max=65))
-    with pytest.raises(TypeError, match="Excluded region for probe design must be given"):
-        replace(
-            valid_probe_params,
-            probe_excluded_region=[("x", 10)],  # type: ignore
-        )
-    with pytest.raises(TypeError, match="Excluded region for probe design must be given"):
-        replace(
-            valid_probe_params,
-            probe_excluded_region=[(1.3, 10)],  # type: ignore
-        )
 
 
 def test_primer_amplicon_params_to_input_tags(

@@ -180,38 +180,38 @@ class Primer3Result(Generic[OligoLikeType]):
     """Encapsulates Primer3 design results (both valid designs and failures).
 
     Attributes:
-        filtered_designs: filtered and ordered (by objective function score) list of primer
-            pairs or single oligos that were returned by Primer3
+        designs: filtered for out-of-spec characteristics and ordered (by objective function score)
+            list of primer pairs or single oligos that were returned by Primer3
         failures: ordered list of Primer3Failures detailing design failure reasons and corresponding
             count
     """
 
-    filtered_designs: list[OligoLikeType]
+    designs: list[OligoLikeType]
     failures: list[Primer3Failure]
 
     def as_primer_result(self) -> "Primer3Result[Oligo]":
         """Returns this Primer3Result assuming the design results are of type `Primer`."""
-        if len(self.filtered_designs) > 0 and not isinstance(self.filtered_designs[0], Oligo):
+        if len(self.designs) > 0 and not isinstance(self.designs[0], Oligo):
             raise ValueError("Cannot call `as_primer_result` on `PrimerPair` results")
         return typing.cast(Primer3Result[Oligo], self)
 
     def as_primer_pair_result(self) -> "Primer3Result[PrimerPair]":
         """Returns this Primer3Result assuming the design results are of type `PrimerPair`."""
-        if len(self.filtered_designs) > 0 and not isinstance(self.filtered_designs[0], PrimerPair):
+        if len(self.designs) > 0 and not isinstance(self.designs[0], PrimerPair):
             raise ValueError("Cannot call `as_primer_pair_result` on `Oligo` results")
         return typing.cast(Primer3Result[PrimerPair], self)
 
     def primers(self) -> list[Oligo]:
         """Returns the design results as a list `Primer`s"""
         try:
-            return self.as_primer_result().filtered_designs
+            return self.as_primer_result().designs
         except ValueError as ex:
             raise ValueError("Cannot call `primers` on `PrimerPair` results") from ex
 
     def primer_pairs(self) -> list[PrimerPair]:
         """Returns the design results as a list `PrimerPair`s"""
         try:
-            return self.as_primer_pair_result().filtered_designs
+            return self.as_primer_pair_result().designs
         except ValueError as ex:
             raise ValueError("Cannot call `primer_pairs` on `Oligo` results") from ex
 
@@ -368,6 +368,13 @@ class Primer3(ExecutableRunner):
         design_region: Span
         match design_input.task:
             case PickHybProbeOnly():
+                if design_input.target.length < design_input.probe_params.probe_sizes.min:
+                    raise ValueError(
+                        "Target region required to be at least as large as the"
+                        " minimal probe size: "
+                        f"target length: {design_input.target.length}, "
+                        f"minimal probe size: {design_input.probe_params.probe_sizes.min}"
+                    )
                 design_region = design_input.target
             case DesignRightPrimersTask() | DesignLeftPrimersTask() | DesignPrimerPairsTask():
                 design_region = self._create_design_region(
@@ -546,7 +553,7 @@ class Primer3(ExecutableRunner):
         """Screens oligo designs (primers or probes) emitted by Primer3 for acceptable dinucleotide
         runs and extracts failure reasons for failed designs."""
 
-        valid_oligo_designs = [
+        valid_designs = [
             design
             for design in unfiltered_designs
             if _has_acceptable_dinuc_run(oligo_design=design, design_input=design_input)
@@ -559,9 +566,7 @@ class Primer3(ExecutableRunner):
 
         failure_strings = [design_results[f"PRIMER_{design_input.task.task_type}_EXPLAIN"]]
         failures = Primer3._build_failures(dinuc_failures, failure_strings)
-        design_candidates: Primer3Result = Primer3Result(
-            filtered_designs=valid_oligo_designs, failures=failures
-        )
+        design_candidates: Primer3Result = Primer3Result(designs=valid_designs, failures=failures)
         return design_candidates
 
     @staticmethod
@@ -660,9 +665,7 @@ class Primer3(ExecutableRunner):
             design_results["PRIMER_RIGHT_EXPLAIN"],
         ]
         pair_failures = Primer3._build_failures(dinuc_pair_failures, failure_strings)
-        primer_designs = Primer3Result(
-            filtered_designs=valid_primer_pair_designs, failures=pair_failures
-        )
+        primer_designs = Primer3Result(designs=valid_primer_pair_designs, failures=pair_failures)
 
         return primer_designs
 

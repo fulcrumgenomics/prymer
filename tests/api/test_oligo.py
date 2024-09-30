@@ -170,15 +170,15 @@ def build_primer_test_cases() -> list[OligoTestCase]:
         ),
         OligoTestCase(
             primer=Oligo(
-                bases=None,
+                bases="ACGT",
                 tm=1.0,
                 penalty=2.0,
                 span=Span(refname="chr1", start=1, end=4, strand=Strand.POSITIVE),
             ),
-            gc_pct=0.0,
-            longest_hp=0,
+            gc_pct=50.0,
+            longest_hp=1,
             longest_dinuc=0,
-            str_fields=["*", "1.0", "2.0", "chr1:1-4:+"],
+            str_fields=["ACGT", "1.0", "2.0", "chr1:1-4:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -244,15 +244,13 @@ def test_with_tail(init: Optional[str], value: str, expected: Optional[str]) -> 
     [
         ("TTTT", "AGCT", "TTTTAGCT"),
         ("", "AGCT", "AGCT"),
-        ("AAA", None, "AAA"),
         (None, "AGCT", "AGCT"),
         ("NNNNNNNNNN", "AGCT", "NNNNNNNNNNAGCT"),
         ("GATTACA", "AGCT", "GATTACAAGCT"),
-        (None, None, None),
     ],
 )
 def test_bases_with_tail(
-    tail_seq: Optional[str], bases: Optional[str], expected_result: Optional[str]
+    tail_seq: Optional[str], bases: str, expected_result: Optional[str]
 ) -> None:
     test_primer = Oligo(
         bases=bases,
