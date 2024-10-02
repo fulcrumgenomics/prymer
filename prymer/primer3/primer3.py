@@ -43,7 +43,7 @@ polymorphic sites found in the `VariantLookup` provided in the constructor.
 
 ```
 
-The `design_oligos()` method on `Primer3` is used to design the primers given a
+The `design()` method on `Primer3` is used to design the primers given a
 [`Primer3Input`][prymer.primer3.primer3_input.Primer3Input].  The latter includes all the
 parameters and target region.
 
@@ -63,13 +63,13 @@ parameters and target region.
     primer_and_amplicon_params=params, \
     task=DesignLeftPrimersTask(), \
 )
->>> left_result = designer.design_oligos(design_input=design_input)
+>>> left_result = designer.design(design_input=design_input)
 
 ```
 
 The `left_result` returns the [`Primer3Result`][prymer.primer3.primer3.Primer3Result]
 container class.   It contains two attributes:
-1. `filtered_designs`: filtered and ordered (by objective function score) list of primer pairs or
+1. `designs`: filtered and ordered (by objective function score) list of primer pairs or
     single primers that were returned by Primer3.
 2. `failures`: ordered list of [`Primer3Failures`][prymer.primer3.primer3.Primer3Failure]
     detailing design failure reasons and corresponding count.
@@ -84,7 +84,7 @@ Primer3Failure(reason=<Primer3FailureReason.GC_CONTENT: 'GC content failed'>, co
 
 ```
 
-While`filtered_designs` attribute on `Primer3Result` may be used to access the list of primers or
+While the `designs` attribute on `Primer3Result` may be used to access the list of primers or
 primer pairs, it is more convenient to use the `primers()` and `primer_pairs()` methods
 to return the designed primers or primer pairs (use the method corresponding to the input task) so
 that the proper type is returned (i.e. [`Primer`][prymer.api.primer.Primer] or
@@ -343,7 +343,7 @@ class Primer3(ExecutableRunner):
                 valid_primer_pair_designs.append(primer_pair)
         return valid_primer_pair_designs, dinuc_pair_failures
 
-    def design_oligos(self, design_input: Primer3Input) -> Primer3Result:  # noqa: C901
+    def design(self, design_input: Primer3Input) -> Primer3Result:  # noqa: C901
         """Designs primers, primer pairs, and/or internal probes given a target region.
 
         Args:
@@ -491,7 +491,7 @@ class Primer3(ExecutableRunner):
 
         Args:
             design_input: the target region, design task, specifications, and scoring penalties
-            design_results: design results emitted by Primer3 and captured by design_oligos()
+            design_results: design results emitted by Primer3 and captured by design()
             design_region: the padded design region
             design_task: the design task
             unmasked_design_seq: the reference sequence corresponding to the target region
@@ -537,9 +537,6 @@ class Primer3(ExecutableRunner):
                     tm=float(design_results[f"PRIMER_{design_task.task_type}_{idx}_TM"]),
                     penalty=float(design_results[f"PRIMER_{design_task.task_type}_{idx}_PENALTY"]),
                     span=span,
-                    self_any_th=float(design_results[f"{key}_SELF_ANY_TH"]),
-                    self_end_th=float(design_results[f"{key}_SELF_END_TH"]),
-                    hairpin_th=float(design_results[f"{key}_HAIRPIN_TH"]),
                 )
             )
         return primers
@@ -581,7 +578,7 @@ class Primer3(ExecutableRunner):
 
         Args:
             design_input: the target region, design task, specifications, and scoring penalties
-            design_results: design results emitted by Primer3 and captured by design_oligos()
+            design_results: design results emitted by Primer3 and captured by design()
             design_region: the padded design region
             unmasked_design_seq: the reference sequence corresponding to the target region
 

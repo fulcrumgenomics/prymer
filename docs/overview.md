@@ -3,7 +3,7 @@
 The `prymer` Python library is intended to be used for three main purposes:
 
 1. [Clustering targets](#clustering-targets) into larger amplicons prior to designing primers.
-2. [Designing oligos](#designing-primers) using Primer3 for each target from (1).
+2. [Designing](#designing-primers) primers (single and paired) and internal hybridization probes using Primer3 for each target from (1).
 3. [Build and Picking a set of primer pairs](#build-and-picking-primer-pairs) from the design candidates produced in (2).
 
 ## Clustering Targets
@@ -18,7 +18,7 @@ amplicons prior to primer design.
 Designing primers (left or right) or primer pairs using Primer3 is primarily performed using the 
 [`Primer3`][prymer.primer3.primer3.Primer3] class, which wraps the
 [`primer3` command line tool](https://github.com/primer3-org/primer3).  The 
-[`design_oligos()`][prymer.primer3.primer3.Primer3.design_oligos] facilitates the design of primers (single and paired) and internal hybridization probes 
+[`design()`][prymer.primer3.primer3.Primer3.design] method facilitates the design of primers (single and paired) and internal hybridization probes 
 for a single target. The `Primer3` instance is intended to be re-used to design primers across multiple targets, or 
 re-design (after changing parameters) for the same target, or both!
 

@@ -53,11 +53,6 @@ def test_probe_param_construction_valid(
     assert valid_probe_params.probe_gcs.min == 45.0
     assert valid_probe_params.probe_gcs.opt == 55.0
     assert valid_probe_params.probe_gcs.max == 60.0
-    # assert that `probe_max_self_any_thermo` was set to 55.0 (probe_tm.min - 10.0)
-    assert valid_probe_params.probe_max_self_any_thermo == 55.0
-    mapped_dict = valid_probe_params.to_input_tags()
-    # because `probe_excluded_region` is not given, we do not expect a key in `mapped_dict`
-    assert Primer3InputTag.SEQUENCE_INTERNAL_EXCLUDED_REGION not in mapped_dict
 
 
 def test_primer_amplicon_param_construction_raises(

@@ -37,7 +37,7 @@ Span(refname='chr1', start=1, end=120, strand=<Strand.POSITIVE: '+'>)
 Span(refname='chr1', start=21, end=100, strand=<Strand.POSITIVE: '+'>)
 
 >>> list(primer_pair)
-[Oligo(name=None, tm=70.0, penalty=-123.0, span=Span(refname='chr1', start=1, end=20, strand=<Strand.POSITIVE: '+'>), self_any=None, self_any_th=None, self_end=None, self_end_th=None, hairpin_th=None, bases='GGGGGGGGGGGGGGGGGGGG', tail=None), Oligo(name=None, tm=70.0, penalty=-123.0, span=Span(refname='chr1', start=101, end=120, strand=<Strand.NEGATIVE: '-'>), self_any=None, self_any_th=None, self_end=None, self_end_th=None, hairpin_th=None, bases='TTTTTTTTTTTTTTTTTTTT', tail=None)]
+[Oligo(name=None, tm=70.0, penalty=-123.0, span=Span(refname='chr1', start=1, end=20, strand=<Strand.POSITIVE: '+'>), bases='GGGGGGGGGGGGGGGGGGGG', tail=None), Oligo(name=None, tm=70.0, penalty=-123.0, span=Span(refname='chr1', start=101, end=120, strand=<Strand.NEGATIVE: '-'>), bases='TTTTTTTTTTTTTTTTTTTT', tail=None)]
 
 ```
 """  # noqa: E501

@@ -25,7 +25,6 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Optional
-from typing import TypeVar
 from typing import assert_never
 
 from fgpyo.sequence import gc_content
@@ -124,7 +123,3 @@ class OligoLike(ABC):
             case _:  # pragma: no cover
                 # Not calculating coverage on this line as it should be impossible to reach
                 assert_never(f"Encountered unhandled Strand value: {self.span.strand}")
-
-
-OligoLikeType = TypeVar("OligoLikeType", bound=OligoLike)
-"""Type variable for classes generic over `OligoLike` types."""

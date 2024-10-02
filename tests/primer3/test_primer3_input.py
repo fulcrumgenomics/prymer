@@ -43,7 +43,7 @@ def valid_primer_weights() -> PrimerAndAmpliconWeights:
 
 @pytest.fixture
 def valid_probe_weights() -> ProbeWeights:
-    return ProbeWeights(probe_wt_hairpin_th=100.0)
+    return ProbeWeights()
 
 
 @pytest.mark.parametrize(
@@ -68,7 +68,7 @@ def test_primer_design_only_valid(
         primer_and_amplicon_params=valid_primer_amplicon_params,
     )
     mapped_dict = test_input.to_input_tags(design_region=test_design_region)
-    assert len(mapped_dict.keys()) == 46
+    assert len(mapped_dict.keys()) == 38
 
 
 @pytest.mark.parametrize(
@@ -101,9 +101,8 @@ def test_probe_design_only_valid(
     )
     mapped_dict = test_input.to_input_tags(design_region=test_design_region)
     assert mapped_dict[Primer3InputTag.PRIMER_PICK_INTERNAL_OLIGO] == 1
-    assert mapped_dict[Primer3InputTag.PRIMER_INTERNAL_WT_HAIRPIN_TH] == 100.0
 
-    assert len(mapped_dict.keys()) == 29
+    assert len(mapped_dict.keys()) == 21
 
     # test instantiation of default `ProbeWeights` when they are not provided
     altered_input = Primer3Input(
@@ -114,7 +113,7 @@ def test_probe_design_only_valid(
         primer_and_amplicon_params=None,
     )
     altered_mapped_dict = altered_input.to_input_tags(design_region=test_target)
-    assert altered_mapped_dict[Primer3InputTag.PRIMER_INTERNAL_WT_HAIRPIN_TH] == 1.0
+    assert altered_mapped_dict[Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_GT] == 0.5
 
 
 def test_probe_design_only_raises(valid_probe_weights: ProbeWeights) -> None:

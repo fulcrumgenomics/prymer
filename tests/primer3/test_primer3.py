@@ -142,11 +142,11 @@ def valid_primer_pairs(
     return primer_pairs
 
 
-def test_design_oligos_raises(
+def test_design_raises(
     genome_ref: Path,
     single_primer_params: PrimerAndAmpliconParameters,
 ) -> None:
-    """Test that design_oligos() raises when given an invalid argument."""
+    """Test that design() raises when given an invalid argument."""
 
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
 
@@ -160,7 +160,7 @@ def test_design_oligos_raises(
         task=DesignLeftPrimersTask(),
     )
     with pytest.raises(ValueError, match="Primer3 failed"):
-        Primer3(genome_fasta=genome_ref).design_oligos(design_input=invalid_design_input)
+        Primer3(genome_fasta=genome_ref).design(design_input=invalid_design_input)
     # TODO: add other Value Errors
 
 
@@ -178,7 +178,7 @@ def test_left_primer_valid_designs(
 
     with Primer3(genome_fasta=genome_ref) as designer:
         for _ in range(10):  # run many times to ensure we can re-use primer3
-            left_result = designer.design_oligos(design_input=design_input)
+            left_result = designer.design(design_input=design_input)
             designed_lefts: list[Oligo] = left_result.primers()
             assert all(isinstance(design, Oligo) for design in designed_lefts)
             for actual_design in designed_lefts:
@@ -225,7 +225,7 @@ def test_right_primer_valid_designs(
     )
     with Primer3(genome_fasta=genome_ref) as designer:
         for _ in range(10):  # run many times to ensure we can re-use primer3
-            right_result: Primer3Result = designer.design_oligos(design_input=design_input)
+            right_result: Primer3Result = designer.design(design_input=design_input)
             designed_rights: list[Oligo] = right_result.primers()
             assert all(isinstance(design, Oligo) for design in designed_rights)
 
@@ -273,7 +273,7 @@ def test_primer_pair_design(
         task=DesignPrimerPairsTask(),
     )
     with Primer3(genome_fasta=genome_ref) as designer:
-        pair_result: Primer3Result = designer.design_oligos(design_input=design_input)
+        pair_result: Primer3Result = designer.design(design_input=design_input)
         designed_pairs: list[PrimerPair] = pair_result.primer_pairs()
         assert all(isinstance(design, PrimerPair) for design in designed_pairs)
         lefts = [primer_pair.left_primer for primer_pair in designed_pairs]
@@ -363,7 +363,7 @@ def test_fasta_close_valid(
     with pytest.raises(
         RuntimeError, match="Error, trying to use a subprocess that has already been terminated"
     ):
-        designer.design_oligos(design_input=design_input)
+        designer.design(design_input=design_input)
 
 
 @pytest.mark.parametrize(
@@ -641,4 +641,4 @@ def test_probe_design_raises(genome_ref: Path, valid_probe_params: ProbeParamete
         with pytest.raises(
             ValueError, match="Target region required to be at least as large as the"
         ):
-            designer.design_oligos(design_input=design_input)
+            designer.design(design_input=design_input)
