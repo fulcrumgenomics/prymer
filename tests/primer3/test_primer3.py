@@ -11,7 +11,6 @@ from prymer.api import Primer
 from prymer.api import PrimerPair
 from prymer.api import Span
 from prymer.api import Strand
-from prymer.api import cached
 from prymer.primer3 import DesignLeftPrimersTask
 from prymer.primer3 import DesignPrimerPairsTask
 from prymer.primer3 import DesignRightPrimersTask
@@ -381,15 +380,13 @@ def test_variant_lookup(
     expected_soft_masked: str,
 ) -> None:
     """Test that MAF filtering and masking are working as expected."""
-    with Primer3(
-        genome_fasta=genome_ref, variant_lookup=cached([vcf_path], min_maf=0.01)
-    ) as designer:
+    with Primer3(genome_fasta=genome_ref, list_of_vcfs=[vcf_path], min_maf=0.01) as designer:
         actual_soft_masked, actual_hard_masked = designer.get_design_sequences(region=region)
     assert actual_hard_masked == expected_hard_masked
     assert actual_soft_masked == expected_soft_masked
 
     # with no variant lookup should all be soft-masked
-    with Primer3(genome_fasta=genome_ref, variant_lookup=None) as designer:
+    with Primer3(genome_fasta=genome_ref) as designer:
         actual_soft_masked, actual_hard_masked = designer.get_design_sequences(region=region)
     assert actual_hard_masked == expected_soft_masked
     assert actual_soft_masked == expected_soft_masked
