@@ -18,8 +18,8 @@ hits than `max_hits` (see `bwt aln -X`).
 Use of this module requires installation of a custom version of BWA named `bwa-aln-interactive`.
 See:
 
-    - https://github.com/fulcrumgenomics/bwa-aln-interactive
-    - https://bioconda.github.io/recipes/bwa-aln-interactive/README.html
+- [https://github.com/fulcrumgenomics/bwa-aln-interactive](https://github.com/fulcrumgenomics/bwa-aln-interactive)
+- [https://bioconda.github.io/recipes/bwa-aln-interactive/README.html](https://bioconda.github.io/recipes/bwa-aln-interactive/README.html)
 
 ## Example
 
@@ -192,7 +192,7 @@ SEED_LENGTH: int = 20
 """The default length of the seed region"""
 
 BWA_AUX_EXTENSIONS: list[str] = [".amb", ".ann", ".bwt", ".pac", ".sa"]
-"""The file extensiosn for BWA index files"""
+"""The file extensions for BWA index files"""
 
 
 class BwaAlnInteractive(ExecutableRunner):
@@ -201,9 +201,9 @@ class BwaAlnInteractive(ExecutableRunner):
     back without waiting for a full batch of reads to be sent.
 
     See:
-        - https://github.com/fulcrumgenomics/bwa-aln-interactive
-        - https://bioconda.github.io/recipes/bwa-aln-interactive/README.html
 
+    - [https://github.com/fulcrumgenomics/bwa-aln-interactive](https://github.com/fulcrumgenomics/bwa-aln-interactive)
+    - [https://bioconda.github.io/recipes/bwa-aln-interactive/README.html](https://bioconda.github.io/recipes/bwa-aln-interactive/README.html)
 
     Attributes:
         max_hits: the maximum number of hits to report - if more than this number of seed hits

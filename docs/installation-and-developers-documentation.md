@@ -38,7 +38,7 @@ mamba install -c bioconda prymer
     poetry install
     ```
 
-# Checking the Build
+## Checking the Build
 
 Use `poetry` to test your code.
 
@@ -47,14 +47,13 @@ poetry run pytest
 ```
 
 Note that `poetry run pytest` will run `mypy` checks, `ruff` checks, `pytest` unit tests, and will provide a unit test coverage report.
-
 However, `pytest` will neither run the ruff formatter nor apply `ruff`'s automatic lint fixes, which can be done by calling `ruff` directly. 
 
 ```console
 poetry run ruff format && poetry run ruff check --fix
 ```
 
-# Building the Documentation
+## Building the Documentation
 
 Use `mkdocs` to build and serve the documentation.
 
@@ -62,7 +61,7 @@ Use `mkdocs` to build and serve the documentation.
 poetry run mkdocs build && poetry run mkdocs serve
 ```
 
-# Creating a Release on PyPi
+## Creating a Release on PyPi
 
 1. Clone the repository recursively and ensure you are on the `main` (un-dirty) branch
 2. Checkout a new branch to prepare the library for release
