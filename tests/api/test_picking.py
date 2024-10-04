@@ -583,7 +583,7 @@ def _pick_top_primer_pairs(
             max_mismatches_in_three_prime_region=0,
             max_mismatches=0,
             max_amplicon_size=params.amplicon_sizes.max,
-        ) as offtarget_detector
+        ) as offtarget_detector,
     ):
         picked: list[PrimerPair] = pick_top_primer_pairs(
             primer_pairs=primer_pairs,
