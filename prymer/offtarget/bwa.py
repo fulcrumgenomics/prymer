@@ -210,6 +210,7 @@ class BwaAlnInteractive(ExecutableRunner):
         reverse_complement: reverse complement each query sequence before alignment.
         include_alt_hits: if True include hits to references with names ending in _alt, otherwise
                           do not include them.
+        header: the SAM alignment header.
     """
 
     def __init__(
@@ -293,7 +294,7 @@ class BwaAlnInteractive(ExecutableRunner):
 
         super().__init__(command=command)
 
-        # Send in a single record to be aligned so we get bwa to output a SAM header.
+        # Send a sentinel record to be aligned so we know when bwa is done outputting a header.
         self._subprocess.stdin.write(Query(id="ignore", bases="A").to_fastq())
         self.__signal_bwa()  # forces the input to be sent to the underlying process.
 
@@ -304,14 +305,13 @@ class BwaAlnInteractive(ExecutableRunner):
             if line.startswith("ignore"):
                 break
 
-        self._header = AlignmentHeader.from_text("".join(header))
+        self.header = AlignmentHeader.from_text("".join(header))
 
     def __signal_bwa(self) -> None:
         """Signals BWA to process the queries"""
-        for _ in range(3):
-            self._subprocess.stdin.flush()
-            self._subprocess.stdin.write("\n\n")
-            self._subprocess.stdin.flush()
+        self._subprocess.stdin.flush()
+        self._subprocess.stdin.write("\n" * 16)
+        self._subprocess.stdin.flush()
 
     def map_one(self, query: str, id: str = "unknown") -> BwaResult:
         """Maps a single query to the genome and returns the result.
@@ -348,7 +348,7 @@ class BwaAlnInteractive(ExecutableRunner):
         for query in queries:
             # get the next alignment and convert to a result
             line: str = next(self._subprocess.stdout).strip()
-            alignment = AlignedSegment.fromstring(line, self._header)
+            alignment = AlignedSegment.fromstring(line, self.header)
             results.append(self._to_result(query=query, rec=alignment))
 
         return results

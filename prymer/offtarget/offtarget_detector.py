@@ -75,6 +75,7 @@ BwaHit(refname='chr1', start=61, negative=True, cigar=Cigar(elements=(CigarEleme
 """  # noqa: E501
 
 import itertools
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import replace
@@ -121,7 +122,7 @@ class OffTargetResult:
     right_primer_spans: list[Span] = field(default_factory=list)
 
 
-class OffTargetDetector:
+class OffTargetDetector(AbstractContextManager):
     """A class for detecting off-target mappings of primers and primer pairs that uses a custom
     version of "bwa aln" named "bwa-aln-interactive".
 

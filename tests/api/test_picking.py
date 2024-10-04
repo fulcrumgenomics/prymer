@@ -573,31 +573,28 @@ def _pick_top_primer_pairs(
     max_primer_pair_hits: int,
     min_difference: int = 1,
 ) -> list[PrimerPair]:
-    offtarget_detector = OffTargetDetector(
-        ref=picking_ref,
-        max_primer_hits=max_primer_hits,
-        max_primer_pair_hits=max_primer_pair_hits,
-        three_prime_region_length=5,
-        max_mismatches_in_three_prime_region=0,
-        max_mismatches=0,
-        max_amplicon_size=params.amplicon_sizes.max,
-    )
-    dimer_checker = NtThermoAlign()
-
-    picked = pick_top_primer_pairs(
-        primer_pairs=primer_pairs,
-        num_primers=len(primer_pairs),
-        min_difference=min_difference,
-        params=params,
-        offtarget_detector=offtarget_detector,
-        is_dimer_tm_ok=lambda s1, s2: (
-            dimer_checker.duplex_tm(s1=s1, s2=s2) <= params.max_dimer_tm
-        ),
-    )
-    offtarget_detector.close()
-    dimer_checker.close()
-
-    return picked
+    with (
+        OffTargetDetector(
+            ref=picking_ref,
+            max_primer_hits=max_primer_hits,
+            max_primer_pair_hits=max_primer_pair_hits,
+            three_prime_region_length=5,
+            max_mismatches_in_three_prime_region=0,
+            max_mismatches=0,
+            max_amplicon_size=params.amplicon_sizes.max,
+        ) as offtarget_detector,
+        NtThermoAlign() as dimer_checker,
+    ):
+        return pick_top_primer_pairs(
+            primer_pairs=primer_pairs,
+            num_primers=len(primer_pairs),
+            min_difference=min_difference,
+            params=params,
+            offtarget_detector=offtarget_detector,
+            is_dimer_tm_ok=lambda s1, s2: (
+                dimer_checker.duplex_tm(s1=s1, s2=s2) <= params.max_dimer_tm
+            ),
+        )
 
 
 _PARAMS: FilteringParams = _zero_score_filtering_params(_score_input())
