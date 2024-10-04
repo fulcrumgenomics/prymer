@@ -18,6 +18,8 @@ jobs:
       matrix:
         PYTHON_VERSION: ["3.11", "3.12"]
     steps:
+      - uses: actions/checkout@v4
+
       - name: Set up Python ${{ matrix.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
@@ -36,7 +38,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           miniforge-version: latest
-          channels: conda-forge,bioconda
+          channels: bioconda,conda-forge
           activate-environment: prymer
           environment-file: prymer.yml
           channel-priority: true
