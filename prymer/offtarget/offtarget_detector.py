@@ -103,11 +103,14 @@ class OffTargetResult:
     """Information obtained by running a single primer pair through the off-target detector.
 
     Attributes:
-        primer_pair: the primer submitted
-        passes: True if the primer pair passes all checks, False otherwise
+        primer_pair: the primer pair submitted
+        passes: True if neither primer exceeds the specified maximum number of hits, and the primer
+            pair would generate an acceptable number of amplicons in the reference genome (i.e.
+            `min_primer_pair_hits <= num_amplicons <= max_primer_pair_hits`). False otherwise.
         cached: True if this result is part of a cache, False otherwise.  This is useful for testing
-        spans: the set of mappings of the primer pair to the genome or an empty list if mappings
-            were not retained
+        spans: The set of mappings of the primer pair to the genome (i.e., the region spanned by the
+            inferred amplicon). This list will be empty if the generating [[OffTargetDetector]] was
+            constructed with `keep_spans=False`.
         left_primer_spans: the list of mappings for the left primer, independent of the pair
             mappings, or an empty list
         right_primer_spans: the list of mappings for the right primer, independent of the pair
@@ -126,12 +129,25 @@ class OffTargetDetector(AbstractContextManager):
     """A class for detecting off-target mappings of primers and primer pairs that uses a custom
     version of "bwa aln" named "bwa-aln-interactive".
 
-    The off-target detection is faster and more sensitive than traditional isPCR and in addition can
-    correctly detect primers that are repetitive and contain many thousands or millions of mappings
-    to the genome.
+    `OffTargetDetector` uses a [custom, interactive
+    version](https://github.com/fulcrumgenomics/bwa-aln-interactive/) of `bwa aln` to perform
+    off-target detection. This approach is faster and more sensitive than traditional isPCR and in
+    addition can correctly detect primers that are repetitive and contain many thousands or millions
+    of mappings to the genome.
 
     Note that while this class invokes BWA with multiple threads, it is not itself thread-safe.
     Only one thread at a time should invoke methods on this class without external synchronization.
+
+    Off-target detection may be performed for individual primers and/or primer pairs.
+
+    To detect off-target hits for individual primers, use the `OffTargetDetector.filters()` method,
+    which will remove any primers that have more than the specified number of maximum hits against
+    the reference.
+
+    To detect off-target amplification of primer pairs, use the `OffTargetDetector.check_one()` or
+    `OffTargetDetector.check_all()` methods. These methods screen the individual primers in each
+    pair for off-target hits, and verify that the possible amplicons inferred by the primers'
+    alignments does not exceed the specified maximum number of primer pair hits.
     """
 
     def __init__(
@@ -143,6 +159,7 @@ class OffTargetDetector(AbstractContextManager):
         max_mismatches_in_three_prime_region: int,
         max_mismatches: int,
         max_amplicon_size: int,
+        min_primer_pair_hits: int = 1,
         cache_results: bool = True,
         threads: Optional[int] = None,
         keep_spans: bool = True,
@@ -150,6 +167,19 @@ class OffTargetDetector(AbstractContextManager):
         executable: str | Path = "bwa-aln-interactive",
     ) -> None:
         """
+        Initialize an [[OffTargetDetector]].
+
+        This class accepts a large number of parameters to control the behavior of the off-target
+        detection. The parameters are used in the various aspects of off-target detection as
+        follows:
+
+        1. Alignment (off-target hit detection): `ref`, `executable`, `threads`,
+           `three_prime_region_length`, `max_mismatches_in_three_prime_region`, `max_mismatches`,
+           and `max_primer_hits`.
+        2. Filtering of individual primers: `max_primer_hits`.
+        3. Checking of primer pairs: `max_primer_hits`, `min_primer_pair_hits`,
+           `max_primer_pair_hits`, and `max_amplicon_size`.
+
         Args:
             ref: the reference genome fasta file (must be indexed with BWA)
             max_primer_hits: the maximum number of hits an individual primer can have in the genome
@@ -157,6 +187,12 @@ class OffTargetDetector(AbstractContextManager):
                 primer failed.
             max_primer_pair_hits: the maximum number of amplicons a primer pair can make and be
                 considered passing
+            min_primer_pair_hits: The minimum number of amplicons a primer pair can make and be
+                considered passing. (In most cases, this is the number of amplicons a primer pair is
+                expected to generate.) The default is 1, which is appropriate when the primer pair
+                is being evaluated for off-target hits against the same reference genome from which
+                the primers were generated. If the primer pair was generated from a different
+                reference sequence, it may be appropriate to set this value to 0.
             three_prime_region_length: the number of bases at the 3' end of the primer in which the
                 parameter max_mismatches_in_three_prime_region is evaluated
             max_mismatches_in_three_prime_region: the maximum number of mismatches that are
@@ -167,10 +203,10 @@ class OffTargetDetector(AbstractContextManager):
             max_amplicon_size: the maximum amplicon size to consider amplifiable
             cache_results: if True, cache results for faster re-querying
             threads: the number of threads to use when invoking bwa
-            keep_spans: if True, [[OffTargetResult]] objects will have amplicon spans
+            keep_spans: if True, [[OffTargetResult]] objects will be reported with amplicon spans
                 populated, otherwise not
-            keep_primer_spans: if True, [[OffTargetResult]] objects will have left and right
-                primer spans
+            keep_primer_spans: if True, [[OffTargetResult]] objects will be reported with left and
+                right primer spans
             executable: string or Path representation of the `bwa` executable path
         """
         self._primer_cache: dict[str, BwaResult] = {}
@@ -187,31 +223,68 @@ class OffTargetDetector(AbstractContextManager):
         )
         self._max_primer_hits = max_primer_hits
         self._max_primer_pair_hits: int = max_primer_pair_hits
+        self._min_primer_pair_hits: int = min_primer_pair_hits
         self._max_amplicon_size: int = max_amplicon_size
         self._cache_results: bool = cache_results
         self._keep_spans: bool = keep_spans
         self._keep_primer_spans: bool = keep_primer_spans
 
     def filter(self, primers: list[PrimerType]) -> list[PrimerType]:
-        """Filters an iterable of Primers to return only those that have less than
-        `max_primer_hits` mappings to the genome."""
+        """
+        Remove primers that have more than `max_primer_hits` mappings to the genome.
+
+        This method maps each primer to the specified reference with `bwa aln` to search for
+        off-target hits. Note that when the reference includes the sequence from which the primers
+        were designed, the on-target hit will be included in the hit count. `max_primer_hits` should
+        be set to at least 1 in this case.
+
+        Args:
+            primers: A list of primers to filter.
+
+        Returns:
+            The input primers, filtered to remove any primers with more than `max_primer_hits`
+            mappings to the genome.
+        """
         results: dict[str, BwaResult] = self.mappings_of(primers)
         return [
             primer for primer in primers if results[primer.bases].hit_count <= self._max_primer_hits
         ]
 
     def check_one(self, primer_pair: PrimerPair) -> OffTargetResult:
-        """Checks a PrimerPair for off-target sites in the genome at which it might amplify."""
+        """
+        Check an individual primer pair for off-target amplification.
+
+        See `OffTargetDetector.check_all()` for details.
+
+        Args:
+            primer_pair: The primer pair to check.
+
+        Returns:
+            The results of the off-target detection.
+            See `OffTargetResult` for details regarding the attributes included in the result.
+        """
         result: dict[PrimerPair, OffTargetResult] = self.check_all([primer_pair])
         return result[primer_pair]
 
     def check_all(self, primer_pairs: list[PrimerPair]) -> dict[PrimerPair, OffTargetResult]:
-        """Checks a collection of primer pairs for off-target sites, returning a dictionary of
-        `PrimerPair`s to `OffTargetResult`.
+        """
+        Check a collection of primer pairs for off-target amplification.
+
+        This method maps each primer to the specified reference with `bwa aln` to search for
+        off-target hits. Possible amplicons are identified from the pairwise combinations of these
+        alignments, up to the specified `max_amplicon_size`.
+
+        Primer pairs are marked as passing if both of the following are true:
+        1. Each primer has no more than `max_primer_hits` alignments to the genome.
+        2. The size of the set of possible amplicons does not exceed `max_primer_pair_hits`, and is
+           at least `min_primer_pair_hits`.
+
+        Args:
+            primer_pairs: The primer pairs to check.
 
         Returns:
-            a Map containing all given primer pairs as keys with the values being the result of
-            off-target checking.
+            A dictionary mapping each checked primer pair to its off-target detection results.
+            See `OffTargetResult` for details regarding the attributes included in each result.
         """
 
         primer_pair_results: dict[PrimerPair, OffTargetResult] = {}
@@ -271,7 +344,7 @@ class OffTargetDetector(AbstractContextManager):
             amplicons = self._to_amplicons(p1.hits, p2.hits, self._max_amplicon_size)
             result = OffTargetResult(
                 primer_pair=primer_pair,
-                passes=0 < len(amplicons) <= self._max_primer_pair_hits,
+                passes=self._min_primer_pair_hits <= len(amplicons) <= self._max_primer_pair_hits,
                 spans=amplicons if self._keep_spans else [],
                 left_primer_spans=(
                     [self._hit_to_span(h) for h in p1.hits] if self._keep_primer_spans else []
@@ -287,10 +360,27 @@ class OffTargetDetector(AbstractContextManager):
         return result
 
     def mappings_of(self, primers: list[PrimerType]) -> dict[str, BwaResult]:
-        """Function to take a set of primers and map any that are not cached, and return mappings
-        for all of them.  Note: the genomics sequence of the returned mappings are on the opposite
-        strand of that of the strand of the primer.  I.e. we map the complementary bases (reversed)
-        to that of the primer."""
+        """
+        Map primers to the reference genome using `bwa aln`.
+
+        Alignment results may be optionally cached for efficiency. Set `cache_results` to `True`
+        when instantiating the [[OffTargetDetector]] to enable caching.
+
+        Any primers without cached results, or all primers when `cache_results` is `False`, will be
+        mapped to the reference genome using `bwa aln` and the specified alignment parameters.
+
+        **Note**: The reverse complement of each primer sequence is used for mapping. The `query`
+        sequence in each `BwaResult` will match the input primer sequence, as will the sequences
+        used as keys in the output dictionary. However, the coordinates reported in each `BwaHit`
+        associated with a result will correspond to complementary sequence.
+
+        Args:
+            primers: A list of primers to map.
+
+        Returns:
+            A dictionary mapping each primer's sequence to its alignment results.
+            See `BwaResult` for details regarding the attributes included in each result.
+        """
 
         primers_to_map: list[PrimerType]
         if not self._cache_results:
@@ -353,4 +443,5 @@ class OffTargetDetector(AbstractContextManager):
         traceback: Optional[TracebackType],
     ) -> None:
         """Gracefully terminates any running subprocesses."""
+        super().__exit__(exc_type, exc_value, traceback)
         self.close()

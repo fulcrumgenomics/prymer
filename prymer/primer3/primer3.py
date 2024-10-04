@@ -48,7 +48,7 @@ The `design_primers()` method on `Primer3` is used to design the primers given a
 parameters and target region.
 
 ```python
->>> from prymer.primer3.primer3_parameters import Primer3Parameters
+>>> from prymer.primer3 import Primer3Parameters
 >>> from prymer.api import MinOptMax
 >>> target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
 >>> params = Primer3Parameters( \

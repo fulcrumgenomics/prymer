@@ -10,23 +10,23 @@ import pysam
 import pytest
 from fgpyo.sequence import reverse_complement
 
+from prymer.api import FilteringParams
+from prymer.api import MinOptMax
+from prymer.api import Primer
+from prymer.api import PrimerPair
+from prymer.api import Span
+from prymer.api import Strand
+from prymer.api import build_and_pick_primer_pairs
+from prymer.api import build_primer_pairs
+from prymer.api import pick_top_primer_pairs
 from prymer.api.melting import calculate_long_seq_tm
-from prymer.api.minoptmax import MinOptMax
-from prymer.api.picking import FilteringParams
 from prymer.api.picking import _dist_penalty
 from prymer.api.picking import _seq_penalty
-from prymer.api.picking import build_and_pick_primer_pairs
-from prymer.api.picking import build_primer_pairs
 from prymer.api.picking import check_primer_overlap
 from prymer.api.picking import is_acceptable_primer_pair
-from prymer.api.picking import pick_top_primer_pairs
 from prymer.api.picking import score as picking_score
-from prymer.api.primer import Primer
-from prymer.api.primer_pair import PrimerPair
-from prymer.api.span import Span
-from prymer.api.span import Strand
 from prymer.ntthal import NtThermoAlign
-from prymer.offtarget.offtarget_detector import OffTargetDetector
+from prymer.offtarget import OffTargetDetector
 
 
 @pytest.fixture
@@ -574,6 +574,7 @@ def _pick_top_primer_pairs(
     min_difference: int = 1,
 ) -> list[PrimerPair]:
     with (
+        NtThermoAlign() as dimer_checker,
         OffTargetDetector(
             ref=picking_ref,
             max_primer_hits=max_primer_hits,
@@ -583,9 +584,8 @@ def _pick_top_primer_pairs(
             max_mismatches=0,
             max_amplicon_size=params.amplicon_sizes.max,
         ) as offtarget_detector,
-        NtThermoAlign() as dimer_checker,
     ):
-        return pick_top_primer_pairs(
+        picked: list[PrimerPair] = pick_top_primer_pairs(
             primer_pairs=primer_pairs,
             num_primers=len(primer_pairs),
             min_difference=min_difference,
@@ -595,6 +595,7 @@ def _pick_top_primer_pairs(
                 dimer_checker.duplex_tm(s1=s1, s2=s2) <= params.max_dimer_tm
             ),
         )
+        return picked
 
 
 _PARAMS: FilteringParams = _zero_score_filtering_params(_score_input())

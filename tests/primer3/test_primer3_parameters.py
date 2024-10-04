@@ -2,9 +2,9 @@ from dataclasses import replace
 
 import pytest
 
-from prymer.api.minoptmax import MinOptMax
-from prymer.primer3.primer3_input_tag import Primer3InputTag
-from prymer.primer3.primer3_parameters import Primer3Parameters
+from prymer.api import MinOptMax
+from prymer.primer3 import Primer3InputTag
+from prymer.primer3 import Primer3Parameters
 
 
 @pytest.fixture

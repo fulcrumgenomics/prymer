@@ -39,6 +39,7 @@ BwaHit(refname='chr1', start=61, negative=False, cigar=Cigar(elements=(CigarElem
 >>> bwa.map_all(queries=[query])
 [BwaResult(query=Query(id='NA', bases='AAAAAA'), hit_count=3968, hits=[])]
 >>> bwa.close()
+True
 
 ```
 """  # noqa: E501
@@ -294,15 +295,11 @@ class BwaAlnInteractive(ExecutableRunner):
 
         super().__init__(command=command)
 
-        # Send a sentinel record to be aligned so we know when bwa is done outputting a header.
-        self._subprocess.stdin.write(Query(id="ignore", bases="A").to_fastq())
-        self.__signal_bwa()  # forces the input to be sent to the underlying process.
-
         header = []
         for line in self._subprocess.stdout:
             if line.startswith("@"):
                 header.append(line)
-            if line.startswith("ignore"):
+            if line.startswith("@PG"):
                 break
 
         self.header = AlignmentHeader.from_text("".join(header))
@@ -341,13 +338,16 @@ class BwaAlnInteractive(ExecutableRunner):
         for query in queries:
             fastq_str = query.to_fastq(reverse_complement=self.reverse_complement)
             self._subprocess.stdin.write(fastq_str)
-        self.__signal_bwa()  # forces the input to be sent to the underlying process.
+
+        # Force the input to be sent to the underlying process.
+        self.__signal_bwa()
 
         # Read back the results
         results: list[BwaResult] = []
         for query in queries:
             # get the next alignment and convert to a result
             line: str = next(self._subprocess.stdout).strip()
+            assert not line.startswith("@"), f"SAM record must not start with '@'! {line}"
             alignment = AlignedSegment.fromstring(line, self.header)
             results.append(self._to_result(query=query, rec=alignment))
 
@@ -421,6 +421,3 @@ class BwaAlnInteractive(ExecutableRunner):
             hits = [hit for hit in hits if not hit.refname.endswith("_alt")]
 
         return hits
-
-    def close(self) -> None:
-        super().close()
