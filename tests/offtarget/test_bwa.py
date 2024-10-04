@@ -2,6 +2,8 @@ import shutil
 from dataclasses import replace
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from typing import TypeAlias
+from typing import cast
 
 import pytest
 from fgpyo.sam import Cigar
@@ -11,6 +13,9 @@ from prymer.offtarget.bwa import BWA_AUX_EXTENSIONS
 from prymer.offtarget.bwa import BwaAlnInteractive
 from prymer.offtarget.bwa import BwaHit
 from prymer.offtarget.bwa import Query
+
+SamHeaderType: TypeAlias = dict[str, dict[str, str] | list[dict[str, str]]]
+"""A type alias for a SAM sequence header dictionary."""
 
 
 @pytest.mark.parametrize("bases", [None, ""])
@@ -66,6 +71,19 @@ def test_hit_build_rc() -> None:
     # things that change
     assert hit_f.negative != hit_r.negative
     assert hit_r.negative is True
+
+
+def test_header_is_properly_constructed(ref_fasta: Path) -> None:
+    """Tests that bwa will return a properly constructed header."""
+    with BwaAlnInteractive(ref=ref_fasta, max_hits=1) as bwa:
+        header: SamHeaderType = bwa.header.to_dict()
+        assert set(header.keys()) == {"HD", "SQ", "PG"}
+        assert header["HD"] == {"GO": "query", "SO": "unsorted", "VN": "1.5"}
+        assert header["SQ"] == [{"LN": 10001, "SN": "chr1"}]
+        assert len(header["PG"]) == 1
+        program_group: dict[str, str] = cast(list[dict[str, str]], header["PG"])[0]
+        assert program_group["ID"] == "bwa"
+        assert program_group["PN"] == "bwa"
 
 
 def test_map_one_uniquely_mapped(ref_fasta: Path) -> None:

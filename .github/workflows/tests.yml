@@ -19,11 +19,11 @@ jobs:
         PYTHON_VERSION: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout fulcrumgenomics/bwa
+      - name: Checkout fulcrumgenomics/bwa-aln-interactive
         uses: actions/checkout@v4
         with:
-          repository: fulcrumgenomics/bwa
-          ref: interactive_aln
+          repository: fulcrumgenomics/bwa-aln-interactive
+          ref: main
           path: bwa
           fetch-depth: 0
 
