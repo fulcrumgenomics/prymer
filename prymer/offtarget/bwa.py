@@ -18,7 +18,7 @@ hits than `max_hits` (see `bwt aln -X`).
 Use of this module requires installation of a custom version of BWA named `bwa-aln-interactive`.
 See:
 
-    - https://github.com/fulcrumgenomics/bwa/tree/interactive_aln
+    - https://github.com/fulcrumgenomics/bwa-aln-interactive
     - https://bioconda.github.io/recipes/bwa-aln-interactive/README.html
 
 ## Example
@@ -201,8 +201,8 @@ class BwaAlnInteractive(ExecutableRunner):
     back without waiting for a full batch of reads to be sent.
 
     See:
+        - https://github.com/fulcrumgenomics/bwa-aln-interactive
         - https://bioconda.github.io/recipes/bwa-aln-interactive/README.html
-        - https://github.com/fulcrumgenomics/bwa/tree/interactive_aln
 
 
     Attributes:
