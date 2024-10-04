@@ -11,13 +11,14 @@ import logging
 import os
 import shutil
 import subprocess
+from contextlib import AbstractContextManager
 from pathlib import Path
 from types import TracebackType
 from typing import Optional
 from typing import Self
 
 
-class ExecutableRunner:
+class ExecutableRunner(AbstractContextManager):
     """
     Base class for interaction with subprocess for all command-line tools. The base class supports
     use of the context management protocol and performs basic validation of executable paths.
@@ -67,6 +68,7 @@ class ExecutableRunner:
         traceback: Optional[TracebackType],
     ) -> None:
         """Gracefully terminates any running subprocesses."""
+        super().__exit__(exc_type, exc_value, traceback)
         self.close()
 
     @classmethod
