@@ -33,6 +33,7 @@ BwaHit(refname='chr1', start=61, negative=False, cigar=Cigar(elements=(CigarElem
 >>> bwa.map_all(queries=[query])
 [BwaResult(query=Query(id='NA', bases='AAAAAA'), hit_count=3968, hits=[])]
 >>> bwa.close()
+True
 
 ```
 """  # noqa: E501
