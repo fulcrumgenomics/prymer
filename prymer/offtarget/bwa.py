@@ -339,6 +339,7 @@ class BwaAlnInteractive(ExecutableRunner):
         for query in queries:
             # get the next alignment and convert to a result
             line: str = next(self._subprocess.stdout).strip()
+            assert not line.startswith("@"), f"SAM record must not start with '@'! {line}"
             alignment = AlignedSegment.fromstring(line, self.header)
             results.append(self._to_result(query=query, rec=alignment))
 
