@@ -82,8 +82,8 @@ def test_header_is_properly_constructed(ref_fasta: Path) -> None:
         assert header["SQ"] == [{"LN": 10001, "SN": "chr1"}]
         assert len(header["PG"]) == 1
         program_group: dict[str, str] = cast(list[dict[str, str]], header["PG"])[0]
-        program_group["ID"] = "bwa"
-        program_group["PN"] = "bwa"
+        assert program_group["ID"] == "bwa"
+        assert program_group["PN"] == "bwa"
 
 
 def test_map_one_uniquely_mapped(ref_fasta: Path) -> None:
