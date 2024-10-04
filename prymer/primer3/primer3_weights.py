@@ -42,14 +42,14 @@ class Primer3Weights:
 
      Example:
          >>> Primer3Weights() #default implementation
-         Primer3Weights(product_size_lt=1, product_size_gt=1, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0)
+         Primer3Weights(product_size_lt=1.0, product_size_gt=1.0, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0)
 
-         >>> Primer3Weights(product_size_lt=5)
-         Primer3Weights(product_size_lt=5, product_size_gt=1, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0)
+         >>> Primer3Weights(product_size_lt=5.0)
+         Primer3Weights(product_size_lt=5.0, product_size_gt=1.0, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0)
     """  # noqa: E501
 
-    product_size_lt: int = 1
-    product_size_gt: int = 1
+    product_size_lt: float = 1.0
+    product_size_gt: float = 1.0
     product_tm_lt: float = 0.0
     product_tm_gt: float = 0.0
     primer_end_stability: float = 0.25
