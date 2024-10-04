@@ -45,10 +45,10 @@ from typing import Optional
 from typing import cast
 
 import pysam
-from fgpyo import sam
 from fgpyo import sequence
 from fgpyo.sam import Cigar
 from pysam import AlignedSegment
+from pysam import AlignmentHeader
 
 from prymer.api import coordmath
 from prymer.util.executable_runner import ExecutableRunner
@@ -201,6 +201,7 @@ class BwaAlnInteractive(ExecutableRunner):
         reverse_complement: reverse complement each query sequence before alignment.
         include_alt_hits: if True include hits to references with names ending in _alt, otherwise
                           do not include them.
+        header: the SAM alignment header.
     """
 
     def __init__(
@@ -284,20 +285,14 @@ class BwaAlnInteractive(ExecutableRunner):
 
         super().__init__(command=command)
 
-        # HACK ALERT
-        # This is a hack. By trial and error, pysam.AlignmentFile() will block reading unless
-        # there's at least a few records due to htslib wanting to read a few records for format
-        # auto-detection. Lame.  So a hundred queries are sent to the aligner to align enable the
-        # htslib auto-detection to complete, and for us to be able to read using pysam.
-        num_warmup: int = 100
-        for i in range(num_warmup):
-            query = Query(id=f"ignoreme:{i}", bases="A" * 100)
-            fastq_str = query.to_fastq(reverse_complement=self.reverse_complement)
-            self._subprocess.stdin.write(fastq_str)
-        self.__signal_bwa()  # forces the input to be sent to the underlying process.
-        self._reader = sam.reader(path=self._subprocess.stdout, file_type=sam.SamFileType.SAM)
-        for _ in range(num_warmup):
-            next(self._reader)
+        header = []
+        for line in self._subprocess.stdout:
+            if line.startswith("@"):
+                header.append(line)
+            if line.startswith("@PG"):
+                break
+
+        self.header = AlignmentHeader.from_text("".join(header))
 
     def __signal_bwa(self) -> None:
         """Signals BWA to process the queries"""
@@ -334,13 +329,17 @@ class BwaAlnInteractive(ExecutableRunner):
         for query in queries:
             fastq_str = query.to_fastq(reverse_complement=self.reverse_complement)
             self._subprocess.stdin.write(fastq_str)
-        self.__signal_bwa()  # forces the input to be sent to the underlying process.
+
+        # Force the input to be sent to the underlying process.
+        self.__signal_bwa()
 
         # Read back the results
         results: list[BwaResult] = []
         for query in queries:
             # get the next alignment and convert to a result
-            results.append(self._to_result(query=query, rec=next(self._reader)))
+            line: str = next(self._subprocess.stdout).strip()
+            alignment = AlignedSegment.fromstring(line, self.header)
+            results.append(self._to_result(query=query, rec=alignment))
 
         return results
 
@@ -412,7 +411,3 @@ class BwaAlnInteractive(ExecutableRunner):
             hits = [hit for hit in hits if not hit.refname.endswith("_alt")]
 
         return hits
-
-    def close(self) -> None:
-        self._reader.close()
-        super().close()
