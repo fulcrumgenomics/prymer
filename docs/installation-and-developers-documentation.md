@@ -29,7 +29,7 @@ mamba install -c bioconda prymer
 5. Configure `poetry` to install into pre-existing virtual environments:
 
     ```console
-    poetry config settings.virtualenvs.create false
+    poetry config virtualenvs.create false
     ```
 
 6. Install `prymer` into the virtual environment:
