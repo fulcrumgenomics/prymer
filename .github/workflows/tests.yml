@@ -44,6 +44,7 @@ jobs:
           python-version: ${{ matrix.PYTHON_VERSION }}
 
       - name: Install the project's dependencies
+        shell: bash -el {0}
         run: poetry install
 
       - name: Test the codebase
