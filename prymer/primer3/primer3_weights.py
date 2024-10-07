@@ -18,10 +18,9 @@ the defaults provided here are derived from the Primer3 manual: https://primer3.
 
 Example:
 >>> PrimerAndAmpliconWeights() # default implementation
-PrimerAndAmpliconWeights(product_size_lt=1.0, product_size_gt=1, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0)
->>> PrimerAndAmpliconWeights(product_size_lt=5)
-PrimerAndAmpliconWeights(product_size_lt=5.0, product_size_gt=1, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0)
-
+PrimerAndAmpliconWeights(product_size_lt=1.0, product_size_gt=1.0, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0)
+>>> PrimerAndAmpliconWeights(product_size_lt=5.0)
+PrimerAndAmpliconWeights(product_size_lt=5.0, product_size_gt=1.0, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0)
 """  # noqa: E501
 
 from dataclasses import dataclass
@@ -56,12 +55,7 @@ class PrimerAndAmpliconWeights:
             `PrimerAndAmpliconParameters.primer_gcs.opt`
         primer_gc_gt: penalty weight for primers with GC percent higher than
             `PrimerAndAmpliconParameters.primer_gcs.opt`
-     Example:
-         >>> PrimerAndAmpliconWeights() #default implementation
-         Primer3Weights(product_size_lt=1.0, product_size_gt=1.0, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0)
-         >>> PrimerAndAmpliconWeights(product_size_lt=5.0)
-         Primer3Weights(product_size_lt=5.0, product_size_gt=1.0, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0)
-    """  # noqa: E501
+    """
 
     product_size_lt: float = 1.0
     product_size_gt: float = 1.0
