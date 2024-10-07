@@ -31,9 +31,6 @@ jobs:
           version: ${{env.POETRY_VERSION}}
           installer-parallel: true
 
-      - name: Install the project's dependencies
-        run: poetry install
-
       - name: Set up miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
@@ -45,6 +42,9 @@ jobs:
           auto-update-conda: true
           auto-activate-base: false
           python-version: ${{ matrix.PYTHON_VERSION }}
+
+      - name: Install the project's dependencies
+        run: poetry install
 
       - name: Test the codebase
         shell: bash -el {0}
