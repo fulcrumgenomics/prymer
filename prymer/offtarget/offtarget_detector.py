@@ -126,8 +126,8 @@ class OffTargetResult:
 
 
 class OffTargetDetector(AbstractContextManager):
-    """
-    Detect off-target mappings of primers and primer pairs.
+    """A class for detecting off-target mappings of primers and primer pairs that uses a custom
+    version of "bwa aln" named "bwa-aln-interactive".
 
     `OffTargetDetector` uses a [custom, interactive
     version](https://github.com/fulcrumgenomics/bwa-aln-interactive/) of `bwa aln` to perform
@@ -164,7 +164,7 @@ class OffTargetDetector(AbstractContextManager):
         threads: Optional[int] = None,
         keep_spans: bool = True,
         keep_primer_spans: bool = True,
-        executable: str | Path = "bwa",
+        executable: str | Path = "bwa-aln-interactive",
     ) -> None:
         """
         Initialize an [[OffTargetDetector]].
