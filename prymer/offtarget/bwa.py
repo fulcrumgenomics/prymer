@@ -305,8 +305,10 @@ class BwaAlnInteractive(ExecutableRunner):
         self.header = AlignmentHeader.from_text("".join(header))
 
     def __signal_bwa(self) -> None:
-        """Signals BWA to process the queries"""
+        """Signals BWA to process the queries."""
         self._subprocess.stdin.flush()
+        # NB: the executable compiled on different platforms require a different number of newlines
+        # NB: it is not currently understood why this is, but 16 spaces seems to work for all tested
         self._subprocess.stdin.write("\n" * 16)
         self._subprocess.stdin.flush()
 
