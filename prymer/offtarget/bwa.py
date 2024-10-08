@@ -165,8 +165,10 @@ class BwaHit:
 
 @dataclass(init=True, frozen=True)
 class BwaResult:
-    """Represents zero or more hits or alignments found by BWA for the given query.  The number of
-    hits found may be more than the number of hits listed in the `hits` attribute.
+    """
+    Represents zero or more hits or alignments found by BWA for the given query.
+    
+    The number of hits found may be more than the number of hits listed in the `hits` attribute.
 
     Attributes:
         query: the query (as given, no RC'ing)
@@ -359,7 +361,8 @@ class BwaAlnInteractive(ExecutableRunner):
         return results
 
     def _to_result(self, query: Query, rec: pysam.AlignedSegment) -> BwaResult:
-        """Converts the query and alignment to a result.
+        """
+        Convert the query and alignment to a result.
 
         Args:
             query: the original query
@@ -370,17 +373,10 @@ class BwaAlnInteractive(ExecutableRunner):
                 "Query and Results are out of order" f"Query=${query.id}, Result=${rec.query_name}"
             )
 
-        num_hits: Optional[int] = int(rec.get_tag("HN")) if rec.has_tag("HN") else None
-        if rec.is_unmapped:
-            if num_hits is not None and num_hits > 0:
-                raise ValueError(f"Read was unmapped but num_hits > 0: {rec}")
-            return BwaResult(query=query, hit_count=0, hits=[])
-        elif num_hits > self.max_hits:
-            return BwaResult(query=query, hit_count=num_hits, hits=[])
-        else:
-            hits = self.to_hits(rec=rec)
-            hit_count = num_hits if len(hits) == 0 else len(hits)
-            return BwaResult(query=query, hit_count=hit_count, hits=hits)
+        num_hits: int = int(rec.get_tag("HN")) if rec.has_tag("HN") else 0
+        hits: list[BwaHit] = self.to_hits(rec=rec) if 0 < num_hits <= self.max_hits else []
+
+        return BwaResult(query=query, hit_count=num_hits, hits=hits)
 
     def to_hits(self, rec: AlignedSegment) -> list[BwaHit]:
         """Extracts the hits from the given alignment.  Beyond the current alignment
