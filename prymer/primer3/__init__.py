@@ -9,6 +9,7 @@ from prymer.primer3.primer3_parameters import ProbeParameters
 from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
 from prymer.primer3.primer3_task import DesignRightPrimersTask
+from prymer.primer3.primer3_task import PickHybProbeOnly
 from prymer.primer3.primer3_weights import PrimerAndAmpliconWeights
 from prymer.primer3.primer3_weights import ProbeWeights
 
@@ -22,6 +23,7 @@ __all__ = [
     "DesignLeftPrimersTask",
     "DesignPrimerPairsTask",
     "DesignRightPrimersTask",
+    "PickHybProbeOnly",
     "PrimerAndAmpliconParameters",
     "ProbeParameters",
     "ProbeWeights",
