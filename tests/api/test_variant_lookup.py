@@ -1,10 +1,10 @@
 import logging
 import random
+from contextlib import closing
 from dataclasses import dataclass
 from dataclasses import replace
 from pathlib import Path
 from typing import Optional
-from typing import Type
 
 import fgpyo.vcf.builder
 import pytest
@@ -17,7 +17,6 @@ from prymer.api.span import Span
 from prymer.api.span import Strand
 from prymer.api.variant_lookup import FileBasedVariantLookup
 from prymer.api.variant_lookup import SimpleVariant
-from prymer.api.variant_lookup import VariantLookup
 from prymer.api.variant_lookup import VariantOverlapDetector
 from prymer.api.variant_lookup import VariantType
 from prymer.api.variant_lookup import cached
@@ -435,13 +434,24 @@ def test_simple_variant_conversion(vcf_path: Path, sample_vcf: list[VariantRecor
     assert actual_simple_variants == VALID_SIMPLE_VARIANTS_APPROX
 
 
-@pytest.mark.parametrize("variant_lookup_class", [FileBasedVariantLookup, VariantOverlapDetector])
-def test_simple_variant_conversion_logs(
-    variant_lookup_class: Type[VariantLookup], vcf_path: Path, caplog: pytest.LogCaptureFixture
+def test_simple_variant_conversion_logs_file_based(
+    vcf_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that `to_variants()` logs a debug message with no pysam.VariantRecords to convert."""
     caplog.set_level(logging.DEBUG)
-    variant_lookup = variant_lookup_class(
+    with FileBasedVariantLookup(
+        vcf_paths=[vcf_path], min_maf=0.01, include_missing_mafs=False
+    ) as variant_lookup:
+        variant_lookup.query(refname="foo", start=1, end=2)
+        assert "No variants extracted from region of interest" in caplog.text
+
+
+def test_simple_variant_conversion_logs_non_file_based(
+    vcf_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that `to_variants()` logs a debug message with no pysam.VariantRecords to convert."""
+    caplog.set_level(logging.DEBUG)
+    variant_lookup = VariantOverlapDetector(
         vcf_paths=[vcf_path], min_maf=0.01, include_missing_mafs=False
     )
     variant_lookup.query(refname="foo", start=1, end=2)
@@ -451,7 +461,10 @@ def test_simple_variant_conversion_logs(
 def test_missing_index_file_raises(temp_missing_path: Path) -> None:
     """Test that both VariantLookup objects raise an error with a missing index file."""
     with pytest.raises(ValueError, match="Cannot perform fetch with missing index file for VCF"):
-        disk_based(vcf_paths=[temp_missing_path], min_maf=0.01, include_missing_mafs=False)
+        with closing(
+            disk_based(vcf_paths=[temp_missing_path], min_maf=0.01, include_missing_mafs=False)
+        ):
+            pass
     with pytest.raises(ValueError, match="Cannot perform fetch with missing index file for VCF"):
         cached(vcf_paths=[temp_missing_path], min_maf=0.01, include_missing_mafs=False)
 
@@ -459,7 +472,8 @@ def test_missing_index_file_raises(temp_missing_path: Path) -> None:
 def test_missing_vcf_files_raises() -> None:
     """Test that an error is raised when no VCF_paths are provided."""
     with pytest.raises(ValueError, match="No VCF paths given to query"):
-        disk_based(vcf_paths=[], min_maf=0.01, include_missing_mafs=False)
+        with closing(disk_based(vcf_paths=[], min_maf=0.01, include_missing_mafs=False)):
+            pass
     with pytest.raises(ValueError, match="No VCF paths given to query"):
         cached(vcf_paths=[], min_maf=0.01, include_missing_mafs=False)
 
@@ -480,17 +494,17 @@ def test_vcf_header_missing_chrom(
     caplog.set_level(logging.DEBUG)
     vcf_paths = [vcf_path, mini_chr1_vcf, mini_chr3_vcf]
     random.Random(random_seed).shuffle(vcf_paths)
-    variant_lookup = FileBasedVariantLookup(
+    with FileBasedVariantLookup(
         vcf_paths=vcf_paths, min_maf=0.00, include_missing_mafs=True
-    )
-    variants_of_interest = variant_lookup.query(
-        refname="chr2", start=7999, end=9900
-    )  # (chr2 only in vcf_path)
-    # Should find all 12 variants from vcf_path (no filtering), with two variants having two
-    # alternate alleles
-    assert len(variants_of_interest) == 14
-    expected_error_msg = "does not contain chromosome"
-    assert expected_error_msg in caplog.text
+    ) as variant_lookup:
+        variants_of_interest = variant_lookup.query(
+            refname="chr2", start=7999, end=9900
+        )  # (chr2 only in vcf_path)
+        # Should find all 12 variants from vcf_path (no filtering), with two variants having two
+        # alternate alleles
+        assert len(variants_of_interest) == 14
+        expected_error_msg = "does not contain chromosome"
+        assert expected_error_msg in caplog.text
 
 
 @pytest.mark.parametrize("test_case", VALID_SIMPLE_VARIANT_TEST_CASES)
@@ -587,32 +601,32 @@ def test_variant_overlap_query_maf_filter(vcf_path: Path, include_missing_mafs: 
 @pytest.mark.parametrize("include_missing_mafs", [False, True])
 def test_file_based_variant_query(vcf_path: Path, include_missing_mafs: bool) -> None:
     """Test that `FileBasedVariantLookup.query()` MAF filtering is as expected."""
-    file_based_vcf_query = FileBasedVariantLookup(
+    with FileBasedVariantLookup(
         vcf_paths=[vcf_path], min_maf=0.0, include_missing_mafs=include_missing_mafs
-    )
-    query = [
-        _round_simple_variant(simple_variant)
-        for simple_variant in file_based_vcf_query.query(
-            refname="chr2",
-            start=8000,
-            end=9100,  # while "common-mixed-2/2" starts at 9101, in the VCf is starts at 9100
-            maf=0.05,
-            include_missing_mafs=include_missing_mafs,
-        )
-    ]
+    ) as file_based_vcf_query:
+        query = [
+            _round_simple_variant(simple_variant)
+            for simple_variant in file_based_vcf_query.query(
+                refname="chr2",
+                start=8000,
+                end=9100,  # while "common-mixed-2/2" starts at 9101, in the VCf is starts at 9100
+                maf=0.05,
+                include_missing_mafs=include_missing_mafs,
+            )
+        ]
 
-    if not include_missing_mafs:
-        assert query == get_simple_variant_approx_by_id(
-            "common-multiallelic-1/2",
-            "common-multiallelic-2/2",
-            "common-mixed-1/2",
-            "common-mixed-2/2",
-        )
-    else:
-        assert query == get_simple_variant_approx_by_id(
-            "complex-variant-sv-1/1",
-            "common-multiallelic-1/2",
-            "common-multiallelic-2/2",
-            "common-mixed-1/2",
-            "common-mixed-2/2",
-        )
+        if not include_missing_mafs:
+            assert query == get_simple_variant_approx_by_id(
+                "common-multiallelic-1/2",
+                "common-multiallelic-2/2",
+                "common-mixed-1/2",
+                "common-mixed-2/2",
+            )
+        else:
+            assert query == get_simple_variant_approx_by_id(
+                "complex-variant-sv-1/1",
+                "common-multiallelic-1/2",
+                "common-multiallelic-2/2",
+                "common-mixed-1/2",
+                "common-mixed-2/2",
+            )
