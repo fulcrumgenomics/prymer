@@ -24,7 +24,7 @@ hard-mask the design and target regions as to avoid design primers over polymorp
 >>> from prymer.api.variant_lookup import VariantLookup, VariantOverlapDetector
 >>> genome_fasta = Path("./tests/primer3/data/miniref.fa")
 >>> genome_vcf = Path("./tests/primer3/data/miniref.variants.vcf.gz")
->>> designer = Primer3(genome_fasta=genome_fasta, list_of_vcfs=[genome_vcf], use_file_based_lookup=True)
+>>> designer = Primer3(genome_fasta=genome_fasta, vcfs_or_lookup=[genome_vcf], use_cache=True)
 
 ```
 
@@ -143,11 +143,8 @@ from prymer.api.primer_like import PrimerLike
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
 from prymer.api.span import Strand
-from prymer.api.variant_lookup import FileBasedVariantLookup
 from prymer.api.variant_lookup import SimpleVariant
-from prymer.api.variant_lookup import VariantOverlapDetector
-from prymer.api.variant_lookup import cached
-from prymer.api.variant_lookup import disk_based
+from prymer.api.variant_lookup import VariantLookup
 from prymer.primer3.primer3_failure_reason import Primer3FailureReason
 from prymer.primer3.primer3_input import Primer3Input
 from prymer.primer3.primer3_input_tag import Primer3InputTag
@@ -230,8 +227,8 @@ class Primer3(ExecutableRunner):
         self,
         genome_fasta: Path,
         executable: Optional[str] = None,
-        list_of_vcfs: Optional[list[Path]] = None,
-        use_file_based_lookup: bool = True,
+        vcfs_or_lookup: Optional[list[Path] | VariantLookup] = None,
+        use_cache: bool = False,
         min_maf: float = 0.0,
         include_missing_mafs: bool = False,
     ) -> None:
@@ -239,8 +236,9 @@ class Primer3(ExecutableRunner):
         Args:
             genome_fasta: Path to reference genome .fasta file
             executable: string representation of the path to primer3_core
-            list_of_vcfs: an optional list of VCF files with which to hard-mask variants
-            use_file_based_lookup: whether to use a file-based `VariantLookup`
+            vcfs_or_lookup: an optional list of VCF files or `VariantLookup` object
+                with which to hard-mask variants
+            use_cache: whether to use an in-memory `VariantLookup` for fast querying
             min_maf: an optional minimum Minor Allele Frequency with which to filter a list of
                 VCF files (return only variants with at least this minor allele frequency)
             include_missing_mafs: when filtering variants with a minor allele frequency,
@@ -255,9 +253,18 @@ class Primer3(ExecutableRunner):
             executable="primer3_core" if executable is None else executable
         )
         command: list[str] = [f"{executable_path}"]
+        if vcfs_or_lookup is None or isinstance(vcfs_or_lookup, VariantLookup):
+            self.vcfs_or_lookup = vcfs_or_lookup
+        elif isinstance(vcfs_or_lookup, list) and all(
+            isinstance(path, Path) for path in vcfs_or_lookup
+        ):  # if provided path, create appropriate `VariantLookup`
+            self.vcfs_or_lookup = VariantLookup.build(
+                vcf_paths=vcfs_or_lookup,
+                use_cache=use_cache,
+                min_maf=min_maf,
+                include_missing_mafs=include_missing_mafs,
+            )
 
-        self.list_of_vcfs = list_of_vcfs
-        self.use_file_based_lookup = use_file_based_lookup
         self.min_maf = min_maf
         self.include_missing_mafs = include_missing_mafs
         self._fasta = pysam.FastaFile(filename=f"{genome_fasta}")
@@ -299,24 +306,11 @@ class Primer3(ExecutableRunner):
         soft_masked = self._fasta.fetch(
             reference=region.refname, start=region.start - 1, end=region.end
         )
-        if self.list_of_vcfs is None:
+        if self.vcfs_or_lookup is None:
             hard_masked = soft_masked
             return soft_masked, hard_masked
-        variant_lookup: Union[FileBasedVariantLookup, VariantOverlapDetector]
-        if self.use_file_based_lookup is True:
-            variant_lookup = disk_based(
-                vcf_paths=self.list_of_vcfs,
-                min_maf=self.min_maf,
-                include_missing_mafs=self.include_missing_mafs,
-            )
-        else:
-            variant_lookup = cached(
-                vcf_paths=self.list_of_vcfs,
-                min_maf=self.min_maf,
-                include_missing_mafs=self.include_missing_mafs,
-            )
 
-        overlapping_variants: list[SimpleVariant] = variant_lookup.query(
+        overlapping_variants: list[SimpleVariant] = self.vcfs_or_lookup.query(
             refname=region.refname, start=region.start, end=region.end
         )
         positions: list[int] = []

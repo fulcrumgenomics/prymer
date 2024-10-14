@@ -10,15 +10,11 @@ that overlap the given range.
 Two concrete implementations are provided that both take a list of VCF files to be queried:
 
 - [`FileBasedVariantLookup`][prymer.api.variant_lookup.FileBasedVariantLookup] -- performs
-disk-based retrieval of variants (using a VCF index).  This class is recommended for large VCFs. The
-[`disk_based()`][prymer.api.variant_lookup.disk_based] alternative constructor is
-provided for easy construction of this object.
+disk-based retrieval of variants (using a VCF index).  This class is recommended for large VCFs.
 - [`VariantOverlapDetector`][prymer.api.variant_lookup.VariantOverlapDetector] -- reads in
 variants into memory and uses an
 [`pybedlite.overlap_detector.OverlapDetector`](https://pybedlite.readthedocs.io/en/latest/api.html#pybedlite.overlap_detector.OverlapDetector)
-for querying.  This class is recommended for small VCFs. The
-[`cached()`][prymer.api.variant_lookup.cached] alternative constructor is provided for
-easy construction of this object.
+for querying.  This class is recommended for small VCFs.
 
 Each class can also use minor allele frequency (MAF) to filter variants.
 
@@ -28,7 +24,7 @@ The helper class `SimpleVariant` is included to facilitate VCF querying and repo
 
 ```python
 >>> from pathlib import Path
->>> lookup = cached(vcf_paths=[Path("./tests/api/data/miniref.variants.vcf.gz")], min_maf=0.00, include_missing_mafs=True)
+>>> lookup = VariantLookup.build(vcf_paths=[Path("./tests/api/data/miniref.variants.vcf.gz")], use_cache=True,min_maf=0.00, include_missing_mafs=True)
 >>> lookup.query(refname="chr2", start=7999, end=8000)
 [SimpleVariant(id='complex-variant-sv-1/1', refname='chr2', pos=8000, ref='T', alt='<DEL>', end=8000, variant_type=<VariantType.OTHER: 'OTHER'>, maf=None)]
 >>> variants = lookup.query(refname="chr2", start=7999, end=9900)
@@ -254,6 +250,30 @@ class VariantLookup(ABC):
         self.min_maf: Optional[float] = min_maf
         self.include_missing_mafs: bool = include_missing_mafs
 
+    @classmethod
+    def build(
+        cls,
+        vcf_paths: list[Path],
+        use_cache: Optional[bool] = True,
+        min_maf: Optional[float] = 0.00,
+        include_missing_mafs: Optional[bool] = False,
+    ) -> "VariantLookup":
+        """Constructs a `VariantLookup` object based on size of VCF(s) to query.
+
+        If `use_cache` is True, return a `VariantOverlapDetector` that caches all variants in
+        memory for fast lookup (appropriate for small VCFs). Otherwise, return a
+        `FileBasedVariantLookup` that queries indexed VCFs on disk for each lookup (appropriate
+        for larger VCFs).
+
+        """
+        if use_cache:
+            return VariantOverlapDetector(
+                vcf_paths=vcf_paths, min_maf=min_maf, include_missing_mafs=include_missing_mafs
+            )
+        return FileBasedVariantLookup(
+            vcf_paths=vcf_paths, min_maf=min_maf, include_missing_mafs=include_missing_mafs
+        )
+
     @final
     def query(
         self,
@@ -427,23 +447,3 @@ def calc_maf_from_filter(variant: pysam.VariantRecord) -> Optional[float]:
             maf = num_alt / len(gts)
 
     return maf
-
-
-def cached(
-    vcf_paths: list[Path], min_maf: float, include_missing_mafs: bool = False
-) -> VariantOverlapDetector:
-    """Constructs a `VariantLookup` that caches all variants in memory for fast lookup.
-    Appropriate for small VCFs."""
-    return VariantOverlapDetector(
-        vcf_paths=vcf_paths, min_maf=min_maf, include_missing_mafs=include_missing_mafs
-    )
-
-
-def disk_based(
-    vcf_paths: list[Path], min_maf: float, include_missing_mafs: bool = False
-) -> FileBasedVariantLookup:
-    """Constructs a `VariantLookup` that queries indexed VCFs on disk for each lookup.
-    Appropriate for large VCFs."""
-    return FileBasedVariantLookup(
-        vcf_paths=vcf_paths, min_maf=min_maf, include_missing_mafs=include_missing_mafs
-    )

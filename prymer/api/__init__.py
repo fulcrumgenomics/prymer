@@ -16,8 +16,6 @@ from prymer.api.variant_lookup import SimpleVariant
 from prymer.api.variant_lookup import VariantLookup
 from prymer.api.variant_lookup import VariantOverlapDetector
 from prymer.api.variant_lookup import VariantType
-from prymer.api.variant_lookup import cached
-from prymer.api.variant_lookup import disk_based
 
 __all__ = [
     "ClusteredIntervals",
@@ -38,6 +36,4 @@ __all__ = [
     "VariantLookup",
     "FileBasedVariantLookup",
     "VariantOverlapDetector",
-    "cached",
-    "disk_based",
 ]

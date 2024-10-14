@@ -20,9 +20,7 @@ from prymer.api.variant_lookup import SimpleVariant
 from prymer.api.variant_lookup import VariantLookup
 from prymer.api.variant_lookup import VariantOverlapDetector
 from prymer.api.variant_lookup import VariantType
-from prymer.api.variant_lookup import cached
 from prymer.api.variant_lookup import calc_maf_from_filter
-from prymer.api.variant_lookup import disk_based
 
 
 @pytest.mark.parametrize(
@@ -451,17 +449,21 @@ def test_simple_variant_conversion_logs(
 def test_missing_index_file_raises(temp_missing_path: Path) -> None:
     """Test that both VariantLookup objects raise an error with a missing index file."""
     with pytest.raises(ValueError, match="Cannot perform fetch with missing index file for VCF"):
-        disk_based(vcf_paths=[temp_missing_path], min_maf=0.01, include_missing_mafs=False)
+        FileBasedVariantLookup(
+            vcf_paths=[temp_missing_path], min_maf=0.01, include_missing_mafs=False
+        )
     with pytest.raises(ValueError, match="Cannot perform fetch with missing index file for VCF"):
-        cached(vcf_paths=[temp_missing_path], min_maf=0.01, include_missing_mafs=False)
+        VariantOverlapDetector(
+            vcf_paths=[temp_missing_path], min_maf=0.01, include_missing_mafs=False
+        )
 
 
 def test_missing_vcf_files_raises() -> None:
     """Test that an error is raised when no VCF_paths are provided."""
     with pytest.raises(ValueError, match="No VCF paths given to query"):
-        disk_based(vcf_paths=[], min_maf=0.01, include_missing_mafs=False)
+        FileBasedVariantLookup(vcf_paths=[], min_maf=0.01, include_missing_mafs=False)
     with pytest.raises(ValueError, match="No VCF paths given to query"):
-        cached(vcf_paths=[], min_maf=0.01, include_missing_mafs=False)
+        VariantOverlapDetector(vcf_paths=[], min_maf=0.01, include_missing_mafs=False)
 
 
 @pytest.mark.parametrize("random_seed", [1, 10, 100, 1000, 10000])

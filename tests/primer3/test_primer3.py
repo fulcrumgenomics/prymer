@@ -6,11 +6,14 @@ import pysam
 import pytest
 from fgpyo.sequence import reverse_complement
 
+from prymer.api import FileBasedVariantLookup
 from prymer.api import MinOptMax
 from prymer.api import Primer
 from prymer.api import PrimerPair
 from prymer.api import Span
 from prymer.api import Strand
+from prymer.api import VariantLookup
+from prymer.api import VariantOverlapDetector
 from prymer.primer3 import DesignLeftPrimersTask
 from prymer.primer3 import DesignPrimerPairsTask
 from prymer.primer3 import DesignRightPrimersTask
@@ -380,7 +383,7 @@ def test_variant_lookup(
     expected_soft_masked: str,
 ) -> None:
     """Test that MAF filtering and masking are working as expected."""
-    with Primer3(genome_fasta=genome_ref, list_of_vcfs=[vcf_path], min_maf=0.01) as designer:
+    with Primer3(genome_fasta=genome_ref, vcfs_or_lookup=[vcf_path], min_maf=0.01) as designer:
         actual_soft_masked, actual_hard_masked = designer.get_design_sequences(region=region)
     assert actual_hard_masked == expected_hard_masked
     assert actual_soft_masked == expected_soft_masked
@@ -390,6 +393,41 @@ def test_variant_lookup(
         actual_soft_masked, actual_hard_masked = designer.get_design_sequences(region=region)
     assert actual_hard_masked == expected_soft_masked
     assert actual_soft_masked == expected_soft_masked
+
+
+@pytest.mark.parametrize(
+    "use_cache,expected_var_lookup_type",
+    [(True, VariantOverlapDetector), (False, FileBasedVariantLookup)],
+)
+def test_variant_lookup_construction(
+    genome_ref: Path, vcf_path: Path, use_cache: bool, expected_var_lookup_type: VariantLookup
+) -> None:
+    """Test that, given a list of VCFs, Primer3 init() correctly sets
+    `self.vcfs_or_lookup` as expected."""
+
+    with Primer3(
+        genome_fasta=genome_ref, vcfs_or_lookup=[vcf_path], min_maf=0.01, use_cache=use_cache
+    ) as designer:
+        assert type(designer.vcfs_or_lookup) is expected_var_lookup_type
+
+
+def test_variant_lookup_preconstruction(genome_ref: Path, vcf_path: Path) -> None:
+    """Test that Primer3.__init__() triggers correct VariantLookup.build()."""
+    with Primer3(
+        genome_fasta=genome_ref,
+        vcfs_or_lookup=FileBasedVariantLookup(
+            vcf_paths=[vcf_path], min_maf=0.01, include_missing_mafs=False
+        ),
+    ) as designer:
+        assert type(designer.vcfs_or_lookup) is FileBasedVariantLookup
+
+    with Primer3(
+        genome_fasta=genome_ref,
+        vcfs_or_lookup=VariantOverlapDetector(
+            vcf_paths=[vcf_path], min_maf=0.01, include_missing_mafs=False
+        ),
+    ) as designer:
+        assert type(designer.vcfs_or_lookup) is VariantOverlapDetector
 
 
 def test_screen_pair_results(
