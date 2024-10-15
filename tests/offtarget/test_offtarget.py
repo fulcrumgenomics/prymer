@@ -12,6 +12,7 @@ from prymer.offtarget import BwaHit
 from prymer.offtarget import BwaResult
 from prymer.offtarget import OffTargetDetector
 from prymer.offtarget import OffTargetResult
+from prymer.offtarget.bwa import BWA_EXECUTABLE_NAME
 
 
 def _build_detector(
@@ -36,6 +37,7 @@ def _build_detector(
         cache_results=cache_results,
         keep_spans=True,
         keep_primer_spans=True,
+        executable=BWA_EXECUTABLE_NAME,
     )
 
 

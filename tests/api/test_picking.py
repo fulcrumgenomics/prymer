@@ -27,6 +27,7 @@ from prymer.api.picking import is_acceptable_primer_pair
 from prymer.api.picking import score as picking_score
 from prymer.ntthal import NtThermoAlign
 from prymer.offtarget import OffTargetDetector
+from prymer.offtarget.bwa import BWA_EXECUTABLE_NAME
 
 
 @pytest.fixture
@@ -583,6 +584,7 @@ def _pick_top_primer_pairs(
             max_mismatches_in_three_prime_region=0,
             max_mismatches=0,
             max_amplicon_size=params.amplicon_sizes.max,
+            executable=BWA_EXECUTABLE_NAME,
         ) as offtarget_detector,
     ):
         picked: list[PrimerPair] = pick_top_primer_pairs(
@@ -890,6 +892,7 @@ def test_and_pick_primer_pairs(
         max_mismatches_in_three_prime_region=0,
         max_mismatches=0,
         max_amplicon_size=params.amplicon_sizes.max,
+        executable=BWA_EXECUTABLE_NAME,
     )
 
     with pysam.FastaFile(f"{picking_ref}") as fasta:

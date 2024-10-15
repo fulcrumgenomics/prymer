@@ -60,6 +60,9 @@ from pysam import AlignmentHeader
 from prymer.api import coordmath
 from prymer.util.executable_runner import ExecutableRunner
 
+BWA_EXECUTABLE_NAME: str = "bwa-aln-interactive"
+"""The executable name for the interactive build of bwa aln."""
+
 
 @dataclass(init=True, frozen=True)
 class Query:
@@ -218,7 +221,7 @@ class BwaAlnInteractive(ExecutableRunner):
         self,
         ref: Path,
         max_hits: int,
-        executable: str | Path = "bwa-aln-interactive",
+        executable: str | Path = BWA_EXECUTABLE_NAME,
         max_mismatches: int = 3,
         max_mismatches_in_seed: int = 3,
         max_gap_opens: int = 0,

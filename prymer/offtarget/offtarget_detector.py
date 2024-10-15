@@ -90,6 +90,7 @@ from ordered_set import OrderedSet
 from prymer.api.primer import Primer
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
+from prymer.offtarget.bwa import BWA_EXECUTABLE_NAME
 from prymer.offtarget.bwa import BwaAlnInteractive
 from prymer.offtarget.bwa import BwaHit
 from prymer.offtarget.bwa import BwaResult
@@ -164,7 +165,7 @@ class OffTargetDetector(AbstractContextManager):
         threads: Optional[int] = None,
         keep_spans: bool = True,
         keep_primer_spans: bool = True,
-        executable: str | Path = "bwa-aln-interactive",
+        executable: str | Path = BWA_EXECUTABLE_NAME,
     ) -> None:
         """
         Initialize an [[OffTargetDetector]].
