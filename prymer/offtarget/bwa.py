@@ -374,7 +374,14 @@ class BwaAlnInteractive(ExecutableRunner):
             )
 
         num_hits: int = int(rec.get_tag("HN")) if rec.has_tag("HN") else 0
-        hits: list[BwaHit] = self.to_hits(rec=rec) if 0 < num_hits <= self.max_hits else []
+        hits: list[BwaHit] = self.to_hits(rec=rec) if 0 < num_hits < self.max_hits else []
+
+        # `to_hits()` removes artifactual hits which span the boundary between concatenated
+        # reference sequences. If we are reporting a list of hits, the number of hits should match
+        # the size of this list. Otherwise, we either have zero hits, or more than the maximum
+        # number of hits. In both of the latter cases, we have to rely on the count reported in the
+        # `HN` tag.
+        num_hits = len(hits) if hits else num_hits
 
         return BwaResult(query=query, hit_count=num_hits, hits=hits)
 
