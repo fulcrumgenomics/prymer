@@ -1,6 +1,5 @@
 import logging
 import random
-from contextlib import closing
 from dataclasses import dataclass
 from dataclasses import replace
 from pathlib import Path
@@ -461,9 +460,7 @@ def test_simple_variant_conversion_logs_non_file_based(
 def test_missing_index_file_raises(temp_missing_path: Path) -> None:
     """Test that both VariantLookup objects raise an error with a missing index file."""
     with pytest.raises(ValueError, match="Cannot perform fetch with missing index file for VCF"):
-        with closing(
-            disk_based(vcf_paths=[temp_missing_path], min_maf=0.01, include_missing_mafs=False)
-        ):
+        with disk_based(vcf_paths=[temp_missing_path], min_maf=0.01, include_missing_mafs=False):
             pass
     with pytest.raises(ValueError, match="Cannot perform fetch with missing index file for VCF"):
         cached(vcf_paths=[temp_missing_path], min_maf=0.01, include_missing_mafs=False)
@@ -472,7 +469,7 @@ def test_missing_index_file_raises(temp_missing_path: Path) -> None:
 def test_missing_vcf_files_raises() -> None:
     """Test that an error is raised when no VCF_paths are provided."""
     with pytest.raises(ValueError, match="No VCF paths given to query"):
-        with closing(disk_based(vcf_paths=[], min_maf=0.01, include_missing_mafs=False)):
+        with disk_based(vcf_paths=[], min_maf=0.01, include_missing_mafs=False):
             pass
     with pytest.raises(ValueError, match="No VCF paths given to query"):
         cached(vcf_paths=[], min_maf=0.01, include_missing_mafs=False)

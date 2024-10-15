@@ -67,7 +67,6 @@ from enum import unique
 from pathlib import Path
 from types import TracebackType
 from typing import Optional
-from typing import Self
 from typing import final
 
 import pysam
@@ -366,11 +365,6 @@ class FileBasedVariantLookup(VariantLookup, AbstractContextManager):
             simple_variants.extend(self.to_variants(variants, source_vcf=path))
         return sorted(simple_variants, key=lambda x: x.pos)
 
-    def __enter__(self) -> Self:
-        """Enter this context manager."""
-        super().__enter__()
-        return self
-
     def close(self) -> None:
         """Close the underlying VCF file handles."""
         for handle in self._readers:
@@ -383,7 +377,6 @@ class FileBasedVariantLookup(VariantLookup, AbstractContextManager):
         traceback: Optional[TracebackType],
     ) -> None:
         """Exit this context manager and close all underlying VCF handles."""
-        super().__exit__(exc_type, exc_value, traceback)
         self.close()
 
 
@@ -477,15 +470,12 @@ def disk_based(
 ) -> FileBasedVariantLookup:
     """Constructs a `VariantLookup` that queries indexed VCFs on disk for each lookup.
 
-    Appropriate for large VCFs. Ensure that you take advantage of [`contextlib.closing`](https://docs.python.org/3/library/contextlib.html#contextlib.closing)
-    for automatically closing the file-based variant lookup after it is used. See below for an
-    example.
+    Appropriate for large VCFs.
 
     Example:
 
     ```python
-    >>> from contextlib import closing
-    >>> with closing(disk_based([Path("./tests/api/data/miniref.variants.vcf.gz")], min_maf=0.0)) as lookup:
+    >>> with disk_based([Path("./tests/api/data/miniref.variants.vcf.gz")], min_maf=0.0) as lookup:
     ...     lookup.query(refname="chr2", start=7999, end=8000)
     [SimpleVariant(id='complex-variant-sv-1/1', refname='chr2', pos=8000, ref='T', alt='<DEL>', end=8000, variant_type=<VariantType.OTHER: 'OTHER'>, maf=None)]
 
