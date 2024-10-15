@@ -478,7 +478,7 @@ def disk_based(
     """Constructs a `VariantLookup` that queries indexed VCFs on disk for each lookup.
 
     Appropriate for large VCFs. Ensure that you take advantage of [`contextlib.closing`](https://docs.python.org/3/library/contextlib.html#contextlib.closing)
-    for automatically closing the file-base variant lookup after it is used. See below for an
+    for automatically closing the file-based variant lookup after it is used. See below for an
     example.
 
     Example:

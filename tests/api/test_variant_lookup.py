@@ -500,11 +500,11 @@ def test_vcf_header_missing_chrom(
         variants_of_interest = variant_lookup.query(
             refname="chr2", start=7999, end=9900
         )  # (chr2 only in vcf_path)
-        # Should find all 12 variants from vcf_path (no filtering), with two variants having two
-        # alternate alleles
-        assert len(variants_of_interest) == 14
-        expected_error_msg = "does not contain chromosome"
-        assert expected_error_msg in caplog.text
+    # Should find all 12 variants from vcf_path (no filtering), with two variants having two
+    # alternate alleles
+    assert len(variants_of_interest) == 14
+    expected_error_msg = "does not contain chromosome"
+    assert expected_error_msg in caplog.text
 
 
 @pytest.mark.parametrize("test_case", VALID_SIMPLE_VARIANT_TEST_CASES)
@@ -615,18 +615,18 @@ def test_file_based_variant_query(vcf_path: Path, include_missing_mafs: bool) ->
             )
         ]
 
-        if not include_missing_mafs:
-            assert query == get_simple_variant_approx_by_id(
-                "common-multiallelic-1/2",
-                "common-multiallelic-2/2",
-                "common-mixed-1/2",
-                "common-mixed-2/2",
-            )
-        else:
-            assert query == get_simple_variant_approx_by_id(
-                "complex-variant-sv-1/1",
-                "common-multiallelic-1/2",
-                "common-multiallelic-2/2",
-                "common-mixed-1/2",
-                "common-mixed-2/2",
-            )
+    if not include_missing_mafs:
+        assert query == get_simple_variant_approx_by_id(
+            "common-multiallelic-1/2",
+            "common-multiallelic-2/2",
+            "common-mixed-1/2",
+            "common-mixed-2/2",
+        )
+    else:
+        assert query == get_simple_variant_approx_by_id(
+            "complex-variant-sv-1/1",
+            "common-multiallelic-1/2",
+            "common-multiallelic-2/2",
+            "common-mixed-1/2",
+            "common-mixed-2/2",
+        )
