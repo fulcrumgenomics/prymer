@@ -421,4 +421,9 @@ class BwaAlnInteractive(ExecutableRunner):
         if not self.include_alt_hits:
             hits = [hit for hit in hits if not hit.refname.endswith("_alt")]
 
+        # Remove hits that extend beyond the end of a contig - these are artifacts of `bwa aln`'s
+        # alignment process, which concatenates all reference sequences and reports hits which span
+        # across contigs.
+        hits = [hit for hit in hits if hit.end <= self.header.get_reference_length(hit.refname)]
+
         return hits
