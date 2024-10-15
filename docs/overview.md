@@ -3,8 +3,8 @@
 The `prymer` Python library is intended to be used for three main purposes:
 
 1. [Clustering targets](#clustering-targets) into larger amplicons prior to designing primers.
-2. [Designing primers](#designing-primers) (left or right) or primer pairs using Primer3 for each target from (1).
-3. [Build and Picking a set of primer pairs](#build-and-picking-primer-pairs) from the designed primer pairs produced in (2).
+2. [Designing](#designing-primers) primers (single and paired) and internal hybridization probes using Primer3 for each target from (1).
+3. [Build and Picking a set of primer pairs](#build-and-picking-primer-pairs) from the design candidates produced in (2).
 
 ## Clustering Targets
 
@@ -18,22 +18,24 @@ amplicons prior to primer design.
 Designing primers (left or right) or primer pairs using Primer3 is primarily performed using the 
 [`Primer3`][prymer.primer3.primer3.Primer3] class, which wraps the
 [`primer3` command line tool](https://github.com/primer3-org/primer3).  The 
-[`design_primers()`][prymer.primer3.primer3.Primer3.design_primers] facilitates the design of single and paired primers 
+[`design()`][prymer.primer3.primer3.Primer3.design] method facilitates the design of primers (single and paired) and internal hybridization probes 
 for a single target. The `Primer3` instance is intended to be re-used to design primers across multiple targets, or 
 re-design (after changing parameters) for the same target, or both!
 
-Common input parameters are specified in [`Primer3Parameters()`][prymer.primer3.primer3_parameters.Primer3Parameters] and 
-[`Primer3Weights()`][prymer.primer3.primer3_weights.Primer3Weights], while the task type (left primer,
+Common input parameters for designing primers are specified in [`PrimerAndAmpliconParameters()`][prymer.primer3.primer3_parameters.PrimerAndAmpliconParameters] and 
+[`PrimerAndAmpliconWeights()`][prymer.primer3.primer3_weights.PrimerAndAmpliconWeights], while the task type (left primer,
 right primer, or primer pair design) is specified with the corresponding 
-[`Primer3Task`][prymer.primer3.primer3_task.Primer3Task].
+[`Primer3Task`][prymer.primer3.primer3_task.Primer3Task]. 
+Design specifications for designing probes are stored in [`ProbeParameters()`][prymer.primer3.primer3_parameters.ProbeParameters]. 
+Penalty weights for designing internal probes are specified in [`ProbeWeights()`][prymer.primer3.primer3_weights.ProbeWeights].
 
 The result of a primer design is encapsulated in the [`Primer3Result`][prymer.primer3.primer3.Primer3Result] class.  It
-provides the primers (or primer pairs) that were designed, as well as a list of reasons some primers were not returned, 
+provides the primers, probes, or primer pairs that were designed, as well as a list of reasons some primers were not returned, 
 for example exceeding the melting temperature threshold, too high GC content, and so on.  These failures are 
 encapsulated in the [`Primer3Failures`][prymer.primer3.primer3.Primer3Failure] class.
 
 The [`Primer3Result`][prymer.primer3.primer3.Primer3Result] returned by the primer design contains either a list of 
-[`Primer`][prymer.api.primer.Primer]s or [`PrimerPair`][prymer.api.primer_pair.PrimerPair]s, depending on the 
+[`Oligo`][prymer.api.primer.Oligo]s or [`PrimerPair`][prymer.api.primer_pair.PrimerPair]s, depending on the 
 [`Primer3Task`][prymer.primer3.primer3_task.Primer3Task] specified in the input parameters.
 These can be subsequently filtered or examined.
 
