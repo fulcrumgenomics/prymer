@@ -90,6 +90,7 @@ from ordered_set import OrderedSet
 from prymer.api.oligo import Oligo
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
+from prymer.offtarget.bwa import BWA_EXECUTABLE_NAME
 from prymer.offtarget.bwa import BwaAlnInteractive
 from prymer.offtarget.bwa import BwaHit
 from prymer.offtarget.bwa import BwaResult
@@ -126,8 +127,8 @@ class OffTargetResult:
 
 
 class OffTargetDetector(AbstractContextManager):
-    """
-    Detect off-target mappings of primers and primer pairs.
+    """A class for detecting off-target mappings of primers and primer pairs that uses a custom
+    version of "bwa aln" named "bwa-aln-interactive".
 
     `OffTargetDetector` uses a [custom, interactive
     version](https://github.com/fulcrumgenomics/bwa-aln-interactive/) of `bwa aln` to perform
@@ -164,7 +165,7 @@ class OffTargetDetector(AbstractContextManager):
         threads: Optional[int] = None,
         keep_spans: bool = True,
         keep_primer_spans: bool = True,
-        executable: str | Path = "bwa",
+        executable: str | Path = BWA_EXECUTABLE_NAME,
     ) -> None:
         """
         Initialize an [[OffTargetDetector]].

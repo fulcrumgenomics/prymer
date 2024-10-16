@@ -19,24 +19,23 @@ jobs:
         PYTHON_VERSION: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout fulcrumgenomics/bwa-aln-interactive
-        uses: actions/checkout@v4
-        with:
-          repository: fulcrumgenomics/bwa-aln-interactive
-          ref: main
-          path: bwa
-          fetch-depth: 0
 
       - name: Set up Python ${{ matrix.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.PYTHON_VERSION }}
 
+      - name: Install and configure Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{env.POETRY_VERSION}}
+          installer-parallel: true
+
       - name: Set up miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
           miniforge-version: latest
-          channels: conda-forge,bioconda
+          channels: bioconda,conda-forge
           activate-environment: prymer
           environment-file: prymer.yml
           channel-priority: true
@@ -44,61 +43,19 @@ jobs:
           auto-activate-base: false
           python-version: ${{ matrix.PYTHON_VERSION }}
 
-      - name: Install fulcrumgenomics/bwa
-        shell: bash -l {0}
-        run: |
-          conda activate prymer
-          pushd bwa
-          make -j $(nproc)
-          cp bwa ${CONDA_PREFIX}/bin
-          popd
+      - name: Install the project's dependencies
+        shell: bash -el {0}
+        run: poetry install
 
-      - name: Configure poetry and check lock file
-        shell: bash -l {0}
-        run: |
-          conda activate prymer
-          poetry config virtualenvs.in-project false
-          poetry check --lock
-
-      - name: Poetry install
-        shell: bash -l {0}
-        run: |
-          conda activate prymer
-          poetry lock --no-update
-          poetry install --with dev
-
-      - name: Unit tests (with doctest and coverage)
-        shell: bash -l {0}
-        run: |
-          conda activate prymer
-          poetry run pytest --cov=prymer --cov-report=xml --cov-branch --doctest-plus --doctest-modules prymer tests
+      - name: Test the codebase
+        shell: bash -el {0}
+        run: poetry run pytest
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4.5.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-      
-      - name: Style checking
-        shell: bash -l {0}
-        run: |
-          conda activate prymer
-          poetry run ruff format --check
 
-      - name: Run lint
-        shell: bash -l {0}
-        run: |
-          conda activate prymer
-          poetry run ruff check
-
-      - name: Run mypy
-        shell: bash -l {0}
-        run: |
-          conda activate prymer
-          poetry run mypy
-
-      - name: Run docs
-        shell: bash -l {0}
-        run: |
-          conda activate prymer
-          set -euo pipefail
-          poetry run mkdocs build --strict
+      - name: Test building the documentation
+        shell: bash -el {0}
+        run: poetry run mkdocs build --strict
