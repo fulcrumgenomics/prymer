@@ -310,8 +310,8 @@ class BwaAlnInteractive(ExecutableRunner):
     def __signal_bwa(self) -> None:
         """Signals BWA to process the queries."""
         self._subprocess.stdin.flush()
-        # NB: the executable compiled on different platforms require a different number of newlines
-        # NB: it is not currently understood why this is, but 16 newlines seems to work for all tested
+        # NB: the executable compiled on different platforms requires a different number of newlines
+        # NB: it is not understood why, but 16 newlines seems to work for all platforms tested
         self._subprocess.stdin.write("\n" * 16)
         self._subprocess.stdin.flush()
 
