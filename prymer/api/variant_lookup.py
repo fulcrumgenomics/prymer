@@ -76,6 +76,7 @@ from pybedlite.overlap_detector import OverlapDetector
 from pysam import VariantFile
 from pysam import VariantRecord
 from strenum import UppercaseStrEnum
+from typing_extensions import override
 
 from prymer.api.span import Span
 from prymer.api.span import Strand
@@ -235,7 +236,7 @@ class _VariantInterval(Interval):
         )
 
 
-class VariantLookup(ABC):
+class VariantLookup(AbstractContextManager, ABC):
     """Base class to represent a variant from a given genomic range.
 
     Attributes:
@@ -321,8 +322,23 @@ class VariantLookup(ABC):
     def _query(self, refname: str, start: int, end: int) -> list[SimpleVariant]:
         """Subclasses must implement this method."""
 
+    def close(self) -> None:
+        """Close this variant lookup."""
+        return None
 
-class FileBasedVariantLookup(VariantLookup, AbstractContextManager):
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        """Exit this context manager by closing the variant lookup."""
+        super().__exit__(exc_type, exc_value, traceback)
+        self.close()
+        return None
+
+
+class FileBasedVariantLookup(VariantLookup):
     """Implementation of `VariantLookup` that queries against indexed VCF files each time a query is
     performed. Assumes the index is located adjacent to the VCF file and has the same base name with
     either a .csi or .tbi suffix.
@@ -365,19 +381,11 @@ class FileBasedVariantLookup(VariantLookup, AbstractContextManager):
             simple_variants.extend(self.to_variants(variants, source_vcf=path))
         return sorted(simple_variants, key=lambda x: x.pos)
 
+    @override
     def close(self) -> None:
         """Close the underlying VCF file handles."""
         for handle in self._readers:
             handle.close()
-
-    def __exit__(
-        self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
-    ) -> None:
-        """Exit this context manager and close all underlying VCF handles."""
-        self.close()
 
 
 class VariantOverlapDetector(VariantLookup):
