@@ -42,7 +42,7 @@ class ExecutableRunner(AbstractContextManager):
         command: list[str],
         stdin: int = subprocess.PIPE,
         stdout: int = subprocess.PIPE,
-        stderr: int = subprocess.PIPE,
+        stderr: int = subprocess.DEVNULL,
     ) -> None:
         if len(command) == 0:
             raise ValueError(f"Invocation must not be empty, received {command}")
