@@ -84,11 +84,11 @@ class ExecutableRunner(AbstractContextManager):
         self.close()
 
     @staticmethod
-    def _stream_to_sink(stream: TextIO, sync: Callable[[str], None]) -> None:
+    def _stream_to_sink(stream: TextIO, sink: Callable[[str], None]) -> None:
         """Redirect a text IO stream to a text sink."""
         while True:
             if line := stream.readline():
-                sync(line.rstrip())
+                sink(line.rstrip())
             else:
                 break
 
