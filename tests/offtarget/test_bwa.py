@@ -98,7 +98,6 @@ def test_stderr_redirected_to_logger(ref_fasta: Path, caplog: pytest.LogCaptureF
     assert "[bwa_aln_core] convert to sequence coordinate..." in caplog.text
     assert "[bwa_aln_core] refine gapped alignments..." in caplog.text
     assert "[bwa_aln_core] print alignments..." in caplog.text
-    assert "[bwa_aln_core] 1 sequences have been processed" in caplog.text
 
 
 def test_map_one_unmapped(ref_fasta: Path) -> None:

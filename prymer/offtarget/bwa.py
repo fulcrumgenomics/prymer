@@ -33,6 +33,7 @@ BwaHit(refname='chr1', start=61, negative=False, cigar=Cigar(elements=(CigarElem
 >>> bwa.map_all(queries=[query])
 [BwaResult(query=Query(id='NA', bases='AAAAAA'), hit_count=3968, hits=[])]
 >>> bwa.close()
+True
 
 ```
 """  # noqa: E501
@@ -333,6 +334,7 @@ class BwaAlnInteractive(ExecutableRunner):
         """
         safely_closed: bool = super().close()
         self._stderr_thread.join()
+        self._reader.close()
         return safely_closed
 
     def map_one(self, query: str, id: str = "unknown") -> BwaResult:
@@ -441,7 +443,3 @@ class BwaAlnInteractive(ExecutableRunner):
             hits = [hit for hit in hits if not hit.refname.endswith("_alt")]
 
         return hits
-
-    def close(self) -> None:
-        self._reader.close()
-        super().close()
