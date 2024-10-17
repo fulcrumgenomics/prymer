@@ -175,6 +175,10 @@ def test_left_primer_valid_designs(
         primer_and_amplicon_params=single_primer_params,
         task=DesignLeftPrimersTask(),
     )
+    expected_thermo_max = single_primer_params.primer_tms.min - 10
+    assert design_input.primer_and_amplicon_params.primer_max_homodimer_tm == expected_thermo_max
+    assert design_input.primer_and_amplicon_params.primer_max_3p_homodimer_tm == expected_thermo_max
+    assert design_input.primer_and_amplicon_params.primer_max_hairpin_tm == expected_thermo_max
 
     with Primer3(genome_fasta=genome_ref) as designer:
         for _ in range(10):  # run many times to ensure we can re-use primer3
