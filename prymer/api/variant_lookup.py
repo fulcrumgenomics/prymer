@@ -59,11 +59,13 @@ common-mixed-2/2@chr2:9101[A/ACACA 0.1200]
 import logging
 from abc import ABC
 from abc import abstractmethod
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from dataclasses import field
 from enum import auto
 from enum import unique
 from pathlib import Path
+from types import TracebackType
 from typing import Optional
 from typing import final
 
@@ -74,6 +76,7 @@ from pybedlite.overlap_detector import OverlapDetector
 from pysam import VariantFile
 from pysam import VariantRecord
 from strenum import UppercaseStrEnum
+from typing_extensions import override
 
 from prymer.api.span import Span
 from prymer.api.span import Strand
@@ -233,7 +236,7 @@ class _VariantInterval(Interval):
         )
 
 
-class VariantLookup(ABC):
+class VariantLookup(AbstractContextManager, ABC):
     """Base class to represent a variant from a given genomic range.
 
     Attributes:
@@ -319,11 +322,36 @@ class VariantLookup(ABC):
     def _query(self, refname: str, start: int, end: int) -> list[SimpleVariant]:
         """Subclasses must implement this method."""
 
+    def close(self) -> None:
+        """Close this variant lookup."""
+        return None
+
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        """Exit this context manager by closing the variant lookup."""
+        super().__exit__(exc_type, exc_value, traceback)
+        self.close()
+        return None
+
 
 class FileBasedVariantLookup(VariantLookup):
-    """Implementation of VariantLookup that queries against indexed VCF files each time a query is
+    """Implementation of `VariantLookup` that queries against indexed VCF files each time a query is
     performed. Assumes the index is located adjacent to the VCF file and has the same base name with
-     either a .csi or .tbi suffix."""
+    either a .csi or .tbi suffix.
+
+    Example:
+
+    ```python
+    >>> with FileBasedVariantLookup([Path("./tests/api/data/miniref.variants.vcf.gz")], min_maf=0.0, include_missing_mafs=False) as lookup:
+    ...     lookup.query(refname="chr2", start=7999, end=8000)
+    [SimpleVariant(id='complex-variant-sv-1/1', refname='chr2', pos=8000, ref='T', alt='<DEL>', end=8000, variant_type=<VariantType.OTHER: 'OTHER'>, maf=None)]
+
+    ```
+    """  # noqa: E501
 
     def __init__(self, vcf_paths: list[Path], min_maf: Optional[float], include_missing_mafs: bool):
         self._readers: list[VariantFile] = []
@@ -352,6 +380,12 @@ class FileBasedVariantLookup(VariantLookup):
             variants = [variant for variant in fh.fetch(contig=refname, start=start - 1, end=end)]
             simple_variants.extend(self.to_variants(variants, source_vcf=path))
         return sorted(simple_variants, key=lambda x: x.pos)
+
+    @override
+    def close(self) -> None:
+        """Close the underlying VCF file handles."""
+        for handle in self._readers:
+            handle.close()
 
 
 class VariantOverlapDetector(VariantLookup):
@@ -443,7 +477,18 @@ def disk_based(
     vcf_paths: list[Path], min_maf: float, include_missing_mafs: bool = False
 ) -> FileBasedVariantLookup:
     """Constructs a `VariantLookup` that queries indexed VCFs on disk for each lookup.
-    Appropriate for large VCFs."""
+
+    Appropriate for large VCFs.
+
+    Example:
+
+    ```python
+    >>> with disk_based([Path("./tests/api/data/miniref.variants.vcf.gz")], min_maf=0.0) as lookup:
+    ...     lookup.query(refname="chr2", start=7999, end=8000)
+    [SimpleVariant(id='complex-variant-sv-1/1', refname='chr2', pos=8000, ref='T', alt='<DEL>', end=8000, variant_type=<VariantType.OTHER: 'OTHER'>, maf=None)]
+
+    ```
+    """  # noqa: E501
     return FileBasedVariantLookup(
         vcf_paths=vcf_paths, min_maf=min_maf, include_missing_mafs=include_missing_mafs
     )
