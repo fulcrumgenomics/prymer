@@ -262,13 +262,21 @@ def test_to_result_out_of_order(ref_fasta: Path) -> None:
 def test_to_result_num_hits_on_unmapped(ref_fasta: Path) -> None:
     with BwaAlnInteractive(ref=ref_fasta, max_hits=1) as bwa:
         query = Query(bases="GATTACA", id="foo")
-        # Exception: HN cannot be non-zero
+
+        # HN *can* be non-zero
         rec = SamBuilder().add_single(name=query.id, attrs={"HN": 42})
-        with pytest.raises(ValueError, match="Read was unmapped but num_hits > 0"):
-            bwa._to_result(query=query, rec=rec)
+        result = bwa._to_result(query=query, rec=rec)
+        assert result.hit_count == 42
+        assert result.hits == []
+
         # OK: HN tag is zero
         rec = SamBuilder().add_single(name=query.id, attrs={"HN": 0})
-        bwa._to_result(query=query, rec=rec)
+        result = bwa._to_result(query=query, rec=rec)
+        assert result.hit_count == 0
+        assert result.hits == []
+
         # OK: no HN tag
         rec = SamBuilder().add_single(name=query.id)
-        bwa._to_result(query=query, rec=rec)
+        result = bwa._to_result(query=query, rec=rec)
+        assert result.hit_count == 0
+        assert result.hits == []
