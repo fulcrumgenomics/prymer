@@ -1,3 +1,4 @@
+import logging
 import shutil
 from dataclasses import replace
 from pathlib import Path
@@ -97,6 +98,25 @@ def test_map_one_uniquely_mapped(ref_fasta: Path) -> None:
         assert result.hits[0].negative is False
         assert f"{result.hits[0].cigar}" == "60M"
         assert result.query == query
+
+
+def test_stderr_redirected_to_logger(ref_fasta: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Tests that we redirect the stderr of the bwa executable to a logger.."""
+    caplog.set_level(logging.DEBUG)
+    query = Query(bases="TCTACTAAAAATACAAAAAATTAGCTGGGCATGATGGCATGCACCTGTAATCCCGCTACT", id="NA")
+    with BwaAlnInteractive(ref=ref_fasta, max_hits=1) as bwa:
+        result = bwa.map_one(query=query.bases, id=query.id)
+        assert result.hit_count == 1
+        assert result.hits[0].refname == "chr1"
+        assert result.hits[0].start == 61
+        assert result.hits[0].negative is False
+        assert f"{result.hits[0].cigar}" == "60M"
+        assert result.query == query
+    assert "[bwa_aln_core] calculate SA coordinate..." in caplog.text
+    assert "[bwa_aln_core] convert to sequence coordinate..." in caplog.text
+    assert "[bwa_aln_core] refine gapped alignments..." in caplog.text
+    assert "[bwa_aln_core] print alignments..." in caplog.text
+    assert "[bwa_aln_core] 1 sequences have been processed" in caplog.text
 
 
 def test_map_one_unmapped(ref_fasta: Path) -> None:

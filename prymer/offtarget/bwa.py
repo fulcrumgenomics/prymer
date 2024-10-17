@@ -44,9 +44,12 @@ True
 ```
 """  # noqa: E501
 
+import logging
 import os
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Thread
 from typing import ClassVar
 from typing import Optional
 from typing import cast
@@ -56,6 +59,7 @@ from fgpyo import sequence
 from fgpyo.sam import Cigar
 from pysam import AlignedSegment
 from pysam import AlignmentHeader
+from typing_extensions import override
 
 from prymer.api import coordmath
 from prymer.util.executable_runner import ExecutableRunner
@@ -298,7 +302,7 @@ class BwaAlnInteractive(ExecutableRunner):
             "/dev/stdin",
         ]
 
-        super().__init__(command=command)
+        super().__init__(command=command, stderr=subprocess.PIPE)
 
         header = []
         for line in self._subprocess.stdout:
@@ -309,6 +313,18 @@ class BwaAlnInteractive(ExecutableRunner):
 
         self.header = AlignmentHeader.from_text("".join(header))
 
+        # NB: ExecutableRunner will default to redirecting stderr to /dev/null. However, we would
+        # like to preserve stderr messages from bwa for potential debugging. To do this, we create
+        # a single thread to continuously read from stderr and redirect text lines to a debug
+        # logger. The close() method of this class will additionally join the stderr logging thread.
+        self._logger = logging.getLogger(self.__class__.__qualname__)
+        self._stderr_thread = Thread(
+            daemon=True,
+            target=self._stream_to_sink,
+            args=(self._subprocess.stderr, lambda line: self._logger.debug(line)),
+        )
+        self._stderr_thread.start()
+
     def __signal_bwa(self) -> None:
         """Signals BWA to process the queries."""
         self._subprocess.stdin.flush()
@@ -316,6 +332,19 @@ class BwaAlnInteractive(ExecutableRunner):
         # NB: it is not understood why, but 16 newlines seems to work for all platforms tested
         self._subprocess.stdin.write("\n" * 16)
         self._subprocess.stdin.flush()
+
+    @override
+    def close(self) -> bool:
+        """
+        Gracefully terminates the underlying subprocess if it is still running.
+
+        Returns:
+            True: if the subprocess was terminated successfully
+            False: if the subprocess failed to terminate or was not already running
+        """
+        safely_closed: bool = super().close()
+        self._stderr_thread.join()
+        return safely_closed
 
     def map_one(self, query: str, id: str = "unknown") -> BwaResult:
         """Maps a single query to the genome and returns the result.
