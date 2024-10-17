@@ -37,9 +37,12 @@ BwaHit(refname='chr1', start=61, negative=False, cigar=Cigar(elements=(CigarElem
 ```
 """  # noqa: E501
 
+import logging
 import os
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Thread
 from typing import ClassVar
 from typing import Optional
 from typing import cast
@@ -49,6 +52,7 @@ from fgpyo import sam
 from fgpyo import sequence
 from fgpyo.sam import Cigar
 from pysam import AlignedSegment
+from typing_extensions import override
 
 from prymer.api import coordmath
 from prymer.util.executable_runner import ExecutableRunner
@@ -282,7 +286,7 @@ class BwaAlnInteractive(ExecutableRunner):
             "/dev/stdin",
         ]
 
-        super().__init__(command=command)
+        super().__init__(command=command, stderr=subprocess.PIPE)
 
         # HACK ALERT
         # This is a hack. By trial and error, pysam.AlignmentFile() will block reading unless
@@ -299,12 +303,37 @@ class BwaAlnInteractive(ExecutableRunner):
         for _ in range(num_warmup):
             next(self._reader)
 
+        # NB: ExecutableRunner will default to redirecting stderr to /dev/null. However, we would
+        # like to preserve stderr messages from bwa for potential debugging. To do this, we create
+        # a single thread to continuously read from stderr and redirect text lines to a debug
+        # logger. The close() method of this class will additionally join the stderr logging thread.
+        self._logger = logging.getLogger(self.__class__.__qualname__)
+        self._stderr_thread = Thread(
+            daemon=True,
+            target=self._stream_to_sink,
+            args=(self._subprocess.stderr, self._logger.debug),
+        )
+        self._stderr_thread.start()
+
     def __signal_bwa(self) -> None:
         """Signals BWA to process the queries"""
         for _ in range(3):
             self._subprocess.stdin.flush()
             self._subprocess.stdin.write("\n\n")
             self._subprocess.stdin.flush()
+
+    @override
+    def close(self) -> bool:
+        """
+        Gracefully terminates the underlying subprocess if it is still running.
+
+        Returns:
+            True: if the subprocess was terminated successfully
+            False: if the subprocess failed to terminate or was not already running
+        """
+        safely_closed: bool = super().close()
+        self._stderr_thread.join()
+        return safely_closed
 
     def map_one(self, query: str, id: str = "unknown") -> BwaResult:
         """Maps a single query to the genome and returns the result.
