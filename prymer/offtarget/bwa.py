@@ -321,7 +321,7 @@ class BwaAlnInteractive(ExecutableRunner):
         self._stderr_thread = Thread(
             daemon=True,
             target=self._stream_to_sink,
-            args=(self._subprocess.stderr, lambda line: self._logger.debug(line)),
+            args=(self._subprocess.stderr, self._logger.debug),
         )
         self._stderr_thread.start()
 
