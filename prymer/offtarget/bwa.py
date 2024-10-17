@@ -167,7 +167,7 @@ class BwaHit:
 class BwaResult:
     """
     Represents zero or more hits or alignments found by BWA for the given query.
-    
+
     The number of hits found may be more than the number of hits listed in the `hits` attribute.
 
     Attributes:
@@ -380,7 +380,7 @@ class BwaAlnInteractive(ExecutableRunner):
         # number of hits. In both of the latter cases, we have to rely on the count reported in the
         # `HN` tag.
         hits: list[BwaHit]
-        if 0 < num_hits < self.max_hits:
+        if 0 < num_hits <= self.max_hits:
             hits = self.to_hits(rec=rec)
             num_hits = len(hits)
         else:
