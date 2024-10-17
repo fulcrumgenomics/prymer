@@ -434,6 +434,9 @@ class BwaAlnInteractive(ExecutableRunner):
         # Remove hits that extend beyond the end of a contig - these are artifacts of `bwa aln`'s
         # alignment process, which concatenates all reference sequences and reports hits which span
         # across contigs.
-        hits = [hit for hit in hits if hit.end <= self.header.get_reference_length(hit.refname)]
+        # NB: the type ignore is necessary because pysam's type hint for `get_reference_length` is
+        # incorrect.
+        # https://github.com/pysam-developers/pysam/pull/1313
+        hits = [hit for hit in hits if hit.end <= self.header.get_reference_length(hit.refname)]  # type: ignore[arg-type]  # noqa: E501
 
         return hits
