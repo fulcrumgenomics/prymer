@@ -35,7 +35,6 @@ jobs:
       - name: Set up miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
-          miniforge-variant: Mambaforge
           miniforge-version: latest
           channels: conda-forge,bioconda
           activate-environment: prymer
