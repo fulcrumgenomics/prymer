@@ -8,25 +8,8 @@ env:
   POETRY_VERSION: 1.8.2
 
 jobs:
-  on-main-branch-check:
-    runs-on: ubuntu-latest
-    outputs:
-      on_main: ${{ steps.contains_tag.outputs.retval }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: rickstaa/action-contains-tag@v1
-        id: contains_tag
-        with:
-          reference: "main"
-          tag: "${{ github.ref_name }}"
-
   tests:
     name: tests
-    needs: on-main-branch-check
-    if: ${{ needs.on-main-branch-check.outputs.on_main == 'true' }}
     uses: "./.github/workflows/tests.yml"
 
   build-wheels:
