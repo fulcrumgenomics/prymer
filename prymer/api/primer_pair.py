@@ -37,9 +37,8 @@ Span(refname='chr1', start=1, end=120, strand=<Strand.POSITIVE: '+'>)
 Span(refname='chr1', start=21, end=100, strand=<Strand.POSITIVE: '+'>)
 
 >>> list(primer_pair)
-[Oligo(name=None, tm=70.0, penalty=-123.0, span=Span(refname='chr1', start=1, end=20, strand=<Strand.POSITIVE: '+'>), bases='GGGGGGGGGGGGGGGGGGGG', tail=None), Oligo(name=None, tm=70.0, penalty=-123.0, span=Span(refname='chr1', start=101, end=120, strand=<Strand.NEGATIVE: '-'>), bases='TTTTTTTTTTTTTTTTTTTT', tail=None)]
+[Oligo(name=None, tm=70.0, penalty=-123.0, span=Span(refname='chr1', start=1, end=20, strand=<Strand.POSITIVE: '+'>), tm_homodimer=None, tm_3p_anchored_homodimer=None, tm_secondary_structure=None, bases='GGGGGGGGGGGGGGGGGGGG', tail=None), Oligo(name=None, tm=70.0, penalty=-123.0, span=Span(refname='chr1', start=101, end=120, strand=<Strand.NEGATIVE: '-'>), tm_homodimer=None, tm_3p_anchored_homodimer=None, tm_secondary_structure=None, bases='TTTTTTTTTTTTTTTTTTTT', tail=None)]
 
-```
 """  # noqa: E501
 
 from dataclasses import dataclass

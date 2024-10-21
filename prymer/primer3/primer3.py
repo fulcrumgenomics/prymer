@@ -386,10 +386,13 @@ class Primer3(ExecutableRunner):
                 assert_never(unreachable)  # pragma: no cover
 
         soft_masked, hard_masked = self.get_design_sequences(design_region)
+        # use 1-base coords, explain primer designs, use hard-masked sequence, and compute
+        # thermodynamic attributes
         global_primer3_params = {
             Primer3InputTag.PRIMER_FIRST_BASE_INDEX: 1,
             Primer3InputTag.PRIMER_EXPLAIN_FLAG: 1,
             Primer3InputTag.SEQUENCE_TEMPLATE: hard_masked,
+            Primer3InputTag.PRIMER_THERMODYNAMIC_OLIGO_ALIGNMENT: 1,
         }
 
         assembled_primer3_tags = {
@@ -530,15 +533,32 @@ class Primer3(ExecutableRunner):
             bases = unmasked_design_seq[slice_offset:slice_end]
             if span.strand == Strand.NEGATIVE:
                 bases = reverse_complement(bases)
-
-            primers.append(
-                Oligo(
-                    bases=bases,
-                    tm=float(design_results[f"PRIMER_{design_task.task_type}_{idx}_TM"]),
-                    penalty=float(design_results[f"PRIMER_{design_task.task_type}_{idx}_PENALTY"]),
-                    span=span,
+            # assemble Primer3-emitted results into `Oligo` objects
+            # if thermodynamic melting temperatures are missing, raise KeyError
+            try:
+                primers.append(
+                    Oligo(
+                        bases=bases,
+                        tm=float(design_results[f"PRIMER_{design_task.task_type}_{idx}_TM"]),
+                        penalty=float(
+                            design_results[f"PRIMER_{design_task.task_type}_{idx}_PENALTY"]
+                        ),
+                        span=span,
+                        tm_homodimer=float(
+                            design_results[f"PRIMER_{design_task.task_type}_{idx}_SELF_ANY_TH"]
+                        ),
+                        tm_3p_anchored_homodimer=float(
+                            design_results[f"PRIMER_{design_task.task_type}_{idx}_SELF_END_TH"],
+                        ),
+                        tm_secondary_structure=float(
+                            design_results[f"PRIMER_{design_task.task_type}_{idx}_HAIRPIN_TH"]
+                        ),
+                    )
                 )
-            )
+            except KeyError as e:
+                raise KeyError(
+                    f"Did not find a required field in Primer3-emitted results: {e}"
+                ) from e
         return primers
 
     @staticmethod
