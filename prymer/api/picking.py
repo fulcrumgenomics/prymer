@@ -27,7 +27,7 @@ Contains the following public classes and methods:
 
 """
 
-from typing import Iterable
+from pathlib import Path
 from typing import Iterator
 from typing import Optional
 
@@ -101,14 +101,14 @@ def score(
 
 
 def build_primer_pairs(
-    left_primers: Iterable[Oligo],
-    right_primers: Iterable[Oligo],
+    left_primers: list[Oligo],
+    right_primers: list[Oligo],
     target: Span,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
     max_heterodimer_tm: Optional[float],
     weights: PrimerAndAmpliconWeights,
-    fasta: FastaFile,
+    fasta_path: Path,
 ) -> Iterator[PrimerPair]:
     """Builds primer pairs from individual left and primers.
 
@@ -125,7 +125,7 @@ def build_primer_pairs(
         max_heterodimer_tm: if supplied, heterodimer Tms will be calculated for primer pairs,
           and those exceeding the maximum Tm will be discarded
         weights: the set of penalty weights
-        fasta: the FASTA file from which the amplicon sequence will be retrieved.
+        fasta_path: the path to the FASTA file from which the amplicon sequence will be retrieved.
 
     Returns:
         an iterator over all the valid primer pairs, unsorted
@@ -141,9 +141,10 @@ def build_primer_pairs(
         raise ValueError("Left primers exist on different reference than target.")
 
     # Grab the sequence we'll use to fill in the amplicon sequence
-    region_start = min(p.span.start for p in left_primers)
-    region_end = max(p.span.end for p in right_primers)
-    bases = fasta.fetch(target.refname, region_start - 1, region_end)
+    with FastaFile(f"{fasta_path}") as fasta:
+        region_start = min(p.span.start for p in left_primers)
+        region_end = max(p.span.end for p in right_primers)
+        bases = fasta.fetch(target.refname, region_start - 1, region_end)
 
     with NtThermoAlign() as ntthal:
         # generate all the primer pairs that don't violate hard size and Tm constraints
