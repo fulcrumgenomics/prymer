@@ -47,39 +47,7 @@ using the [`OffTargetDetector`][prymer.offtarget.offtarget_detector.OffTargetDet
 
 The remaining primers may then be used with the 
 [`build_primer_pairs()`][prymer.api.picking.build_primer_pairs] method to build primer pairs
-from all combinations of the left and right primers.
+from all combinations of the left and right primers that are within acceptable amplicon size and tm ranges.
+Optionally, if a `max_heterodimer_tm` is provided, primer pairs will be screened to ensure that the left and right
+primers do not dimerize with a Tm greater than the one provided.
 The produced primer pairs are scored in a manner similar to Primer3 using the [`score()`][prymer.api.picking.score] method.
-The [`FilterParams`][prymer.api.picking.FilteringParams] class is used to provide parameters for scoring.
-
-Next, the [`pick_top_primer_pairs()`][prymer.api.picking.pick_top_primer_pairs] method is used to select up to
-a maximum number of primer pairs.  The primer pairs are selected in the order of lowest penalty (highest score).  As
-part of this process, each primer pair must:
-
-1. Have an amplicon in the desired size range (see [`is_acceptable_primer_pair`][prymer.api.picking.is_acceptable_primer_pair]).
-2. Have an amplicon melting temperature in the desired range (see [`is_acceptable_primer_pair`][prymer.api.picking.is_acceptable_primer_pair]).
-3. Not have too many off-targets (see [`OffTargetDetector.check_one()`][prymer.offtarget.offtarget_detector.OffTargetDetector.check_one]).
-4. Not have primer pairs that overlap too much (see [`check_primer_overlap()`][prymer.api.picking.check_primer_overlap]).
-5. Not form a dimer with a melting temperature above a specified threshold (see the [`max_dimer_tm` attribute in `FilterParams`][prymer.api.picking.FilteringParams]).
-
-Checking for dimers may be performed using the [`NtThermoAlign`][prymer.ntthal.NtThermoAlign] command line executable,
-and can be passed to [`pick_top_primer_pairs()`][prymer.api.picking.pick_top_primer_pairs] as follows:
-
-```python
-from prymer.ntthal import NtThermoAlign
-from prymer.api.picking import FilteringParams, pick_top_primer_pairs
-params = FilteringParams(...)
-dimer_checker = NtThermoAlign()
-pick_top_primer_pairs(
-    is_dimer_tm_ok=lambda s1, s2: (
-        dimer_checker.duplex_tm(s1=s1, s2=s2) <= params.max_dimer_tm
-    ),
-    ...
-)
-
-```
-
-For convenience, the [`build_and_pick_primer_pairs()`][prymer.api.picking.build_and_pick_primer_pairs] method combines
-both the [`build_primer_pairs()`][prymer.api.picking.build_primer_pairs] and 
-[`pick_top_primer_pairs()`][prymer.api.picking.pick_top_primer_pairs] methods in single invocation.
-
-The resulting primer pairs may be further examined.
