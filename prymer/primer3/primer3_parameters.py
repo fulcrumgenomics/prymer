@@ -284,6 +284,7 @@ class ProbeParameters:
             Primer3InputTag.PRIMER_INTERNAL_MAX_SELF_ANY_TH: self.probe_max_homodimer_tm,
             Primer3InputTag.PRIMER_INTERNAL_MAX_SELF_END_TH: self.probe_max_3p_homodimer_tm,
             Primer3InputTag.PRIMER_INTERNAL_MAX_HAIRPIN_TH: self.probe_max_hairpin_tm,
+            Primer3InputTag.PRIMER_NUM_RETURN: self.number_probes_return,
         }
 
         return mapped_dict
