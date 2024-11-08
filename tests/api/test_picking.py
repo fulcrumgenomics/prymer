@@ -69,14 +69,14 @@ def fasta(tmp_path: Path) -> Path:
     return path
 
 
-def p(bases: str, tm: float, pos: int, pen: float = 0) -> Oligo:
+def p(bases: str, tm: float, pos: int, pen: float = 0, chrom: str = "chr1") -> Oligo:
     """Generates a primer for testing."""
     oligo = Oligo(
         name="left",
         tm=tm,
         penalty=pen,
         bases=bases,
-        span=Span("chr1", pos, pos + len(bases) - 1),
+        span=Span(chrom, pos, pos + len(bases) - 1),
         tail=None,
     )
     assert oligo.span.length == len(oligo.bases)
@@ -354,3 +354,51 @@ def test_build_primer_pairs_amplicon_tm_filtering(
         )
 
         assert len(pairs) == (1 if max_tm > amp_tm else 0)
+
+
+def test_build_primer_pairs_fails_when_primers_on_wrong_reference(
+    fasta: Path,
+    weights: PrimerAndAmpliconWeights,
+) -> None:
+    target = Span("chr1", 240, 260)
+    valid_lefts = [p(REF_BASES[200:220], tm=60, pos=201, pen=1)]
+    invalid_lefts = [p(REF_BASES[200:220], tm=60, chrom="X", pos=201, pen=1)]
+    valid_rights = [p(reverse_complement(REF_BASES[280:300]), tm=61, pos=281, pen=1)]
+    invalid_rights = [p(reverse_complement(REF_BASES[280:300]), tm=61, chrom="X", pos=281, pen=1)]
+
+    picks = picking.build_primer_pairs(
+        left_primers=valid_lefts,
+        right_primers=valid_rights,
+        target=target,
+        amplicon_sizes=MinOptMax(0, 100, 500),
+        amplicon_tms=MinOptMax(0, 80, 150),
+        max_heterodimer_tm=None,
+        weights=weights,
+        fasta_path=fasta,
+    )
+
+    assert next(picks) is not None
+
+    with pytest.raises(ValueError, match="Left primers exist on different reference"):
+        _picks = list(picking.build_primer_pairs(
+            left_primers=invalid_lefts,
+            right_primers=valid_rights,
+            target=target,
+            amplicon_sizes=MinOptMax(0, 100, 500),
+            amplicon_tms=MinOptMax(0, 80, 150),
+            max_heterodimer_tm=None,
+            weights=weights,
+            fasta_path=fasta,
+        ))
+
+    with pytest.raises(ValueError, match="Right primers exist on different reference"):
+        _picks = list(picking.build_primer_pairs(
+            left_primers=valid_lefts,
+            right_primers=invalid_rights,
+            target=target,
+            amplicon_sizes=MinOptMax(0, 100, 500),
+            amplicon_tms=MinOptMax(0, 80, 150),
+            max_heterodimer_tm=None,
+            weights=weights,
+            fasta_path=fasta,
+        ))

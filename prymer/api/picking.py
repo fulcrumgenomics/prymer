@@ -130,14 +130,17 @@ def build_primer_pairs(
     Returns:
         an iterator over all the valid primer pairs, unsorted
     """
+    print(f"Target={target}; lefts={left_primers}.")
+    print(f"Target={target}; rights={right_primers}.")
+
     # Short circuit if we have no left primers or no right primers
     if not any(left_primers) or not any(right_primers):
         return
 
-    if not all(p.span.refname == target.refname for p in left_primers):
+    if any(p.span.refname != target.refname for p in left_primers):
         raise ValueError("Left primers exist on different reference than target.")
 
-    if not all(p.span.refname == target.refname for p in right_primers):
+    if any(p.span.refname != target.refname for p in right_primers):
         raise ValueError("Right primers exist on different reference than target.")
 
     # Grab the sequence we'll use to fill in the amplicon sequence
