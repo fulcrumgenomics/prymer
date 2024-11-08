@@ -18,9 +18,9 @@ the defaults provided here are derived from the Primer3 manual: https://primer3.
 
 Example:
 >>> PrimerAndAmpliconWeights() # default implementation
-PrimerAndAmpliconWeights(product_size_lt=1.0, product_size_gt=1.0, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0)
+PrimerAndAmpliconWeights(product_size_lt=1.0, product_size_gt=1.0, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0, primer_homodimer_wt=0.0, primer_3p_homodimer_wt=0.0, primer_secondary_structure_wt=0.0)
 >>> PrimerAndAmpliconWeights(product_size_lt=5.0)
-PrimerAndAmpliconWeights(product_size_lt=5.0, product_size_gt=1.0, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0)
+PrimerAndAmpliconWeights(product_size_lt=5.0, product_size_gt=1.0, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0, primer_homodimer_wt=0.0, primer_3p_homodimer_wt=0.0, primer_secondary_structure_wt=0.0)
 """  # noqa: E501
 
 from dataclasses import dataclass
@@ -38,7 +38,7 @@ class PrimerAndAmpliconWeights:
 
     Some of these settings depart from the default settings enumerated in the Primer3 manual.
     Please see the Primer3 manual for additional details:
-     https://primer3.org/manual.html#globalTags
+        https://primer3.org/manual.html#globalTags
 
     Attributes:
         product_size_lt: weight for products shorter than
@@ -53,8 +53,15 @@ class PrimerAndAmpliconWeights:
             for the last five 3' bases of primer
         primer_gc_lt: penalty for primers with GC percent lower than
             `PrimerAndAmpliconParameters.primer_gcs.opt`
-        primer_gc_gt: penalty weight for primers with GC percent higher than
+        primer_gc_gt: weight for primers with GC percent higher than
             `PrimerAndAmpliconParameters.primer_gcs.opt`
+        primer_homodimer_wt: penalty for the individual primer self binding value as specified
+            in `PrimerAndAmpliconParameters.primer_max_homodimer_tm`
+        primer_3p_homodimer_wt: weight for the 3'-anchored primer self binding value as specified in
+            `PrimerAndAmpliconParameters.primer_max_3p_homodimer_tm`
+        primer_secondary_structure_wt: penalty weight for the primer hairpin structure melting
+            temperature as defined in `PrimerAndAmpliconParameters.PRIMER_MAX_HAIRPIN_TH`
+
     """
 
     product_size_lt: float = 1.0
@@ -70,6 +77,9 @@ class PrimerAndAmpliconWeights:
     primer_size_gt: float = 0.1
     primer_tm_lt: float = 1.0
     primer_tm_gt: float = 1.0
+    primer_homodimer_wt: float = 0.0
+    primer_3p_homodimer_wt: float = 0.0
+    primer_secondary_structure_wt: float = 0.0
 
     def to_input_tags(self) -> dict[Primer3InputTag, Any]:
         """Maps weights to Primer3InputTag to feed directly into Primer3."""
@@ -87,6 +97,9 @@ class PrimerAndAmpliconWeights:
             Primer3InputTag.PRIMER_WT_SIZE_GT: self.primer_size_gt,
             Primer3InputTag.PRIMER_WT_TM_LT: self.primer_tm_lt,
             Primer3InputTag.PRIMER_WT_TM_GT: self.primer_tm_gt,
+            Primer3InputTag.PRIMER_WT_SELF_ANY_TH: self.primer_homodimer_wt,
+            Primer3InputTag.PRIMER_WT_SELF_END_TH: self.primer_3p_homodimer_wt,
+            Primer3InputTag.PRIMER_WT_HAIRPIN_TH: self.primer_secondary_structure_wt,
         }
         return mapped_dict
 
@@ -102,15 +115,27 @@ class ProbeWeights:
         probe_tm_gt: penalty for probes with a Tm greater than `ProbeParameters.probe_tms.opt`
         probe_gc_lt: penalty for probes with GC content lower than `ProbeParameters.probe_gcs.opt`
         probe_gc_gt: penalty for probes with GC content greater than `ProbeParameters.probe_gcs.opt`
+        probe_wt_self_any_th: penalty for probe self-complementarity as defined in
+            `ProbeParameters.probe_max_self_any_thermo`
+        probe_wt_self_end: penalty for probe 3' complementarity as defined in
+            `ProbeParameters.probe_max_self_end_thermo`
+        probe_wt_hairpin_th: penalty for the most stable primer hairpin structure value as defined
+            in `ProbeParameters.probe_max_hairpin_thermo`
+
+    Each of these defaults are taken from the Primer3 manual. More details can be found here:
+    https://primer3.org/manual.html
 
     """
 
-    probe_size_lt: float = 0.25
-    probe_size_gt: float = 0.25
+    probe_size_lt: float = 1.0
+    probe_size_gt: float = 1.0
     probe_tm_lt: float = 1.0
     probe_tm_gt: float = 1.0
-    probe_gc_lt: float = 0.5
-    probe_gc_gt: float = 0.5
+    probe_gc_lt: float = 0.0
+    probe_gc_gt: float = 0.0
+    probe_homodimer_wt: float = 0.0
+    probe_3p_homodimer_wt: float = 0.0
+    probe_secondary_structure_wt: float = 0.0
 
     def to_input_tags(self) -> dict[Primer3InputTag, Any]:
         """Maps weights to Primer3InputTag to feed directly into Primer3."""
@@ -121,5 +146,8 @@ class ProbeWeights:
             Primer3InputTag.PRIMER_INTERNAL_WT_TM_GT: self.probe_tm_gt,
             Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_LT: self.probe_gc_lt,
             Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_GT: self.probe_gc_gt,
+            Primer3InputTag.PRIMER_INTERNAL_WT_SELF_ANY_TH: self.probe_homodimer_wt,
+            Primer3InputTag.PRIMER_INTERNAL_WT_SELF_END_TH: self.probe_3p_homodimer_wt,
+            Primer3InputTag.PRIMER_INTERNAL_WT_HAIRPIN_TH: self.probe_secondary_structure_wt,
         }
         return mapped_dict

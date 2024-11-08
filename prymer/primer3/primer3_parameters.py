@@ -56,13 +56,18 @@ PRIMER_MAX_POLY_X -> 5
 PRIMER_MAX_NS_ACCEPTED -> 1
 PRIMER_LOWERCASE_MASKING -> 1
 PRIMER_NUM_RETURN -> 5
+PRIMER_MAX_SELF_ANY_TH -> 53.0
+PRIMER_MAX_SELF_END_TH -> 53.0
+PRIMER_MAX_HAIRPIN_TH -> 53.0
 
 ```
 """
 
 import warnings
 from dataclasses import dataclass
+from dataclasses import fields
 from typing import Any
+from typing import Optional
 
 from prymer.api.minoptmax import MinOptMax
 from prymer.primer3.primer3_input_tag import Primer3InputTag
@@ -84,9 +89,21 @@ class PrimerAndAmpliconParameters:
         primer_max_dinuc_bases: the maximal number of bases in a dinucleotide run in a primer
         avoid_masked_bases: whether Primer3 should avoid designing primers in soft-masked regions
         number_primers_return: the number of primers to return
+        primer_max_homodimer_tm: the max melting temperature acceptable for self-complementarity
+        primer_max_3p_homodimer_tm: the max melting temperature acceptable for self-complementarity
+            anchored at the 3' end
+        primer_max_hairpin_tm: the max melting temperature acceptable for secondary structure
 
     Please see the Primer3 manual for additional details: https://primer3.org/manual.html#globalTags
 
+    Each of `primer_max_homodimer_tm`, `primer_max_3p_homodimer_tm`, and `primer_max_hairpin_tm` is
+    optional. If these attributes are not provided, the default value will be set to 10 degrees
+    lower than the minimal melting temperature specified for the primer. This matches the Primer3
+    manual.
+
+    If these values are provided, users should provide the absolute value of the
+    melting temperature threshold (i.e. when provided, values should be specified independent
+    of primer design.)
     """
 
     amplicon_sizes: MinOptMax[int]
@@ -100,6 +117,9 @@ class PrimerAndAmpliconParameters:
     primer_max_dinuc_bases: int = 6
     avoid_masked_bases: bool = True
     number_primers_return: int = 5
+    primer_max_homodimer_tm: Optional[float] = None
+    primer_max_3p_homodimer_tm: Optional[float] = None
+    primer_max_hairpin_tm: Optional[float] = None
 
     def __post_init__(self) -> None:
         if self.primer_max_dinuc_bases % 2 == 1:
@@ -110,6 +130,16 @@ class PrimerAndAmpliconParameters:
             raise TypeError("Amplicon sizes and primer sizes must be integers")
         if self.gc_clamp[0] > self.gc_clamp[1]:
             raise ValueError("Min primer GC-clamp must be <= max primer GC-clamp")
+        # if thermo attributes are not provided, default them to `self.primer_tms.min - 10.0`
+        default_thermo_max: float = self.primer_tms.min - 10.0
+        thermo_max_fields = [
+            "primer_max_homodimer_tm",
+            "primer_max_3p_homodimer_tm",
+            "primer_max_hairpin_tm",
+        ]
+        for field in fields(self):
+            if field.name in thermo_max_fields and getattr(self, field.name) is None:
+                object.__setattr__(self, field.name, default_thermo_max)
 
     def to_input_tags(self) -> dict[Primer3InputTag, Any]:
         """Converts input params to Primer3InputTag to feed directly into Primer3."""
@@ -136,6 +166,9 @@ class PrimerAndAmpliconParameters:
             Primer3InputTag.PRIMER_MAX_NS_ACCEPTED: self.primer_max_Ns,
             Primer3InputTag.PRIMER_LOWERCASE_MASKING: 1 if self.avoid_masked_bases else 0,
             Primer3InputTag.PRIMER_NUM_RETURN: self.number_primers_return,
+            Primer3InputTag.PRIMER_MAX_SELF_ANY_TH: self.primer_max_homodimer_tm,
+            Primer3InputTag.PRIMER_MAX_SELF_END_TH: self.primer_max_3p_homodimer_tm,
+            Primer3InputTag.PRIMER_MAX_HAIRPIN_TH: self.primer_max_hairpin_tm,
         }
 
         return mapped_dict
@@ -180,12 +213,28 @@ class ProbeParameters:
         probe_max_dinuc_bases: the max  number of bases in a dinucleotide run in a probe
         probe_max_polyX: the max homopolymer length acceptable within a probe
         probe_max_Ns: the max number of ambiguous bases acceptable within a probe
+        probe_max_homodimer_tm: the max melting temperature acceptable for self-complementarity
+        probe_max_3p_homodimer_tm: the max melting temperature acceptable for self-complementarity
+            anchored at the 3' end
+        probe_max_hairpin_tm: the max melting temperature acceptable for secondary structure
 
     The attributes that have default values specified take their default values from the
     Primer3 manual.
 
     Please see the Primer3 manual for additional details: https://primer3.org/manual.html#globalTags
 
+    While Primer3 supports alignment based and thermodynamic methods for simulating hybridizations,
+    prymer enforces the use of the thermodynamic approach. This is slightly more computationally
+    expensive but superior in their ability to limit problematic oligo self-complementarity
+    (e.g., primer-dimers, nonspecific binding of probes)
+
+    If they are not provided, `probe_max_self_any_thermo`, `probe_max_self_end_thermo`, and
+    `probe_max_hairpin_thermo` will be set to default values as specified in the Primer3 manual.
+    The default value is 10 degrees lower than the minimal melting temperature specified for
+    probe design (i.e. when not provided, values are specified relative to the probe design).
+    If these values are provided, users should provide the absolute value of the
+    melting temperature threshold (i.e. when provided, values should be specified as independent
+    of probe design.)
 
     """
 
@@ -196,6 +245,9 @@ class ProbeParameters:
     probe_max_dinuc_bases: int = 4
     probe_max_polyX: int = 5
     probe_max_Ns: int = 0
+    probe_max_homodimer_tm: Optional[float] = None
+    probe_max_3p_homodimer_tm: Optional[float] = None
+    probe_max_hairpin_tm: Optional[float] = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.probe_sizes.min, int):
@@ -204,6 +256,16 @@ class ProbeParameters:
             raise TypeError("Probe melting temperatures and GC content must be floats")
         if self.probe_max_dinuc_bases % 2 == 1:
             raise ValueError("Max threshold for dinucleotide bases must be an even number of bases")
+        # if thermo attributes are not provided, default them to `self.probe_tms.min - 10.0`
+        default_thermo_max: float = self.probe_tms.min - 10.0
+        thermo_max_fields = [
+            "probe_max_homodimer_tm",
+            "probe_max_3p_homodimer_tm",
+            "probe_max_hairpin_tm",
+        ]
+        for field in fields(self):
+            if field.name in thermo_max_fields and getattr(self, field.name) is None:
+                object.__setattr__(self, field.name, default_thermo_max)
 
     def to_input_tags(self) -> dict[Primer3InputTag, Any]:
         """Converts input params to Primer3InputTag to feed directly into Primer3."""
@@ -219,6 +281,9 @@ class ProbeParameters:
             Primer3InputTag.PRIMER_INTERNAL_MAX_GC: self.probe_gcs.max,
             Primer3InputTag.PRIMER_INTERNAL_MAX_POLY_X: self.probe_max_polyX,
             Primer3InputTag.PRIMER_INTERNAL_MAX_NS_ACCEPTED: self.probe_max_Ns,
+            Primer3InputTag.PRIMER_INTERNAL_MAX_SELF_ANY_TH: self.probe_max_homodimer_tm,
+            Primer3InputTag.PRIMER_INTERNAL_MAX_SELF_END_TH: self.probe_max_3p_homodimer_tm,
+            Primer3InputTag.PRIMER_INTERNAL_MAX_HAIRPIN_TH: self.probe_max_hairpin_tm,
         }
 
         return mapped_dict
