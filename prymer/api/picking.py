@@ -1,20 +1,10 @@
 """
 # Methods and class for building and scoring primer pairs from a list of left and right primers.
 
-Typically, the first step is to build primer pairs from a list of left and right primers for a
+Typically, primer pairs are built from a list of left and right primers for a
 given target with the [`build_primer_pairs()`][prymer.api.picking.build_primer_pairs]
 method. The returned primer pairs are automatically scored (using the
 [`score()`][prymer.api.picking.score] method).
-
-Next, the list of primer pairs for a given target are filtered based on various criteria using the
-[`pick_top_primer_pairs()`][prymer.api.picking.pick_top_primer_pairs] method. Criteria
-included but not limited to filtering for desired size and melting temperature ranges (see
-[`is_acceptable_primer_pair()`][prymer.api.picking.is_acceptable_primer_pair]), not too
-many off-targets, no self-dimers, and so on.  A given maximum number of passing primer pairs is
-returned.
-
-These two steps can be performed jointly using the
-[`build_and_pick_primer_pairs()`][prymer.api.picking.build_and_pick_primer_pairs] method.
 
 ## Module contents
 
@@ -123,7 +113,7 @@ def build_primer_pairs(
         amplicon_sizes: minimum, optimal, and maximum amplicon sizes (lengths)
         amplicon_tms: minimum, optimal, and maximum amplicon Tms
         max_heterodimer_tm: if supplied, heterodimer Tms will be calculated for primer pairs,
-          and those exceeding the maximum Tm will be discarded
+            and those exceeding the maximum Tm will be discarded
         weights: the set of penalty weights
         fasta_path: the path to the FASTA file from which the amplicon sequence will be retrieved.
 
