@@ -138,7 +138,7 @@ def build_primer_pairs(
         raise ValueError("Left primers exist on different reference than target.")
 
     if not all(p.span.refname == target.refname for p in right_primers):
-        raise ValueError("Left primers exist on different reference than target.")
+        raise ValueError("Right primers exist on different reference than target.")
 
     # Grab the sequence we'll use to fill in the amplicon sequence
     with FastaFile(f"{fasta_path}") as fasta:
