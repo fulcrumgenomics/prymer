@@ -85,6 +85,9 @@ def p(bases: str, tm: float, pos: int, pen: float = 0, chrom: str = "chr1") -> O
 
 def pp(lp: Oligo, rp: Oligo, bases: Optional[str] = None, tm: Optional[float] = None) -> PrimerPair:
     """Generates a primer pair for testing."""
+    if lp.span.end > rp.span.start:
+        raise ValueError("Overlapping primers not supported.")
+
     if bases is None:
         length = rp.span.end - lp.span.start + 1
         needed = length - lp.span.length - rp.span.length

@@ -120,9 +120,6 @@ def build_primer_pairs(
     Returns:
         an iterator over all the valid primer pairs, unsorted
     """
-    print(f"Target={target}; lefts={left_primers}.")
-    print(f"Target={target}; rights={right_primers}.")
-
     # Short circuit if we have no left primers or no right primers
     if not any(left_primers) or not any(right_primers):
         return
