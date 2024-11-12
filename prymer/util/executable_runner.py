@@ -14,8 +14,10 @@ import subprocess
 from contextlib import AbstractContextManager
 from pathlib import Path
 from types import TracebackType
+from typing import Callable
 from typing import Optional
 from typing import Self
+from typing import TextIO
 
 
 class ExecutableRunner(AbstractContextManager):
@@ -30,6 +32,12 @@ class ExecutableRunner(AbstractContextManager):
     Subclasses of [`ExecutableRunner`][prymer.util.executable_runner.ExecutableRunner]
     provide additional type checking of inputs and orchestrate parsing output data from specific
     command-line tools.
+
+    Warning:
+        Users of this class must be acutely aware of deadlocks that can exist when manually
+        writing and reading to subprocess pipes. The Python documentation for subprocess and PIPE
+        has warnings to this effect as well as recommended workarounds and alternatives.
+        https://docs.python.org/3/library/subprocess.html
     """
 
     __slots__ = ("_command", "_subprocess", "_name")
@@ -40,9 +48,13 @@ class ExecutableRunner(AbstractContextManager):
     def __init__(
         self,
         command: list[str],
+        # NB: users of this class must be acutely aware of deadlocks that can exist when manually
+        # writing and reading to subprocess pipes. The Python documentation for subprocess and PIPE
+        # has warnings to this effect as well as recommended workarounds and alternatives.
+        # https://docs.python.org/3/library/subprocess.html
         stdin: int = subprocess.PIPE,
         stdout: int = subprocess.PIPE,
-        stderr: int = subprocess.PIPE,
+        stderr: int = subprocess.DEVNULL,
     ) -> None:
         if len(command) == 0:
             raise ValueError(f"Invocation must not be empty, received {command}")
@@ -70,6 +82,15 @@ class ExecutableRunner(AbstractContextManager):
         """Gracefully terminates any running subprocesses."""
         super().__exit__(exc_type, exc_value, traceback)
         self.close()
+
+    @staticmethod
+    def _stream_to_sink(stream: TextIO, sink: Callable[[str], None]) -> None:
+        """Redirect a text IO stream to a text sink."""
+        while True:
+            if line := stream.readline():
+                sink(line.rstrip())
+            else:
+                break
 
     @classmethod
     def validate_executable_path(cls, executable: str | Path) -> Path:
@@ -115,8 +136,7 @@ class ExecutableRunner(AbstractContextManager):
 
     def close(self) -> bool:
         """
-        Gracefully terminates the underlying subprocess if it is still
-        running.
+        Gracefully terminates the underlying subprocess if it is still running.
 
         Returns:
             True: if the subprocess was terminated successfully

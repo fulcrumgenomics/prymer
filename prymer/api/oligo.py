@@ -83,24 +83,49 @@ from prymer.api.span import Span
 class Oligo(OligoLike, Metric["Oligo"]):
     """Stores the properties of the designed oligo.
 
-    Oligos can include both single primer and internal probe designs. The penalty score of the
-    design is emitted by Primer3 and controlled by the corresponding design parameters.
-    The penalty for a primer is set by the combination of `PrimerAndAmpliconParameters` and
-    `PrimerWeights`, whereas a probe penalty is set by `ProbeParameters` and `ProbeWeights`.
+    Oligos can include both single primer and internal probe designs. Primer3 emits information
+    about the specific properties of a primer and/or probe, including the base sequence,
+    melting temperature (tm), and score.
+
+    The penalty score of the design is emitted by Primer3 and controlled by the corresponding
+    design parameters. The penalty for a primer is set by the combination of
+    `PrimerAndAmpliconParameters` and `PrimerWeights`.
+    A probe penalty is set by `ProbeParameters` and `ProbeWeights`.
+
+    The span of an `Oligo` object represents the mapping of the oligo
+    to the genome. `Oligo` objects can optionally have a `tail` sequence to prepend to the 5' end
+    of the primer or probe, as well as a `name` for downstream record keeping.
+
+    `Oligo` objects can also store thermodynamic characteristics of primer and/or probe
+    design. These include the calculated melting temperatures of the most stable hairpin structure,
+    self-, and end- complementarity. These values can be emitted by Primer3.
+
+    These thermodynamic characteristics are meant to quantify how likely it is the primer or probe
+    will bind to itself (e.g., instead of the target DNA). A melting temperature close to or greater
+    than the intended melting temperature for target binding indicates the primer or probe is
+    likely to form stable hairpins or dimers, leading to reduced efficiency of the reaction.
 
     Attributes:
         tm: the calculated melting temperature of the oligo
         penalty: the penalty or score for the oligo
         span: the mapping of the primer to the genome
+        name: an optional name to use for the primer
+        tm_homodimer: calculated melting temperature that represents
+            the tendency of an oligo to bind to itself (self-complementarity)
+        tm_3p_anchored_homodimer: calculated melting temperature that represents
+            the tendency of a primer to bind to the 3'-END of an identical primer
+        tm_secondary_structure: calculated melting temperature of the oligo hairpin structure
         bases: the base sequence of the oligo (excluding any tail)
         tail: an optional tail sequence to put on the 5' end of the primer
-        name: an optional name to use for the primer
 
     """
 
     tm: float
     penalty: float
     span: Span
+    tm_homodimer: Optional[float] = None
+    tm_3p_anchored_homodimer: Optional[float] = None
+    tm_secondary_structure: Optional[float] = None
     bases: Optional[str] = None
     tail: Optional[str] = None
 

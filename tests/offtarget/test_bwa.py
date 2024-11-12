@@ -1,3 +1,4 @@
+import logging
 import shutil
 from dataclasses import replace
 from pathlib import Path
@@ -97,6 +98,25 @@ def test_map_one_uniquely_mapped(ref_fasta: Path) -> None:
         assert result.hits[0].negative is False
         assert f"{result.hits[0].cigar}" == "60M"
         assert result.query == query
+
+
+def test_stderr_redirected_to_logger(ref_fasta: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Tests that we redirect the stderr of the bwa executable to a logger.."""
+    caplog.set_level(logging.DEBUG)
+    query = Query(bases="TCTACTAAAAATACAAAAAATTAGCTGGGCATGATGGCATGCACCTGTAATCCCGCTACT", id="NA")
+    with BwaAlnInteractive(ref=ref_fasta, max_hits=1) as bwa:
+        result = bwa.map_one(query=query.bases, id=query.id)
+        assert result.hit_count == 1
+        assert result.hits[0].refname == "chr1"
+        assert result.hits[0].start == 61
+        assert result.hits[0].negative is False
+        assert f"{result.hits[0].cigar}" == "60M"
+        assert result.query == query
+    assert "[bwa_aln_core] calculate SA coordinate..." in caplog.text
+    assert "[bwa_aln_core] convert to sequence coordinate..." in caplog.text
+    assert "[bwa_aln_core] refine gapped alignments..." in caplog.text
+    assert "[bwa_aln_core] print alignments..." in caplog.text
+    assert "[bwa_aln_core] 1 sequences have been processed" in caplog.text
 
 
 def test_map_one_unmapped(ref_fasta: Path) -> None:
@@ -262,13 +282,21 @@ def test_to_result_out_of_order(ref_fasta: Path) -> None:
 def test_to_result_num_hits_on_unmapped(ref_fasta: Path) -> None:
     with BwaAlnInteractive(ref=ref_fasta, max_hits=1) as bwa:
         query = Query(bases="GATTACA", id="foo")
-        # Exception: HN cannot be non-zero
+
+        # HN *can* be non-zero
         rec = SamBuilder().add_single(name=query.id, attrs={"HN": 42})
-        with pytest.raises(ValueError, match="Read was unmapped but num_hits > 0"):
-            bwa._to_result(query=query, rec=rec)
+        result = bwa._to_result(query=query, rec=rec)
+        assert result.hit_count == 42
+        assert result.hits == []
+
         # OK: HN tag is zero
         rec = SamBuilder().add_single(name=query.id, attrs={"HN": 0})
-        bwa._to_result(query=query, rec=rec)
+        result = bwa._to_result(query=query, rec=rec)
+        assert result.hit_count == 0
+        assert result.hits == []
+
         # OK: no HN tag
         rec = SamBuilder().add_single(name=query.id)
-        bwa._to_result(query=query, rec=rec)
+        result = bwa._to_result(query=query, rec=rec)
+        assert result.hit_count == 0
+        assert result.hits == []

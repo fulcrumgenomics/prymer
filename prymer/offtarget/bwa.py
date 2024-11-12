@@ -44,9 +44,12 @@ True
 ```
 """  # noqa: E501
 
+import logging
 import os
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Thread
 from typing import ClassVar
 from typing import Optional
 from typing import cast
@@ -56,6 +59,7 @@ from fgpyo import sequence
 from fgpyo.sam import Cigar
 from pysam import AlignedSegment
 from pysam import AlignmentHeader
+from typing_extensions import override
 
 from prymer.api import coordmath
 from prymer.util.executable_runner import ExecutableRunner
@@ -165,8 +169,10 @@ class BwaHit:
 
 @dataclass(init=True, frozen=True)
 class BwaResult:
-    """Represents zero or more hits or alignments found by BWA for the given query.  The number of
-    hits found may be more than the number of hits listed in the `hits` attribute.
+    """
+    Represents zero or more hits or alignments found by BWA for the given query.
+
+    The number of hits found may be more than the number of hits listed in the `hits` attribute.
 
     Attributes:
         query: the query (as given, no RC'ing)
@@ -296,7 +302,7 @@ class BwaAlnInteractive(ExecutableRunner):
             "/dev/stdin",
         ]
 
-        super().__init__(command=command)
+        super().__init__(command=command, stderr=subprocess.PIPE)
 
         header = []
         for line in self._subprocess.stdout:
@@ -307,6 +313,18 @@ class BwaAlnInteractive(ExecutableRunner):
 
         self.header = AlignmentHeader.from_text("".join(header))
 
+        # NB: ExecutableRunner will default to redirecting stderr to /dev/null. However, we would
+        # like to preserve stderr messages from bwa for potential debugging. To do this, we create
+        # a single thread to continuously read from stderr and redirect text lines to a debug
+        # logger. The close() method of this class will additionally join the stderr logging thread.
+        self._logger = logging.getLogger(self.__class__.__qualname__)
+        self._stderr_thread = Thread(
+            daemon=True,
+            target=self._stream_to_sink,
+            args=(self._subprocess.stderr, self._logger.debug),
+        )
+        self._stderr_thread.start()
+
     def __signal_bwa(self) -> None:
         """Signals BWA to process the queries."""
         self._subprocess.stdin.flush()
@@ -314,6 +332,19 @@ class BwaAlnInteractive(ExecutableRunner):
         # NB: it is not understood why, but 16 newlines seems to work for all platforms tested
         self._subprocess.stdin.write("\n" * 16)
         self._subprocess.stdin.flush()
+
+    @override
+    def close(self) -> bool:
+        """
+        Gracefully terminates the underlying subprocess if it is still running.
+
+        Returns:
+            True: if the subprocess was terminated successfully
+            False: if the subprocess failed to terminate or was not already running
+        """
+        safely_closed: bool = super().close()
+        self._stderr_thread.join()
+        return safely_closed
 
     def map_one(self, query: str, id: str = "unknown") -> BwaResult:
         """Maps a single query to the genome and returns the result.
@@ -359,7 +390,8 @@ class BwaAlnInteractive(ExecutableRunner):
         return results
 
     def _to_result(self, query: Query, rec: pysam.AlignedSegment) -> BwaResult:
-        """Converts the query and alignment to a result.
+        """
+        Convert the query and alignment to a result.
 
         Args:
             query: the original query
@@ -370,17 +402,20 @@ class BwaAlnInteractive(ExecutableRunner):
                 "Query and Results are out of order" f"Query=${query.id}, Result=${rec.query_name}"
             )
 
-        num_hits: Optional[int] = int(rec.get_tag("HN")) if rec.has_tag("HN") else None
-        if rec.is_unmapped:
-            if num_hits is not None and num_hits > 0:
-                raise ValueError(f"Read was unmapped but num_hits > 0: {rec}")
-            return BwaResult(query=query, hit_count=0, hits=[])
-        elif num_hits > self.max_hits:
-            return BwaResult(query=query, hit_count=num_hits, hits=[])
-        else:
+        num_hits: int = int(rec.get_tag("HN")) if rec.has_tag("HN") else 0
+        # `to_hits()` removes artifactual hits which span the boundary between concatenated
+        # reference sequences. If we are reporting a list of hits, the number of hits should match
+        # the size of this list. Otherwise, we either have zero hits, or more than the maximum
+        # number of hits. In both of the latter cases, we have to rely on the count reported in the
+        # `HN` tag.
+        hits: list[BwaHit]
+        if 0 < num_hits <= self.max_hits:
             hits = self.to_hits(rec=rec)
-            hit_count = num_hits if len(hits) == 0 else len(hits)
-            return BwaResult(query=query, hit_count=hit_count, hits=hits)
+            num_hits = len(hits)
+        else:
+            hits = []
+
+        return BwaResult(query=query, hit_count=num_hits, hits=hits)
 
     def to_hits(self, rec: AlignedSegment) -> list[BwaHit]:
         """Extracts the hits from the given alignment.  Beyond the current alignment
@@ -424,5 +459,13 @@ class BwaAlnInteractive(ExecutableRunner):
 
         if not self.include_alt_hits:
             hits = [hit for hit in hits if not hit.refname.endswith("_alt")]
+
+        # Remove hits that extend beyond the end of a contig - these are artifacts of `bwa aln`'s
+        # alignment process, which concatenates all reference sequences and reports hits which span
+        # across contigs.
+        # NB: the type ignore is necessary because pysam's type hint for `get_reference_length` is
+        # incorrect.
+        # https://github.com/pysam-developers/pysam/pull/1313
+        hits = [hit for hit in hits if hit.end <= self.header.get_reference_length(hit.refname)]  # type: ignore[arg-type]  # noqa: E501
 
         return hits
