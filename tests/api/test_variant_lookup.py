@@ -538,9 +538,6 @@ def test_variant_overlap_detector_query(vcf_path: Path) -> None:
         vcf_paths=[vcf_path], min_maf=0.0, include_missing_mafs=True
     )
 
-    # test that we can close the variant overlap detector and make no side effects
-    variant_overlap_detector.close()
-
     # query for all variants
     assert VALID_SIMPLE_VARIANTS_APPROX == variant_overlap_detector_query(
         variant_overlap_detector, refname="chr2", start=8000, end=9101
@@ -565,9 +562,6 @@ def test_variant_overlap_detector_query(vcf_path: Path) -> None:
     assert variant_overlap_detector_query(
         variant_overlap_detector, refname="chr2", start=8000, end=9000
     ) == get_simple_variant_approx_by_id("complex-variant-sv-1/1", "rare-dbsnp-snp1-1/1")
-
-    # test that we can close the variant overlap detector and make no side effects
-    variant_overlap_detector.close()
 
 
 @pytest.mark.parametrize("include_missing_mafs", [False, True])

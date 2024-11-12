@@ -383,25 +383,29 @@ def test_build_primer_pairs_fails_when_primers_on_wrong_reference(
     assert next(picks) is not None
 
     with pytest.raises(ValueError, match="Left primers exist on different reference"):
-        _picks = list(picking.build_primer_pairs(
-            left_primers=invalid_lefts,
-            right_primers=valid_rights,
-            target=target,
-            amplicon_sizes=MinOptMax(0, 100, 500),
-            amplicon_tms=MinOptMax(0, 80, 150),
-            max_heterodimer_tm=None,
-            weights=weights,
-            fasta_path=fasta,
-        ))
+        _picks = list(
+            picking.build_primer_pairs(
+                left_primers=invalid_lefts,
+                right_primers=valid_rights,
+                target=target,
+                amplicon_sizes=MinOptMax(0, 100, 500),
+                amplicon_tms=MinOptMax(0, 80, 150),
+                max_heterodimer_tm=None,
+                weights=weights,
+                fasta_path=fasta,
+            )
+        )
 
     with pytest.raises(ValueError, match="Right primers exist on different reference"):
-        _picks = list(picking.build_primer_pairs(
-            left_primers=valid_lefts,
-            right_primers=invalid_rights,
-            target=target,
-            amplicon_sizes=MinOptMax(0, 100, 500),
-            amplicon_tms=MinOptMax(0, 80, 150),
-            max_heterodimer_tm=None,
-            weights=weights,
-            fasta_path=fasta,
-        ))
+        _picks = list(
+            picking.build_primer_pairs(
+                left_primers=valid_lefts,
+                right_primers=invalid_rights,
+                target=target,
+                amplicon_sizes=MinOptMax(0, 100, 500),
+                amplicon_tms=MinOptMax(0, 80, 150),
+                max_heterodimer_tm=None,
+                weights=weights,
+                fasta_path=fasta,
+            )
+        )
