@@ -16,7 +16,7 @@ Contains the following public classes and methods:
     from individual left and primers.
 
 """
-
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Iterator
 from typing import Optional
@@ -91,8 +91,8 @@ def score(
 
 
 def build_primer_pairs(
-    left_primers: list[Oligo],
-    right_primers: list[Oligo],
+    left_primers: Sequence[Oligo],
+    right_primers: Sequence[Oligo],
     target: Span,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
