@@ -64,6 +64,8 @@ from dataclasses import field
 from enum import auto
 from enum import unique
 from pathlib import Path
+from types import TracebackType
+from typing import ContextManager
 from typing import Optional
 from typing import final
 
@@ -320,10 +322,20 @@ class VariantLookup(ABC):
         """Subclasses must implement this method."""
 
 
-class FileBasedVariantLookup(VariantLookup):
-    """Implementation of VariantLookup that queries against indexed VCF files each time a query is
+class FileBasedVariantLookup(ContextManager, VariantLookup):
+    """Implementation of `VariantLookup` that queries against indexed VCF files each time a query is
     performed. Assumes the index is located adjacent to the VCF file and has the same base name with
-     either a .csi or .tbi suffix."""
+    either a .csi or .tbi suffix.
+
+    Example:
+
+    ```python
+    >>> with FileBasedVariantLookup([Path("./tests/api/data/miniref.variants.vcf.gz")], min_maf=0.0, include_missing_mafs=False) as lookup:
+    ...     lookup.query(refname="chr2", start=7999, end=8000)
+    [SimpleVariant(id='complex-variant-sv-1/1', refname='chr2', pos=8000, ref='T', alt='<DEL>', end=8000, variant_type=<VariantType.OTHER: 'OTHER'>, maf=None)]
+
+    ```
+    """  # noqa: E501
 
     def __init__(self, vcf_paths: list[Path], min_maf: Optional[float], include_missing_mafs: bool):
         self._readers: list[VariantFile] = []
@@ -341,6 +353,20 @@ class FileBasedVariantLookup(VariantLookup):
             open_fh = pysam.VariantFile(str(path))
             self._readers.append(open_fh)
 
+    def __enter__(self) -> "FileBasedVariantLookup":
+        """Enter the context manager."""
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        """Exit this context manager while closing the underlying VCF handles."""
+        self.close()
+        return None
+
     def _query(self, refname: str, start: int, end: int) -> list[SimpleVariant]:
         """Queries variants from the VCFs used by this lookup and returns a `SimpleVariant`."""
         simple_variants: list[SimpleVariant] = []
@@ -352,6 +378,11 @@ class FileBasedVariantLookup(VariantLookup):
             variants = [variant for variant in fh.fetch(contig=refname, start=start - 1, end=end)]
             simple_variants.extend(self.to_variants(variants, source_vcf=path))
         return sorted(simple_variants, key=lambda x: x.pos)
+
+    def close(self) -> None:
+        """Close the underlying VCF file handles."""
+        for handle in self._readers:
+            handle.close()
 
 
 class VariantOverlapDetector(VariantLookup):
@@ -443,7 +474,18 @@ def disk_based(
     vcf_paths: list[Path], min_maf: float, include_missing_mafs: bool = False
 ) -> FileBasedVariantLookup:
     """Constructs a `VariantLookup` that queries indexed VCFs on disk for each lookup.
-    Appropriate for large VCFs."""
+
+    Appropriate for large VCFs.
+
+    Example:
+
+    ```python
+    >>> with disk_based([Path("./tests/api/data/miniref.variants.vcf.gz")], min_maf=0.0) as lookup:
+    ...     lookup.query(refname="chr2", start=7999, end=8000)
+    [SimpleVariant(id='complex-variant-sv-1/1', refname='chr2', pos=8000, ref='T', alt='<DEL>', end=8000, variant_type=<VariantType.OTHER: 'OTHER'>, maf=None)]
+
+    ```
+    """  # noqa: E501
     return FileBasedVariantLookup(
         vcf_paths=vcf_paths, min_maf=min_maf, include_missing_mafs=include_missing_mafs
     )
