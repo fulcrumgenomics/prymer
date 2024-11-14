@@ -292,6 +292,7 @@ def test_build_primers_amplicon_size_filtering(
         assert pair.amplicon.end == pair.right_primer.span.end
         assert pair.bases == REF_BASES[pair.amplicon.start - 1 : pair.amplicon.end]
         assert pair.span.length <= 200
+        assert pair.span.length >= 100
 
 
 def test_build_primers_heterodimer_filtering(

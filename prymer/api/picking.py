@@ -143,7 +143,8 @@ def build_primer_pairs(
             for rp in right_primers:
                 amp_span = PrimerPair.calculate_amplicon_span(lp, rp)
 
-                if amp_span.length > amplicon_sizes.max:
+                # Ignore pairings with amplicon sizes out of the range specified
+                if not amplicon_sizes.min <= amp_span.length <= amplicon_sizes.max:
                     continue
 
                 # Since the amplicon span and the region_start are both 1-based, the minuend
