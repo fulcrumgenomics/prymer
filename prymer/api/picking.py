@@ -21,6 +21,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Iterator
 from typing import Optional
+from typing import Tuple
 
 from pysam import FastaFile
 
@@ -80,18 +81,19 @@ def score(
     # The penalty for the amplicon melting temperature.
     # The difference in melting temperature between the calculated and optimal is weighted by the
     # product melting temperature.
-    tm = amplicon_tm
     tm_penalty: float
-    if tm > amplicon_tms.opt:
-        tm_penalty = (tm - amplicon_tms.opt) * weights.product_tm_gt
+    if amplicon_tms.opt == 0.0:
+        tm_penalty = 0.0
+    elif amplicon_tm > amplicon_tms.opt:
+        tm_penalty = (amplicon_tm - amplicon_tms.opt) * weights.product_tm_gt
     else:
-        tm_penalty = (amplicon_tms.opt - tm) * weights.product_tm_lt
+        tm_penalty = (amplicon_tms.opt - amplicon_tm) * weights.product_tm_lt
 
     # Put it all together
     return left_primer.penalty + right_primer.penalty + size_penalty + tm_penalty
 
 
-def build_primer_pairs(
+def build_primer_pairs(  # noqa: C901
     left_primers: Sequence[Oligo],
     right_primers: Sequence[Oligo],
     target: Span,
@@ -137,44 +139,59 @@ def build_primer_pairs(
         region_end = max(p.span.end for p in right_primers)
         bases = fasta.fetch(target.refname, region_start - 1, region_end)
 
+    # Each tuple is left_idx, right_idx, penalty, tm
+    pairings: list[Tuple[int, int, float, float]] = []
+
+    # generate all the primer pairs that don't violate hard size and Tm constraints
+    for i in range(0, len(left_primers)):
+        for j in range(0, len(right_primers)):
+            lp = left_primers[i]
+            rp = right_primers[j]
+            amp_span = PrimerPair.calculate_amplicon_span(lp, rp)
+
+            # Ignore pairings with amplicon sizes out of the range specified
+            if not amplicon_sizes.min <= amp_span.length <= amplicon_sizes.max:
+                continue
+
+            # Since the amplicon span and the region_start are both 1-based, the minuend
+            # becomes a zero-based offset
+            amp_bases = bases[amp_span.start - region_start : amp_span.end - region_start + 1]
+            amp_tm = calculate_long_seq_tm(amp_bases)
+
+            if amp_tm < amplicon_tms.min or amp_tm > amplicon_tms.max:
+                continue
+
+            penalty = score(
+                left_primer=lp,
+                right_primer=rp,
+                amplicon=amp_span,
+                amplicon_tm=amp_tm,
+                amplicon_sizes=amplicon_sizes,
+                amplicon_tms=amplicon_tms,
+                weights=weights,
+            )
+
+            pairings.append((i, j, penalty, amp_tm))
+
+    pairings.sort(key=lambda tup: tup[2])
+
     with NtThermoAlign() as ntthal:
-        # generate all the primer pairs that don't violate hard size and Tm constraints
-        for lp in left_primers:
-            for rp in right_primers:
-                amp_span = PrimerPair.calculate_amplicon_span(lp, rp)
+        for i, j, penalty, tm in pairings:
+            lp = left_primers[i]
+            rp = right_primers[j]
 
-                # Ignore pairings with amplicon sizes out of the range specified
-                if not amplicon_sizes.min <= amp_span.length <= amplicon_sizes.max:
+            if max_heterodimer_tm is not None:
+                if ntthal.duplex_tm(lp.bases, rp.bases) > max_heterodimer_tm:
                     continue
 
-                # Since the amplicon span and the region_start are both 1-based, the minuend
-                # becomes a zero-based offset
-                amp_bases = bases[amp_span.start - region_start : amp_span.end - region_start + 1]
-                amp_tm = calculate_long_seq_tm(amp_bases)
+            amp_bases = bases[lp.span.start - region_start : rp.span.end - region_start + 1]
 
-                if amp_tm < amplicon_tms.min or amp_tm > amplicon_tms.max:
-                    continue
+            pp = PrimerPair(
+                left_primer=lp,
+                right_primer=rp,
+                amplicon_sequence=amp_bases,
+                amplicon_tm=tm,
+                penalty=penalty,
+            )
 
-                if max_heterodimer_tm is not None:
-                    if ntthal.duplex_tm(lp.bases, rp.bases) > max_heterodimer_tm:
-                        continue
-
-                penalty = score(
-                    left_primer=lp,
-                    right_primer=rp,
-                    amplicon=amp_span,
-                    amplicon_tm=amp_tm,
-                    amplicon_sizes=amplicon_sizes,
-                    amplicon_tms=amplicon_tms,
-                    weights=weights,
-                )
-
-                pp = PrimerPair(
-                    left_primer=lp,
-                    right_primer=rp,
-                    amplicon_sequence=amp_bases,
-                    amplicon_tm=amp_tm,
-                    penalty=penalty,
-                )
-
-                yield pp
+            yield pp
