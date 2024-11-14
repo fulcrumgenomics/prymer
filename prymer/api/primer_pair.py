@@ -84,7 +84,11 @@ class PrimerPair(OligoLike):
     def __post_init__(self) -> None:
         # Derive the amplicon from the left and right primers. This must be done before
         # calling super() as `PrimerLike.id` depends on the amplicon being set
-        object.__setattr__(self, "_amplicon", self._calculate_amplicon())
+        object.__setattr__(
+            self,
+            "_amplicon",
+            PrimerPair.calculate_amplicon_span(self.left_primer, self.right_primer),
+        )
         super(PrimerPair, self).__post_init__()
 
     @property
@@ -226,29 +230,37 @@ class PrimerPair(OligoLike):
             + f"{self.amplicon_tm}\t{self.penalty}"
         )
 
-    def _calculate_amplicon(self) -> Span:
+    @staticmethod
+    def calculate_amplicon_span(left_primer: Oligo, right_primer: Oligo) -> Span:
         """
-        Calculates the amplicon from the left and right primers, spanning from the start of the
-        left primer to the end of the right primer.
+        Calculates the amplicon Span from the left and right primers.
+
+        Args:
+            left_primer: the left primer for the amplicon
+            right_primer: the right primer for the amplicon
+
+        Returns:
+            a Span starting at the first base of the left primer and ending at the last base of
+             the right primer
         """
 
         # Require that `left_primer` and `right_primer` both map to the same reference sequence
-        if self.left_primer.span.refname != self.right_primer.span.refname:
+        if left_primer.span.refname != right_primer.span.refname:
             raise ValueError(
-                "The reference must be the same across primers in a pair; received "
-                f"left primer ref: {self.left_primer.span.refname}, "
-                f"right primer ref: {self.right_primer.span.refname}"
+                "Left and right primers are on different references. "
+                f"Left primer ref: {left_primer.span.refname}. "
+                f"Right primer ref: {right_primer.span.refname}"
             )
 
-        # Require that the left primer does not start to the right of the right primer
-        if self.left_primer.span.start > self.right_primer.span.end:
+        # Require that the left primer starts before the right primer
+        if left_primer.span.start > right_primer.span.start:
             raise ValueError(
-                "Left primer start must be less than or equal to right primer end; received "
-                "left primer genome span: {self.left_primer.span}, "
-                "right primer genome span: {self.right_primer.span}"
+                "Left primer does not start before the right primer. "
+                f"Left primer span: {left_primer.span}, "
+                f"Right primer span: {right_primer.span}"
             )
 
-        return replace(self.left_primer.span, end=self.right_primer.span.end)
+        return Span(left_primer.span.refname, left_primer.span.start, right_primer.span.end)
 
     @staticmethod
     def compare(

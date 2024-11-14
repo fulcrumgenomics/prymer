@@ -427,7 +427,7 @@ def test_reference_mismatch() -> None:
 
     pp = PRIMER_PAIR_TEST_CASES[0].primer_pair
 
-    with pytest.raises(ValueError, match="The reference must be the same across primers in a pair"):
+    with pytest.raises(ValueError, match="different references"):
         replace(
             pp,
             left_primer=replace(
@@ -436,7 +436,7 @@ def test_reference_mismatch() -> None:
             ),
         )
 
-    with pytest.raises(ValueError, match="The reference must be the same across primers in a pair"):
+    with pytest.raises(ValueError, match="different references"):
         replace(
             pp,
             right_primer=replace(
@@ -450,7 +450,7 @@ def test_right_primer_before_left_primer() -> None:
     """Test that an exception is raised if the left primer starts after the right primer ends"""
     pp = PRIMER_PAIR_TEST_CASES[0].primer_pair
     with pytest.raises(
-        ValueError, match="Left primer start must be less than or equal to right primer end"
+        ValueError, match="Left primer does not start before the right primer"
     ):
         replace(
             pp,

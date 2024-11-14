@@ -16,6 +16,7 @@ Contains the following public classes and methods:
     from individual left and primers.
 
 """
+
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Iterator
@@ -140,13 +141,12 @@ def build_primer_pairs(
         # generate all the primer pairs that don't violate hard size and Tm constraints
         for lp in left_primers:
             for rp in right_primers:
-                if rp.span.end - lp.span.start + 1 > amplicon_sizes.max:
+                amp_span = PrimerPair.calculate_amplicon_span(lp, rp)
+
+                if amp_span.length > amplicon_sizes.max:
                     continue
 
-                amp_mapping = Span(refname=target.refname, start=lp.span.start, end=rp.span.end)
-                amp_bases = bases[
-                    amp_mapping.start - region_start : amp_mapping.end - region_start + 1
-                ]
+                amp_bases = bases[amp_span.start - region_start : amp_span.end - region_start + 1]
                 amp_tm = calculate_long_seq_tm(amp_bases)
 
                 if amp_tm < amplicon_tms.min or amp_tm > amplicon_tms.max:
@@ -159,7 +159,7 @@ def build_primer_pairs(
                 penalty = score(
                     left_primer=lp,
                     right_primer=rp,
-                    amplicon=amp_mapping,
+                    amplicon=amp_span,
                     amplicon_tm=amp_tm,
                     amplicon_sizes=amplicon_sizes,
                     amplicon_tms=amplicon_tms,
