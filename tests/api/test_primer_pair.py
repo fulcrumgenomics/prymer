@@ -449,9 +449,7 @@ def test_reference_mismatch() -> None:
 def test_right_primer_before_left_primer() -> None:
     """Test that an exception is raised if the left primer starts after the right primer ends"""
     pp = PRIMER_PAIR_TEST_CASES[0].primer_pair
-    with pytest.raises(
-        ValueError, match="Left primer does not start before the right primer"
-    ):
+    with pytest.raises(ValueError, match="Left primer does not start before the right primer"):
         replace(
             pp,
             left_primer=pp.right_primer,
@@ -556,3 +554,24 @@ def test_primer_pair_compare(
     assert -expected_by_amplicon_false == PrimerPair.compare(
         this=that, that=this, seq_dict=seq_dict, by_amplicon=False
     )
+
+
+def test_calculate_amplicon_span() -> None:
+    left = Oligo(name="l", bases="AACCGGTTAA", tm=60, penalty=1, span=Span("chr1", 50, 59))
+    right = Oligo(name="l", bases="AACCGGTTAA", tm=60, penalty=1, span=Span("chr1", 150, 159))
+    assert PrimerPair.calculate_amplicon_span(left, right) == Span("chr1", 50, 159)
+
+    left = Oligo(name="l", bases="AACCGGTTAA", tm=60, penalty=1, span=Span("chr2", 50, 59))
+    right = Oligo(name="l", bases="AACCGGTTAA", tm=60, penalty=1, span=Span("chr3", 150, 159))
+    with pytest.raises(ValueError, match="different references"):
+        PrimerPair.calculate_amplicon_span(left, right)
+
+    left = Oligo(name="l", bases="AACCGGTTAA", tm=60, penalty=1, span=Span("chr1", 150, 159))
+    right = Oligo(name="l", bases="AACCGGTTAA", tm=60, penalty=1, span=Span("chr1", 50, 59))
+    with pytest.raises(ValueError, match="Left primer does not start before the right primer"):
+        PrimerPair.calculate_amplicon_span(left, right)
+
+    left = Oligo(name="l", bases="AACCGGTTAAACGTT", tm=60, penalty=1, span=Span("chr1", 150, 164))
+    right = Oligo(name="l", bases="AACCGGTTAA", tm=60, penalty=1, span=Span("chr1", 150, 159))
+    with pytest.raises(ValueError, match="Right primer ends before left primer ends"):
+        PrimerPair.calculate_amplicon_span(left, right)

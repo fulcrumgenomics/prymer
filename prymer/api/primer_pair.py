@@ -242,8 +242,12 @@ class PrimerPair(OligoLike):
         Returns:
             a Span starting at the first base of the left primer and ending at the last base of
              the right primer
-        """
 
+        Raises:
+            ValueError: If `left_primer` and `right_primer` have different reference names.
+            ValueError: If `left_primer` doesn't start before the right primer.
+            ValueError: If `right_primer` ends before `left_primer`.
+        """
         # Require that `left_primer` and `right_primer` both map to the same reference sequence
         if left_primer.span.refname != right_primer.span.refname:
             raise ValueError(
@@ -256,6 +260,14 @@ class PrimerPair(OligoLike):
         if left_primer.span.start > right_primer.span.start:
             raise ValueError(
                 "Left primer does not start before the right primer. "
+                f"Left primer span: {left_primer.span}, "
+                f"Right primer span: {right_primer.span}"
+            )
+
+        # Require that the left primer starts before the right primer
+        if right_primer.span.end < left_primer.span.end:
+            raise ValueError(
+                "Right primer ends before left primer ends. "
                 f"Left primer span: {left_primer.span}, "
                 f"Right primer span: {right_primer.span}"
             )
