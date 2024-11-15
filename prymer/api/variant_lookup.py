@@ -80,6 +80,8 @@ from strenum import UppercaseStrEnum
 from prymer.api.span import Span
 from prymer.api.span import Strand
 
+_logger = logging.getLogger(__name__)
+
 
 @unique
 class VariantType(UppercaseStrEnum):
@@ -282,9 +284,7 @@ class VariantLookup(ABC):
 
         variants = self._query(refname=refname, start=start, end=end)
         if len(variants) == 0:
-            logging.getLogger(__name__).debug(
-                f"No variants extracted from region of interest: {refname}:{start}-{end}"
-            )
+            _logger.debug(f"No variants extracted from region of interest: {refname}:{start}-{end}")
         if maf is None or maf <= 0.0:
             return variants
         elif include_missing_mafs:  # return variants with a MAF above threshold or missing
@@ -313,7 +313,7 @@ class VariantLookup(ABC):
             ):  # if passing or empty filters
                 simple_variants = SimpleVariant.build(variant)
                 if any(v.variant_type == VariantType.OTHER for v in simple_variants):
-                    logging.getLogger(__name__).debug(
+                    _logger.debug(
                         f"Input VCF file {source_vcf} may contain complex variants: {variant}"
                     )
                 simple_vars.extend(simple_variants)
@@ -374,9 +374,7 @@ class FileBasedVariantLookup(ContextManager, VariantLookup):
         simple_variants: list[SimpleVariant] = []
         for fh, path in zip(self._readers, self.vcf_paths, strict=True):
             if not fh.header.contigs.get(refname):
-                logging.getLogger(__name__).debug(
-                    f"Header in VCF file {path} does not contain chromosome {refname}."
-                )
+                _logger.debug(f"Header in VCF file {path} does not contain chromosome {refname}.")
                 continue
             #  pysam.fetch is 0-based, half-open
             variants = [variant for variant in fh.fetch(contig=refname, start=start - 1, end=end)]
