@@ -268,7 +268,7 @@ class Primer3(ExecutableRunner):
         self._fasta.close()
         subprocess_close = super().close()
         if not subprocess_close:
-            logging.debug("Did not successfully close underlying subprocess")
+            logging.getLogger(__name__).debug("Did not successfully close underlying subprocess")
         return subprocess_close
 
     def get_design_sequences(self, region: Span) -> tuple[str, str]:

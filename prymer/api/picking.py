@@ -16,6 +16,7 @@ Contains the following public classes and methods:
     from individual left and primers.
 
 """
+
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Iterator

@@ -112,7 +112,7 @@ class Primer3FailureReason(StrEnum):
                     continue
                 std_reason = Primer3FailureReason.from_reason(reason)
                 if std_reason is None:
-                    logging.debug(f"Unknown Primer3 failure reason: {reason}")
+                    logging.getLogger(__name__).debug(f"Unknown Primer3 failure reason: {reason}")
                 by_fail_count[std_reason] += count
 
         return by_fail_count

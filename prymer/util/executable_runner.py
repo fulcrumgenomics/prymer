@@ -70,7 +70,9 @@ class ExecutableRunner(AbstractContextManager):
         )
 
     def __enter__(self) -> Self:
-        logging.debug(f"Initiating {self._name} with the following params: {self._command}")
+        logging.getLogger(__name__).debug(
+            f"Initiating {self._name} with the following params: {self._command}"
+        )
         return self
 
     def __exit__(
@@ -142,15 +144,17 @@ class ExecutableRunner(AbstractContextManager):
             True: if the subprocess was terminated successfully
             False: if the subprocess failed to terminate or was not already running
         """
+        log = logging.getLogger(__name__)
+
         if self.is_alive:
             self._subprocess.terminate()
             self._subprocess.wait(timeout=10)
             if not self.is_alive:
-                logging.debug("Subprocess terminated successfully.")
+                log.debug("Subprocess terminated successfully.")
                 return True
             else:
-                logging.debug("Subprocess failed to terminate.")
+                log.debug("Subprocess failed to terminate.")
                 return False
         else:
-            logging.debug("Subprocess is not running.")
+            log.debug("Subprocess is not running.")
             return False
