@@ -146,6 +146,8 @@ def build_primer_pairs(
                 if amp_span.length > amplicon_sizes.max:
                     continue
 
+                # Since the amplicon span and the region_start are both 1-based, the minuend
+                # becomes a zero-based offset
                 amp_bases = bases[amp_span.start - region_start : amp_span.end - region_start + 1]
                 amp_tm = calculate_long_seq_tm(amp_bases)
 
