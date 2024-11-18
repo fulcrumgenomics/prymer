@@ -42,8 +42,8 @@ Span(refname='chr1', start=21, end=100, strand=<Strand.POSITIVE: '+'>)
 """  # noqa: E501
 
 from dataclasses import dataclass
-from dataclasses import field
 from dataclasses import replace
+from functools import cached_property
 from typing import Iterator
 from typing import Optional
 
@@ -55,7 +55,7 @@ from prymer.api.oligo_like import OligoLike
 from prymer.api.span import Span
 
 
-@dataclass(frozen=True, init=True, kw_only=True, slots=True)
+@dataclass(frozen=True, init=True, kw_only=True)
 class PrimerPair(OligoLike):
     """
     Represents a pair of primers that work together to amplify an amplicon. The
@@ -79,22 +79,11 @@ class PrimerPair(OligoLike):
     amplicon_tm: float
     penalty: float
     amplicon_sequence: Optional[str] = None
-    _amplicon: Span = field(init=False)
 
-    def __post_init__(self) -> None:
-        # Derive the amplicon from the left and right primers. This must be done before
-        # calling super() as `PrimerLike.id` depends on the amplicon being set
-        object.__setattr__(
-            self,
-            "_amplicon",
-            PrimerPair.calculate_amplicon_span(self.left_primer, self.right_primer),
-        )
-        super(PrimerPair, self).__post_init__()
-
-    @property
+    @cached_property
     def amplicon(self) -> Span:
         """Returns the mapping for the amplicon"""
-        return self._amplicon
+        return self.calculate_amplicon_span(self.left_primer, self.right_primer)
 
     @property
     def span(self) -> Span:
