@@ -241,7 +241,7 @@ class PrimerPair(OligoLike):
 
         Returns:
             a Span starting at the first base of the left primer and ending at the last base of
-             the right primer
+            the right primer
 
         Raises:
             ValueError: If `left_primer` and `right_primer` have different reference names.
