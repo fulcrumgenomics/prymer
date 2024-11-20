@@ -115,6 +115,7 @@ warn_return_any             = true
 warn_unreachable            = true
 warn_unused_configs         = true
 warn_unused_ignores         = true
+exclude = ["site/", "docs/"]
 
 [[tool.mypy.overrides]]
 module = "defopt"
