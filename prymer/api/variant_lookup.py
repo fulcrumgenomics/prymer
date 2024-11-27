@@ -1,10 +1,9 @@
 """
 # Variant Lookup Class and Methods
 
-This module contains the abstract class
-[`VariantLookup`][prymer.api.variant_lookup.VariantLookup] to facilitate retrieval of
-variants that overlap a given genomic coordinate range.  Concrete implementations must implement the
-[`query()`][prymer.api.variant_lookup.VariantLookup.query] method for retrieving variants
+This module contains the class [`VariantLookup`][prymer.api.variant_lookup.VariantLookup] to
+facilitate retrieval of variants that overlap a given genomic coordinate range.
+The [`query()`][`prymer.api.variant_lookup.VariantLookup.query`] method is used to retrieve variants
 that overlap the given range.
 
 [`VariantLookup`][prymer.api.variant_lookup.VariantLookup] needs a list of VCF files to be queried,
@@ -345,7 +344,6 @@ class VariantLookup(ContextManager):
         maf: Optional[float] = None,
         include_missing_mafs: bool = None,
     ) -> list[SimpleVariant]:
-
         maf = maf if maf is not None else self.min_maf
         include_missing_mafs = (
             include_missing_mafs if include_missing_mafs is not None else self.include_missing_mafs

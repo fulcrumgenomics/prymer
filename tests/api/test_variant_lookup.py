@@ -19,7 +19,6 @@ from prymer.api.variant_lookup import VariantLookup
 from prymer.api.variant_lookup import VariantType
 from prymer.api.variant_lookup import _DiskBasedLookup
 from prymer.api.variant_lookup import _InMemoryLookup
-from prymer.api.variant_lookup import _VariantLookup
 from prymer.api.variant_lookup import calc_maf_from_filter
 
 
@@ -380,7 +379,7 @@ def get_simple_variant_approx_by_id(*variant_id: str) -> list[SimpleVariant]:
 
 
 def variant_overlap_detector_query(
-    detector: VariantLookup | _VariantLookup,
+    detector: VariantLookup,
     refname: str,
     start: int,
     end: int,
@@ -537,8 +536,8 @@ def test_calc_maf_from_gt_only() -> None:
 
 def test_variant_overlap_detector_query(vcf_path: Path) -> None:
     """Test `VariantOverlapDetector.query()` positional filtering."""
-    variant_overlap_detector = _InMemoryLookup(
-        vcf_paths=[vcf_path], min_maf=0.0, include_missing_mafs=True
+    variant_overlap_detector = VariantLookup(
+        vcf_paths=[vcf_path], min_maf=0.0, include_missing_mafs=True, cached=True
     )
 
     # query for all variants
