@@ -11,7 +11,9 @@ from prymer.api.oligo import Oligo
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
 from prymer.api.span import Strand
-from prymer.api.variant_lookup import cached
+from prymer.api.variant_lookup import VariantLookup
+from prymer.api.variant_lookup import _DiskBasedLookup
+from prymer.api.variant_lookup import _InMemoryLookup
 from prymer.primer3.primer3 import Primer3
 from prymer.primer3.primer3 import Primer3Failure
 from prymer.primer3.primer3 import Primer3Result
@@ -33,6 +35,32 @@ def genome_ref() -> Path:
 @pytest.fixture
 def vcf_path() -> Path:
     return Path(__file__).parent / "data" / "miniref.variants.vcf.gz"
+
+
+@pytest.fixture()
+def variant_masking_test_data() -> list[tuple[Span, str, str]]:
+    return [
+        (
+            Span(refname="chr2", start=9000, end=9110),
+            # 9000      9010      9020      9030      9040      9050      9060      9070      9080      9090      9100      9110 # noqa
+            "AATATTCTTGNTGCTTATGCNGCTGACATTGTTGCCCTCCCTAAAGCAACNAAGTAGCCTNTATTTCCCANAGTGAAAGANNACGCTGGCNNNTCAGTTANNNTACAAAAG",
+            "AATATTCTTGCTGCTTATGCAGCTGACATTGTTGCCCTCCCTAAAGCAACCAAGTAGCCTTTATTTCCCACAGTGAAAGAAAACGCTGGCCTATCAGTTACATTACAAAAG",
+        ),  # expected masked positions: 9010, 9020, 9050, 9060, 9070,
+        # 9080 (2bp insertion: 3 bases), 9090 (2bp deletion: 2 bases), 9100 (mixed: 3 bases)
+        # do not expect positions 9000 (MAF = 0.001), 9030 (MAF = 0.001), or 9040 (MAF = 0.0004814)
+        # to be masked  (MAF below the provided min_maf)
+        (
+            Span(refname="chr2", start=9095, end=9120),
+            "AGTTANNNTACAAAAGGCAGATTTCA",
+            "AGTTACATTACAAAAGGCAGATTTCA",
+        ),
+        # 9100 (common-mixed -- alt1: CA->GG, and alt2: CA->CACACA).  The first alt masks the
+        # positions [9100,9101], and the second alt masks the positions [9100,9102] (an extra
+        # base for the insertion).  But the second alt is not added to variant lookup, while the
+        # first variant is classified as OTHER, so [9100,9102] are masked.  FIXME: this could be
+        # improved by more faithfully parsing the input VCF and representing each alternate as its
+        # own simple variant.
+    ]
 
 
 @pytest.fixture
@@ -140,6 +168,11 @@ def valid_primer_pairs(
         for left, right in list(zip(valid_left_primers, valid_right_primers, strict=True))
     ]
     return primer_pairs
+
+
+################################################################################
+# Tests for Primer3.py:: design()
+################################################################################
 
 
 def test_design_raises(
@@ -370,51 +403,131 @@ def test_fasta_close_valid(
         designer.design(design_input=design_input)
 
 
-@pytest.mark.parametrize(
-    "region, expected_hard_masked, expected_soft_masked",
-    [
-        (
-            Span(refname="chr2", start=9000, end=9110),
-            # 9000      9010      9020      9030      9040      9050      9060      9070      9080      9090      9100      9110 # noqa
-            "AATATTCTTGNTGCTTATGCNGCTGACATTGTTGCCCTCCCTAAAGCAACNAAGTAGCCTNTATTTCCCANAGTGAAAGANNACGCTGGCNNNTCAGTTANNNTACAAAAG",
-            "AATATTCTTGCTGCTTATGCAGCTGACATTGTTGCCCTCCCTAAAGCAACCAAGTAGCCTTTATTTCCCACAGTGAAAGAAAACGCTGGCCTATCAGTTACATTACAAAAG",
-        ),  # expected masked positions: 9010, 9020, 9050, 9060, 9070,
-        # 9080 (2bp insertion: 3 bases), 9090 (2bp deletion: 2 bases), 9100 (mixed: 3 bases)
-        # do not expect positions 9000 (MAF = 0.001), 9030 (MAF = 0.001), or 9040 (MAF = 0.0004814)
-        # to be masked  (MAF below the provided min_maf)
-        (
-            Span(refname="chr2", start=9095, end=9120),
-            "AGTTANNNTACAAAAGGCAGATTTCA",
-            "AGTTACATTACAAAAGGCAGATTTCA",
-        ),
-        # 9100 (common-mixed -- alt1: CA->GG, and alt2: CA->CACACA).  The first alt masks the
-        # positions [9100,9101], and the second alt masks the positions [9100,9102] (an extra
-        # base for the insertion).  But the second alt is not added to variant lookup, while the
-        # first variant is classified as OTHER, so [9100,9102] are masked.  FIXME: this could be
-        # improved by more faithfully parsing the input VCF and representing each alternate as its
-        # own simple variant.
-    ],
-)
-def test_variant_lookup(
+################################################################################
+# Tests for variant_lookup.py::VariantLookup()
+################################################################################
+
+
+@pytest.mark.parametrize("variant_test_data_index", [0, 1])
+def test_cached_variant_lookup(
+    variant_masking_test_data: list[tuple[Span, str, str]],
+    variant_test_data_index: int,
     genome_ref: Path,
     vcf_path: Path,
-    region: Span,
-    expected_hard_masked: str,
-    expected_soft_masked: str,
 ) -> None:
-    """Test that MAF filtering and masking are working as expected."""
-    with Primer3(
-        genome_fasta=genome_ref, variant_lookup=cached([vcf_path], min_maf=0.01)
-    ) as designer:
+    """Test that _InMemoryLookup() is instantiated correctly and works as expected.
+
+    Parameterizes test data from the `variant_masking_test_data` fixture (2 test cases)."""
+    region: Span = variant_masking_test_data[variant_test_data_index][0]
+    expected_hard_masked: str = variant_masking_test_data[variant_test_data_index][1]
+    expected_soft_masked: str = variant_masking_test_data[variant_test_data_index][2]
+    cached_variant_lookup: VariantLookup = VariantLookup(
+        vcf_paths=[vcf_path], min_maf=0.01, cached=True, include_missing_mafs=True
+    )
+
+    with Primer3(genome_fasta=genome_ref, variants=cached_variant_lookup) as designer:
         actual_soft_masked, actual_hard_masked = designer.get_design_sequences(region=region)
+
+    assert isinstance(designer.variant_lookup._lookup, _InMemoryLookup)
+    assert not isinstance(designer.variant_lookup._lookup, _DiskBasedLookup)
     assert actual_hard_masked == expected_hard_masked
     assert actual_soft_masked == expected_soft_masked
 
     # with no variant lookup should all be soft-masked
-    with Primer3(genome_fasta=genome_ref, variant_lookup=None) as designer:
+    with Primer3(genome_fasta=genome_ref, variants=None) as designer:
         actual_soft_masked, actual_hard_masked = designer.get_design_sequences(region=region)
     assert actual_hard_masked == expected_soft_masked
     assert actual_soft_masked == expected_soft_masked
+
+
+@pytest.mark.parametrize("variant_test_data_index", [0, 1])
+def test_diskbased_variant_lookup(
+    variant_masking_test_data: list[tuple[Span, str, str]],
+    variant_test_data_index: int,
+    genome_ref: Path,
+    vcf_path: Path,
+) -> None:
+    """Test that _DiskBasedLookup() is instantiated correctly and works as expected.
+
+    Parameterizes test data from the `variant_masking_test_data` fixture (2 test cases)."""
+    region: Span = variant_masking_test_data[variant_test_data_index][0]
+    expected_hard_masked: str = variant_masking_test_data[variant_test_data_index][1]
+    expected_soft_masked: str = variant_masking_test_data[variant_test_data_index][2]
+    disk_variant_lookup: VariantLookup = VariantLookup(
+        vcf_paths=[vcf_path], min_maf=0.01, cached=False, include_missing_mafs=True
+    )
+    with Primer3(genome_fasta=genome_ref, variants=disk_variant_lookup) as designer:
+        actual_soft_masked, actual_hard_masked = designer.get_design_sequences(region=region)
+
+    assert isinstance(designer.variant_lookup._lookup, _DiskBasedLookup)
+    assert not isinstance(designer.variant_lookup._lookup, _InMemoryLookup)
+    assert actual_hard_masked == expected_hard_masked
+    assert actual_soft_masked == expected_soft_masked
+
+    # with no variant lookup --> should all be soft-masked
+    with Primer3(genome_fasta=genome_ref, variants=None) as designer:
+        actual_soft_masked, actual_hard_masked = designer.get_design_sequences(region=region)
+    assert actual_hard_masked == expected_soft_masked
+    assert actual_soft_masked == expected_soft_masked
+
+
+def test_invalid_variant_lookup(genome_ref: Path, vcf_path: Path) -> None:
+    """Assert that we raise an error if `variants` is not a list of `Path` objects."""
+    with pytest.raises(ValueError, match="Variant lookup is required to be"):
+        Primer3(genome_fasta=genome_ref, variants=[vcf_path, "invalid_item"])  # type: ignore
+
+
+################################################################################
+# Tests for Primer3 methods: _create_design_region(), _screen_pair_results(), _build_failures()
+################################################################################
+
+
+@pytest.mark.parametrize("max_amplicon_length", [100, 101])
+def test_create_design_region(max_amplicon_length: int, genome_ref: Path) -> None:
+    """If the target region is shorter than the max amplicon length, it should be padded to fit."""
+    target_region = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
+
+    with Primer3(genome_fasta=genome_ref) as designer:
+        design_region: Span = designer._create_design_region(
+            target_region=target_region,
+            max_amplicon_length=max_amplicon_length,
+            min_primer_length=10,
+        )
+
+    assert design_region.length == 2 * max_amplicon_length - target_region.length
+
+
+def test_create_design_region_raises_when_target_region_exceeds_max_amplicon_length(
+    genome_ref: Path,
+) -> None:
+    """
+    `_create_design_region()` should raise a ValueError when the target region is larger than the
+    max amplicon length.
+    """
+    target_region = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
+
+    with Primer3(genome_fasta=genome_ref) as designer:
+        with pytest.raises(ValueError, match="exceeds the maximum size"):
+            designer._create_design_region(
+                target_region=target_region, max_amplicon_length=10, min_primer_length=10
+            )
+
+
+def test_create_design_region_raises_when_primers_would_not_fit_in_design_region(
+    genome_ref: Path,
+) -> None:
+    """
+    `_create_design_region()` should raise a ValueError when the design region does not include
+    sufficient space flanking the target for a primer to be designed. (i.e. when this space is less
+    than the specified minimum primer length.)
+    """
+    target_region = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
+
+    with Primer3(genome_fasta=genome_ref) as designer:
+        with pytest.raises(ValueError, match="exceeds the maximum size"):
+            designer._create_design_region(
+                target_region=target_region, max_amplicon_length=55, min_primer_length=10
+            )
 
 
 def test_screen_pair_results(
@@ -542,6 +655,12 @@ def test_build_failures_debugs(
     assert expected_error_msg in caplog.text
 
 
+################################################################################
+# Tests for Primer3Result methods: primers(), primer_pairs(),
+#   as_primer_result(), as_primer_pair_result()
+################################################################################
+
+
 def test_primer3_result_primers_ok(
     valid_left_primers: list[Oligo], valid_right_primers: list[Oligo]
 ) -> None:
@@ -585,54 +704,9 @@ def test_primer3_result_as_primer_pair_result_exception(
         result.as_primer_pair_result()
 
 
-@pytest.mark.parametrize("max_amplicon_length", [100, 101])
-def test_create_design_region(max_amplicon_length: int, genome_ref: Path) -> None:
-    """If the target region is shorter than the max amplicon length, it should be padded to fit."""
-    target_region = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
-
-    with Primer3(genome_fasta=genome_ref) as designer:
-        design_region: Span = designer._create_design_region(
-            target_region=target_region,
-            max_amplicon_length=max_amplicon_length,
-            min_primer_length=10,
-        )
-
-    assert design_region.length == 2 * max_amplicon_length - target_region.length
-
-
-def test_create_design_region_raises_when_target_region_exceeds_max_amplicon_length(
-    genome_ref: Path,
-) -> None:
-    """
-    `_create_design_region()` should raise a ValueError when the target region is larger than the
-    max amplicon length.
-    """
-    target_region = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
-
-    with Primer3(genome_fasta=genome_ref) as designer:
-        with pytest.raises(ValueError, match="exceeds the maximum size"):
-            designer._create_design_region(
-                target_region=target_region, max_amplicon_length=10, min_primer_length=10
-            )
-
-
-def test_create_design_region_raises_when_primers_would_not_fit_in_design_region(
-    genome_ref: Path,
-) -> None:
-    """
-    `_create_design_region()` should raise a ValueError when the design region does not include
-    sufficient space flanking the target for a primer to be designed. (i.e. when this space is less
-    than the specified minimum primer length.)
-    """
-    target_region = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
-
-    with Primer3(genome_fasta=genome_ref) as designer:
-        with pytest.raises(ValueError, match="exceeds the maximum size"):
-            designer._create_design_region(
-                target_region=target_region, max_amplicon_length=55, min_primer_length=10
-            )
-
-
+################################################################################
+# Tests for Primer3 probe design
+################################################################################
 def test_probe_design_raises(genome_ref: Path, valid_probe_params: ProbeParameters) -> None:
     """Test that we raise an error when the target region is smaller than the minimal probe size."""
     target = Span(refname="chr1", start=201, end=217, strand=Strand.POSITIVE)

@@ -7,20 +7,12 @@ variants that overlap a given genomic coordinate range.  Concrete implementation
 [`query()`][prymer.api.variant_lookup.VariantLookup.query] method for retrieving variants
 that overlap the given range.
 
-Two concrete implementations are provided that both take a list of VCF files to be queried:
-
-- [`FileBasedVariantLookup`][prymer.api.variant_lookup.FileBasedVariantLookup] -- performs
-disk-based retrieval of variants (using a VCF index).  This class is recommended for large VCFs. The
-[`disk_based()`][prymer.api.variant_lookup.disk_based] alternative constructor is
-provided for easy construction of this object.
-- [`VariantOverlapDetector`][prymer.api.variant_lookup.VariantOverlapDetector] -- reads in
-variants into memory and uses an
+[`VariantLookup`][prymer.api.variant_lookup.VariantLookup] needs a list of VCF files to be queried,
+a minimum Minimum Allele Frequency with which to optionally filter variants, a boolean `include_missing_mafs` flag, and a
+boolean `cached` flag. It is recommended to set `cached` to `False` for large VCFs. When `cached`
+is True, variants from smaller VCFs are loaded into memory.
 [`pybedlite.overlap_detector.OverlapDetector`](https://pybedlite.readthedocs.io/en/latest/api.html#pybedlite.overlap_detector.OverlapDetector)
-for querying.  This class is recommended for small VCFs. The
-[`cached()`][prymer.api.variant_lookup.cached] alternative constructor is provided for
-easy construction of this object.
-
-Each class can also use minor allele frequency (MAF) to filter variants.
+is used for querying.
 
 The helper class `SimpleVariant` is included to facilitate VCF querying and reporting out results.
 
@@ -28,7 +20,7 @@ The helper class `SimpleVariant` is included to facilitate VCF querying and repo
 
 ```python
 >>> from pathlib import Path
->>> lookup = cached(vcf_paths=[Path("./tests/api/data/miniref.variants.vcf.gz")], min_maf=0.00, include_missing_mafs=True)
+>>> lookup = VariantLookup(vcf_paths=[Path("./tests/api/data/miniref.variants.vcf.gz")], min_maf=0.00, include_missing_mafs=True)
 >>> lookup.query(refname="chr2", start=7999, end=8000)
 [SimpleVariant(id='complex-variant-sv-1/1', refname='chr2', pos=8000, ref='T', alt='<DEL>', end=8000, variant_type=<VariantType.OTHER: 'OTHER'>, maf=None)]
 >>> variants = lookup.query(refname="chr2", start=7999, end=9900)
@@ -67,7 +59,6 @@ from pathlib import Path
 from types import TracebackType
 from typing import ContextManager
 from typing import Optional
-from typing import final
 
 import pysam
 from fgpyo.vcf import reader
@@ -237,7 +228,7 @@ class _VariantInterval(Interval):
         )
 
 
-class VariantLookup(ABC):
+class _VariantLookup(ABC):
     """Base class to represent a variant from a given genomic range.
 
     Attributes:
@@ -258,7 +249,11 @@ class VariantLookup(ABC):
         self.min_maf: Optional[float] = min_maf
         self.include_missing_mafs: bool = include_missing_mafs
 
-    @final
+    @abstractmethod
+    def close(self) -> None:
+        pass
+
+    @abstractmethod
     def query(
         self,
         refname: str,
@@ -277,20 +272,7 @@ class VariantLookup(ABC):
             include_missing_mafs: whether to include variants with a missing MAF
                 (overrides self.include_missing_mafs)
         """
-        if maf is None:
-            maf = self.min_maf
-        if include_missing_mafs is None:
-            include_missing_mafs = self.include_missing_mafs
-
-        variants = self._query(refname=refname, start=start, end=end)
-        if len(variants) == 0:
-            _logger.debug(f"No variants extracted from region of interest: {refname}:{start}-{end}")
-        if maf is None or maf <= 0.0:
-            return variants
-        elif include_missing_mafs:  # return variants with a MAF above threshold or missing
-            return [v for v in variants if (v.maf is None or v.maf >= maf)]
-        else:
-            return [v for v in variants if v.maf is not None and v.maf >= maf]
+        pass
 
     @staticmethod
     def to_variants(
@@ -319,12 +301,76 @@ class VariantLookup(ABC):
                 simple_vars.extend(simple_variants)
         return sorted(simple_vars, key=lambda v: (v.pos, v.id))
 
-    @abstractmethod
-    def _query(self, refname: str, start: int, end: int) -> list[SimpleVariant]:
-        """Subclasses must implement this method."""
+
+class VariantLookup(ContextManager):
+    def __init__(
+        self,
+        vcf_paths: list[Path],
+        min_maf: Optional[float],
+        include_missing_mafs: bool,
+        cached: bool = True,
+    ):
+        self.vcf_paths: list[Path] = vcf_paths
+        self.min_maf: Optional[float] = min_maf
+        self.include_missing_mafs: bool = include_missing_mafs
+        self.cached: bool = cached
+
+        self._lookup: _VariantLookup
+
+        if cached:
+            self._lookup = _InMemoryLookup(
+                vcf_paths=vcf_paths, min_maf=min_maf, include_missing_mafs=include_missing_mafs
+            )
+        else:
+            self._lookup = _DiskBasedLookup(
+                vcf_paths=vcf_paths, min_maf=min_maf, include_missing_mafs=include_missing_mafs
+            )
+
+    def __enter__(self) -> "VariantLookup":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        self._lookup.close()
+
+    def query(
+        self,
+        refname: str,
+        start: int,
+        end: int,
+        maf: Optional[float] = None,
+        include_missing_mafs: bool = None,
+    ) -> list[SimpleVariant]:
+
+        maf = maf if maf is not None else self.min_maf
+        include_missing_mafs = (
+            include_missing_mafs if include_missing_mafs is not None else self.include_missing_mafs
+        )
+        variants: list[SimpleVariant] = self._lookup.query(
+            refname=refname,
+            start=start,
+            end=end,
+        )
+
+        if len(variants) == 0:
+            _logger.debug(f"No variants extracted from region of interest: {refname}:{start}-{end}")
+        if maf is None or maf <= 0.0:
+            return variants
+        elif include_missing_mafs:  # return variants with a MAF above threshold or missing
+            return [v for v in variants if (v.maf is None or v.maf >= maf)]
+        else:
+            return [v for v in variants if v.maf is not None and v.maf >= maf]
+
+    def close(self) -> None:
+        """Close the underlying VCF file handles."""
+        self._lookup.close()
 
 
-class FileBasedVariantLookup(ContextManager, VariantLookup):
+class _DiskBasedLookup(_VariantLookup):
     """Implementation of `VariantLookup` that queries against indexed VCF files each time a query is
     performed. Assumes the index is located adjacent to the VCF file and has the same base name with
     either a .csi or .tbi suffix.
@@ -332,7 +378,7 @@ class FileBasedVariantLookup(ContextManager, VariantLookup):
     Example:
 
     ```python
-    >>> with FileBasedVariantLookup([Path("./tests/api/data/miniref.variants.vcf.gz")], min_maf=0.0, include_missing_mafs=False) as lookup:
+    >>> with _DiskBasedLookup([Path("./tests/api/data/miniref.variants.vcf.gz")], min_maf=0.0, include_missing_mafs=False) as lookup:
     ...     lookup.query(refname="chr2", start=7999, end=8000)
     [SimpleVariant(id='complex-variant-sv-1/1', refname='chr2', pos=8000, ref='T', alt='<DEL>', end=8000, variant_type=<VariantType.OTHER: 'OTHER'>, maf=None)]
 
@@ -355,7 +401,7 @@ class FileBasedVariantLookup(ContextManager, VariantLookup):
             open_fh = pysam.VariantFile(str(path))
             self._readers.append(open_fh)
 
-    def __enter__(self) -> "FileBasedVariantLookup":
+    def __enter__(self) -> "_DiskBasedLookup":
         """Enter the context manager."""
         return self
 
@@ -369,7 +415,14 @@ class FileBasedVariantLookup(ContextManager, VariantLookup):
         self.close()
         return None
 
-    def _query(self, refname: str, start: int, end: int) -> list[SimpleVariant]:
+    def query(
+        self,
+        refname: str,
+        start: int,
+        end: int,
+        maf: Optional[float] = None,
+        include_missing_mafs: bool = None,
+    ) -> list[SimpleVariant]:
         """Queries variants from the VCFs used by this lookup and returns a `SimpleVariant`."""
         simple_variants: list[SimpleVariant] = []
         for fh, path in zip(self._readers, self.vcf_paths, strict=True):
@@ -387,7 +440,7 @@ class FileBasedVariantLookup(ContextManager, VariantLookup):
             handle.close()
 
 
-class VariantOverlapDetector(VariantLookup):
+class _InMemoryLookup(_VariantLookup):
     """Implements `VariantLookup` by reading the entire VCF into memory and loading the resulting
     Variants into an `OverlapDetector`."""
 
@@ -415,7 +468,14 @@ class VariantOverlapDetector(VariantLookup):
                 )
                 self._overlap_detector.add_all(variant_intervals)
 
-    def _query(self, refname: str, start: int, end: int) -> list[SimpleVariant]:
+    def query(
+        self,
+        refname: str,
+        start: int,
+        end: int,
+        maf: Optional[float] = None,
+        include_missing_mafs: bool = None,
+    ) -> list[SimpleVariant]:
         """Queries variants from the VCFs used by this lookup."""
         query = Interval(
             refname=refname, start=start - 1, end=end
@@ -425,6 +485,9 @@ class VariantOverlapDetector(VariantLookup):
             for variant_interval in self._overlap_detector.get_overlaps(query)
         )
         return sorted(overlapping_variants, key=lambda v: (v.pos, v.id))
+
+    def close(self) -> None:
+        pass
 
 
 # module-level functions
@@ -460,34 +523,3 @@ def calc_maf_from_filter(variant: pysam.VariantRecord) -> Optional[float]:
             maf = num_alt / len(gts)
 
     return maf
-
-
-def cached(
-    vcf_paths: list[Path], min_maf: float, include_missing_mafs: bool = False
-) -> VariantOverlapDetector:
-    """Constructs a `VariantLookup` that caches all variants in memory for fast lookup.
-    Appropriate for small VCFs."""
-    return VariantOverlapDetector(
-        vcf_paths=vcf_paths, min_maf=min_maf, include_missing_mafs=include_missing_mafs
-    )
-
-
-def disk_based(
-    vcf_paths: list[Path], min_maf: float, include_missing_mafs: bool = False
-) -> FileBasedVariantLookup:
-    """Constructs a `VariantLookup` that queries indexed VCFs on disk for each lookup.
-
-    Appropriate for large VCFs.
-
-    Example:
-
-    ```python
-    >>> with disk_based([Path("./tests/api/data/miniref.variants.vcf.gz")], min_maf=0.0) as lookup:
-    ...     lookup.query(refname="chr2", start=7999, end=8000)
-    [SimpleVariant(id='complex-variant-sv-1/1', refname='chr2', pos=8000, ref='T', alt='<DEL>', end=8000, variant_type=<VariantType.OTHER: 'OTHER'>, maf=None)]
-
-    ```
-    """  # noqa: E501
-    return FileBasedVariantLookup(
-        vcf_paths=vcf_paths, min_maf=min_maf, include_missing_mafs=include_missing_mafs
-    )

@@ -14,13 +14,13 @@ from pysam import VariantRecord
 
 from prymer.api.span import Span
 from prymer.api.span import Strand
-from prymer.api.variant_lookup import FileBasedVariantLookup
 from prymer.api.variant_lookup import SimpleVariant
-from prymer.api.variant_lookup import VariantOverlapDetector
+from prymer.api.variant_lookup import VariantLookup
 from prymer.api.variant_lookup import VariantType
-from prymer.api.variant_lookup import cached
+from prymer.api.variant_lookup import _DiskBasedLookup
+from prymer.api.variant_lookup import _InMemoryLookup
+from prymer.api.variant_lookup import _VariantLookup
 from prymer.api.variant_lookup import calc_maf_from_filter
-from prymer.api.variant_lookup import disk_based
 
 
 @pytest.mark.parametrize(
@@ -380,7 +380,7 @@ def get_simple_variant_approx_by_id(*variant_id: str) -> list[SimpleVariant]:
 
 
 def variant_overlap_detector_query(
-    detector: VariantOverlapDetector,
+    detector: VariantLookup | _VariantLookup,
     refname: str,
     start: int,
     end: int,
@@ -423,7 +423,7 @@ def test_simple_variant_conversion(vcf_path: Path, sample_vcf: list[VariantRecor
     which is required for class instantiation.
     We use the in-memory `VariantBuilder` here to keep test data consistent."""
 
-    variant_overlap_detector = VariantOverlapDetector(
+    variant_overlap_detector = _InMemoryLookup(
         vcf_paths=[vcf_path], min_maf=0.0, include_missing_mafs=True
     )
     # overcome rounding differences
@@ -438,10 +438,13 @@ def test_simple_variant_conversion_logs_file_based(
 ) -> None:
     """Test that `to_variants()` logs a debug message with no pysam.VariantRecords to convert."""
     caplog.set_level(logging.DEBUG)
-    with FileBasedVariantLookup(
-        vcf_paths=[vcf_path], min_maf=0.01, include_missing_mafs=False
+    with VariantLookup(
+        vcf_paths=[vcf_path],
+        min_maf=0.01,
+        include_missing_mafs=False,
+        cached=False,
     ) as variant_lookup:
-        variant_lookup.query(refname="foo", start=1, end=2)
+        variant_lookup.query(refname="chr2", start=1, end=2)
         assert "No variants extracted from region of interest" in caplog.text
 
 
@@ -450,29 +453,29 @@ def test_simple_variant_conversion_logs_non_file_based(
 ) -> None:
     """Test that `to_variants()` logs a debug message with no pysam.VariantRecords to convert."""
     caplog.set_level(logging.DEBUG)
-    variant_lookup = VariantOverlapDetector(
-        vcf_paths=[vcf_path], min_maf=0.01, include_missing_mafs=False
+    variant_lookup = VariantLookup(
+        vcf_paths=[vcf_path], min_maf=0.01, include_missing_mafs=False, cached=False
     )
-    variant_lookup.query(refname="foo", start=1, end=2)
+    variant_lookup.query(refname="chr2", start=1, end=2)
     assert "No variants extracted from region of interest" in caplog.text
 
 
 def test_missing_index_file_raises(temp_missing_path: Path) -> None:
     """Test that both VariantLookup objects raise an error with a missing index file."""
     with pytest.raises(ValueError, match="Cannot perform fetch with missing index file for VCF"):
-        with disk_based(vcf_paths=[temp_missing_path], min_maf=0.01, include_missing_mafs=False):
+        with VariantLookup(vcf_paths=[temp_missing_path], min_maf=0.01, include_missing_mafs=False):
             pass
     with pytest.raises(ValueError, match="Cannot perform fetch with missing index file for VCF"):
-        cached(vcf_paths=[temp_missing_path], min_maf=0.01, include_missing_mafs=False)
+        VariantLookup(vcf_paths=[temp_missing_path], min_maf=0.01, include_missing_mafs=False)
 
 
 def test_missing_vcf_files_raises() -> None:
     """Test that an error is raised when no VCF_paths are provided."""
     with pytest.raises(ValueError, match="No VCF paths given to query"):
-        with disk_based(vcf_paths=[], min_maf=0.01, include_missing_mafs=False):
+        with VariantLookup(vcf_paths=[], min_maf=0.01, include_missing_mafs=False):
             pass
     with pytest.raises(ValueError, match="No VCF paths given to query"):
-        cached(vcf_paths=[], min_maf=0.01, include_missing_mafs=False)
+        VariantLookup(vcf_paths=[], min_maf=0.01, include_missing_mafs=False)
 
 
 @pytest.mark.parametrize("random_seed", [1, 10, 100, 1000, 10000])
@@ -491,7 +494,7 @@ def test_vcf_header_missing_chrom(
     caplog.set_level(logging.DEBUG)
     vcf_paths = [vcf_path, mini_chr1_vcf, mini_chr3_vcf]
     random.Random(random_seed).shuffle(vcf_paths)
-    with FileBasedVariantLookup(
+    with _DiskBasedLookup(
         vcf_paths=vcf_paths, min_maf=0.00, include_missing_mafs=True
     ) as variant_lookup:
         variants_of_interest = variant_lookup.query(
@@ -534,7 +537,7 @@ def test_calc_maf_from_gt_only() -> None:
 
 def test_variant_overlap_detector_query(vcf_path: Path) -> None:
     """Test `VariantOverlapDetector.query()` positional filtering."""
-    variant_overlap_detector = VariantOverlapDetector(
+    variant_overlap_detector = _InMemoryLookup(
         vcf_paths=[vcf_path], min_maf=0.0, include_missing_mafs=True
     )
 
@@ -566,12 +569,12 @@ def test_variant_overlap_detector_query(vcf_path: Path) -> None:
 
 @pytest.mark.parametrize("include_missing_mafs", [False, True])
 def test_variant_overlap_query_maf_filter(vcf_path: Path, include_missing_mafs: bool) -> None:
-    """Test that `VariantOverlapDetector.query()` MAF filtering is as expected.
+    """Test that `_InMemoryLookup.query()` MAF filtering is as expected.
     `include_missing_mafs` is parameterized in both the class constructor and in the query to
     demonstrate that it is only the query_method setting that changes the test results.
     """
-    variant_overlap_detector = VariantOverlapDetector(
-        vcf_paths=[vcf_path], min_maf=0.0, include_missing_mafs=include_missing_mafs
+    variant_overlap_detector: VariantLookup = VariantLookup(
+        vcf_paths=[vcf_path], min_maf=0.0, include_missing_mafs=include_missing_mafs, cached=True
     )
     query = variant_overlap_detector_query(
         variant_overlap_detector,
@@ -598,9 +601,10 @@ def test_variant_overlap_query_maf_filter(vcf_path: Path, include_missing_mafs: 
 @pytest.mark.parametrize("include_missing_mafs", [False, True])
 def test_file_based_variant_query(vcf_path: Path, include_missing_mafs: bool) -> None:
     """Test that `FileBasedVariantLookup.query()` MAF filtering is as expected."""
-    with FileBasedVariantLookup(
-        vcf_paths=[vcf_path], min_maf=0.0, include_missing_mafs=include_missing_mafs
+    with VariantLookup(
+        vcf_paths=[vcf_path], min_maf=0.0, include_missing_mafs=include_missing_mafs, cached=False
     ) as file_based_vcf_query:
+        # assert isinstance(file_based_vcf_query._lookup, _DiskBasedLookup)
         query = [
             _round_simple_variant(simple_variant)
             for simple_variant in file_based_vcf_query.query(
