@@ -147,19 +147,32 @@ def build_primer_pairs(  # noqa: C901
     pairings: list[Tuple[int, int, float, float]] = []
 
     # generate all the primer pairs that don't violate hard size and Tm constraints
+    first_right_primer_idx = 0
+
+    # Nested loops over indices are used here so that we can skip potentially large chunks of
+    # the cartesian product, based on the fact that we're sorting the left and right primers.
+    # Two things are relied upon:
+    #   1. If we encounter a left/right combo that either has the right primer leftward of the
+    #      left primer _or_ generates a too-short amplicon, the neither that right primer nor
+    #      any previous right primer can make a valid combination with any subsequent left primer.
+    #   2. If we encounter a left/right combo that generates a too-large amplicon, then no
+    #      subsequent right-primer can make a valid combination with that left primer
     for i in range(0, len(left_primers)):
-        for j in range(0, len(right_primers)):
+        for j in range(first_right_primer_idx, len(right_primers)):
             lp = left_primers[i]
             rp = right_primers[j]
 
             # If the right primer isn't "to the right" of the left primer, move on
             if rp.span.start < lp.span.start or lp.span.end > rp.span.end:
+                first_right_primer_idx = max(first_right_primer_idx, j+1)
                 continue
 
-            # Ignore pairings with amplicon sizes out of the range specified
             amp_span = PrimerPair.calculate_amplicon_span(lp, rp)
+
             if amp_span.length < amplicon_sizes.min:
+                first_right_primer_idx = max(first_right_primer_idx, j+1)
                 continue
+
             if amp_span.length > amplicon_sizes.max:
                 break  # break in this case because all subsequent rps will yield longer amplicons
 
