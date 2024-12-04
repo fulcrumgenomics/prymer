@@ -274,7 +274,7 @@ def test_build_primers_amplicon_size_filtering(
     pairs = list(
         picking.build_primer_pairs(
             left_primers=[p("A" * 20, tm=60, pos=s, pen=1.0) for s in range(1, 151, 10)],
-            right_primers=[p("A" * 20, tm=60, pos=s, pen=1.0) for s in range(151, 301, 10)],
+            right_primers=[p("A" * 20, tm=60, pos=s, pen=1.0) for s in range(101, 301, 10)],
             target=Span("chr1", 150, 160),
             amplicon_sizes=MinOptMax(100, 150, 200),
             amplicon_tms=MinOptMax(0.0, 0.0, 100.0),

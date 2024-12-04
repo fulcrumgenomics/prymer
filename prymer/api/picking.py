@@ -133,6 +133,10 @@ def build_primer_pairs(  # noqa: C901
     if any(p.span.refname != target.refname for p in right_primers):
         raise ValueError("Right primers exist on different reference than target.")
 
+    # Sort the left and right primers
+    left_primers = sorted(left_primers, key=lambda p: p.span.start)
+    right_primers = sorted(right_primers, key=lambda p: p.span.end)
+
     # Grab the sequence we'll use to fill in the amplicon sequence
     with FastaFile(f"{fasta_path}") as fasta:
         region_start = min(p.span.start for p in left_primers)
@@ -147,11 +151,17 @@ def build_primer_pairs(  # noqa: C901
         for j in range(0, len(right_primers)):
             lp = left_primers[i]
             rp = right_primers[j]
-            amp_span = PrimerPair.calculate_amplicon_span(lp, rp)
+
+            # If the right primer isn't "to the right" of the left primer, move on
+            if rp.span.start < lp.span.start or lp.span.end > rp.span.end:
+                continue
 
             # Ignore pairings with amplicon sizes out of the range specified
-            if not amplicon_sizes.min <= amp_span.length <= amplicon_sizes.max:
+            amp_span = PrimerPair.calculate_amplicon_span(lp, rp)
+            if amp_span.length < amplicon_sizes.min:
                 continue
+            if amp_span.length > amplicon_sizes.max:
+                break  # break in this case because all subsequent rps will yield longer amplicons
 
             # Since the amplicon span and the region_start are both 1-based, the minuend
             # becomes a zero-based offset
@@ -173,6 +183,7 @@ def build_primer_pairs(  # noqa: C901
 
             pairings.append((i, j, penalty, amp_tm))
 
+    # Sort by the penalty, ascending
     pairings.sort(key=lambda tup: tup[2])
 
     with NtThermoAlign() as ntthal:
