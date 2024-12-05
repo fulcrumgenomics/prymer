@@ -126,6 +126,24 @@ class OffTargetResult:
     right_primer_spans: list[Span] = field(default_factory=list)
 
 
+@dataclass(init=True)
+class PrimerPairBwaHitsBySideAndStrand:
+    """A helper class for storing BWA hits for the left and right primers of a primer pair organized
+    by left/right and hit strand.
+
+    Attributes:
+        left_positive: A list of BwaHit objects on the positive strand for the left primer.
+        left_negative: A list of BwaHit objects on the negative strand for the left primer.
+        right_positive: A list of BwaHit objects on the positive strand for the right primer.
+        right_negative: A list of BwaHit objects on the negative strand for the right primer.
+    """
+
+    left_positive: list[BwaHit] = field(default_factory=list)
+    left_negative: list[BwaHit] = field(default_factory=list)
+    right_positive: list[BwaHit] = field(default_factory=list)
+    right_negative: list[BwaHit] = field(default_factory=list)
+
+
 class OffTargetDetector(AbstractContextManager):
     """A class for detecting off-target mappings of primers and primer pairs that uses a custom
     version of "bwa aln" named "bwa-aln-interactive".
@@ -334,26 +352,67 @@ class OffTargetDetector(AbstractContextManager):
         result: OffTargetResult
 
         # Get the mappings for the left primer and right primer respectively
-        p1: BwaResult = hits_by_primer[primer_pair.left_primer.bases]
-        p2: BwaResult = hits_by_primer[primer_pair.right_primer.bases]
+        left_bwa_result: BwaResult = hits_by_primer[primer_pair.left_primer.bases]
+        right_bwa_result: BwaResult = hits_by_primer[primer_pair.right_primer.bases]
 
-        # Get all possible amplicons from the left_primer_mappings and right_primer_mappings
-        # primer hits, filtering if there are too many for either
-        if p1.hit_count > self._max_primer_hits or p2.hit_count > self._max_primer_hits:
+        # If there are too many hits, this primer pair will not pass. Exit early.
+        if (
+            left_bwa_result.hit_count > self._max_primer_hits
+            or right_bwa_result.hit_count > self._max_primer_hits
+        ):
             result = OffTargetResult(primer_pair=primer_pair, passes=False)
-        else:
-            amplicons = self._to_amplicons(p1.hits, p2.hits, self._max_amplicon_size)
-            result = OffTargetResult(
-                primer_pair=primer_pair,
-                passes=self._min_primer_pair_hits <= len(amplicons) <= self._max_primer_pair_hits,
-                spans=amplicons if self._keep_spans else [],
-                left_primer_spans=(
-                    [self._hit_to_span(h) for h in p1.hits] if self._keep_primer_spans else []
-                ),
-                right_primer_spans=(
-                    [self._hit_to_span(h) for h in p2.hits] if self._keep_primer_spans else []
-                ),
+
+        # Get the set of reference names with hits
+        hits_by_refname: dict[str, PrimerPairBwaHitsBySideAndStrand] = {
+            hit.refname: PrimerPairBwaHitsBySideAndStrand()
+            for hit in left_bwa_result.hits + right_bwa_result.hits
+        }
+
+        # Split the hits for left and right by reference name and strand
+        for hit in left_bwa_result.hits:
+            if hit.negative:
+                hits_by_refname[hit.refname].left_negative.append(hit)
+            else:
+                hits_by_refname[hit.refname].left_positive.append(hit)
+
+        for hit in right_bwa_result.hits:
+            if hit.negative:
+                hits_by_refname[hit.refname].right_negative.append(hit)
+            else:
+                hits_by_refname[hit.refname].right_positive.append(hit)
+
+        amplicons: list[Span] = []
+        for hits in hits_by_refname.values():
+            amplicons.extend(
+                self._to_amplicons(
+                    lefts=hits.left_positive,
+                    rights=hits.right_negative,
+                    max_len=self._max_amplicon_size,
+                )
             )
+            amplicons.extend(
+                self._to_amplicons(
+                    lefts=hits.right_positive,
+                    rights=hits.left_negative,
+                    max_len=self._max_amplicon_size,
+                )
+            )
+
+        result = OffTargetResult(
+            primer_pair=primer_pair,
+            passes=self._min_primer_pair_hits <= len(amplicons) <= self._max_primer_pair_hits,
+            spans=amplicons if self._keep_spans else [],
+            left_primer_spans=(
+                [self._hit_to_span(h) for h in left_bwa_result.hits]
+                if self._keep_primer_spans
+                else []
+            ),
+            right_primer_spans=(
+                [self._hit_to_span(h) for h in right_bwa_result.hits]
+                if self._keep_primer_spans
+                else []
+            ),
+        )
 
         if self._cache_results:
             self._primer_pair_cache[primer_pair] = replace(result, cached=True)
