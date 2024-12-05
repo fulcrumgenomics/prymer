@@ -220,13 +220,13 @@ def test_build_off_target_result(ref_fasta: Path) -> None:
         penalty=0,
     )
 
-    with _build_detector(ref_fasta=ref_fasta) as detector:
+    with _build_detector(
+        ref_fasta=ref_fasta, max_primer_hits=10, max_primer_pair_hits=10
+    ) as detector:
         off_target_result: OffTargetResult = detector._build_off_target_result(
             primer_pair=primer_pair,
             hits_by_primer=hits_by_primer,
         )
-
-    print(off_target_result.spans)
 
     assert off_target_result.spans == [
         Span(refname="chr1", start=100, end=299, strand=Strand.POSITIVE),
