@@ -362,6 +362,8 @@ class OffTargetDetector(AbstractContextManager):
             or right_bwa_result.hit_count > self._max_primer_hits
         ):
             result = OffTargetResult(primer_pair=primer_pair, passes=False)
+            if self._cache_results:
+                self._primer_pair_cache[primer_pair] = replace(result, cached=True)
             return result
 
         # Get the set of reference names with hits
