@@ -2470,4 +2470,8 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
+<<<<<<< HEAD
 content-hash = "48fcc5b5c9af0689875659e38ea1e5a2599f0803e74ae6234253c8edf768f02c"
+=======
+content-hash = "41609d214eabe8ad191f046c451150fd74eb70465f1e7fca28afaf3d9d8130fe"
+>>>>>>> 07e8083 (chore: unpin pybedlite dependency)
