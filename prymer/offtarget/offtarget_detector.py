@@ -90,6 +90,7 @@ from ordered_set import OrderedSet
 from prymer.api.oligo import Oligo
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
+from prymer.api.span import Strand
 from prymer.offtarget.bwa import BWA_EXECUTABLE_NAME
 from prymer.offtarget.bwa import BwaAlnInteractive
 from prymer.offtarget.bwa import BwaHit
@@ -381,20 +382,23 @@ class OffTargetDetector(AbstractContextManager):
             else:
                 hits_by_refname[hit.refname].right_positive.append(hit)
 
+        # Build amplicons from hits on the same reference with valid relative orientation
         amplicons: list[Span] = []
         for hits in hits_by_refname.values():
             amplicons.extend(
                 self._to_amplicons(
-                    lefts=hits.left_positive,
-                    rights=hits.right_negative,
+                    positive_hits=hits.left_positive,
+                    negative_hits=hits.right_negative,
                     max_len=self._max_amplicon_size,
+                    strand=Strand.POSITIVE,
                 )
             )
             amplicons.extend(
                 self._to_amplicons(
-                    lefts=hits.right_positive,
-                    rights=hits.left_negative,
+                    positive_hits=hits.right_positive,
+                    negative_hits=hits.left_negative,
                     max_len=self._max_amplicon_size,
+                    strand=Strand.NEGATIVE,
                 )
             )
 
@@ -469,19 +473,50 @@ class OffTargetDetector(AbstractContextManager):
         return hits_by_primer
 
     @staticmethod
-    def _to_amplicons(lefts: list[BwaHit], rights: list[BwaHit], max_len: int) -> list[Span]:
+    def _to_amplicons(
+        positive_hits: list[BwaHit], negative_hits: list[BwaHit], max_len: int, strand: Strand
+    ) -> list[Span]:
         """Takes a set of hits for one or more left primers and right primers and constructs
         amplicon mappings anywhere a left primer hit and a right primer hit align in F/R
         orientation up to `maxLen` apart on the same reference.  Primers may not overlap.
-        """
-        amplicons: list[Span] = []
-        for h1, h2 in itertools.product(lefts, rights):
-            if h1.negative == h2.negative or h1.refname != h2.refname:  # not F/R orientation
-                continue
 
-            plus, minus = (h2, h1) if h1.negative else (h1, h2)
-            if minus.start > plus.end and (minus.end - plus.start + 1) <= max_len:
-                amplicons.append(Span(refname=plus.refname, start=plus.start, end=minus.end))
+        Args:
+            positive_hits: List of hits on the positive strand for one of the primers in the pair.
+            negative_hits: List of hits on the negative strand for the other primer in the pair.
+            max_len: Maximum length of amplicons to consider.
+            strand: The strand of the amplicon to generate. Set to Strand.POSITIVE if
+                `positive_hits` are for the left primer and `negative_hits` are for the right
+                primer. Set to Strand.NEGATIVE if `positive_hits` are for the right primer and
+                `negative_hits` are for the left primer.
+
+        Raises:
+            ValueError: If any of the positive hits are not on the positive strand, or any of the
+                negative hits are not on the negative strand. If hits are present on more than one
+                reference.
+        """
+        if any(h.negative for h in positive_hits):
+            raise ValueError("Positive hits must be on the positive strand.")
+        if any(not h.negative for h in negative_hits):
+            raise ValueError("Negative hits must be on the negative strand.")
+
+        refnames: set[str] = {h.refname for h in positive_hits + negative_hits}
+        if len(refnames) > 1:
+            raise ValueError("Hits are present on more than one reference.")
+
+        amplicons: list[Span] = []
+        for positive_hit, negative_hit in itertools.product(positive_hits, negative_hits):
+            if (
+                negative_hit.start > positive_hit.end
+                and (negative_hit.end - positive_hit.start + 1) <= max_len
+            ):
+                amplicons.append(
+                    Span(
+                        refname=positive_hit.refname,
+                        start=positive_hit.start,
+                        end=negative_hit.end,
+                        strand=strand,
+                    )
+                )
 
         return amplicons
 
