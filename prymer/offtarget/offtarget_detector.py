@@ -362,6 +362,7 @@ class OffTargetDetector(AbstractContextManager):
             or right_bwa_result.hit_count > self._max_primer_hits
         ):
             result = OffTargetResult(primer_pair=primer_pair, passes=False)
+            return result
 
         # Get the set of reference names with hits
         hits_by_refname: dict[str, PrimerPairBwaHitsBySideAndStrand] = {
