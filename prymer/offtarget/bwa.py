@@ -471,6 +471,6 @@ class BwaAlnInteractive(ExecutableRunner):
         # NB: the type ignore is necessary because pysam's type hint for `get_reference_length` is
         # incorrect.
         # https://github.com/pysam-developers/pysam/pull/1313
-        hits = [hit for hit in hits if hit.end <= self.header.get_reference_length(hit.refname)]  # type: ignore[arg-type]  # noqa: E501
+        hits = [hit for hit in hits if hit.end <= self.header.get_reference_length(hit.refname)]  # noqa: E501
 
         return hits

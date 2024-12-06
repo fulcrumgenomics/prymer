@@ -6,7 +6,7 @@
 [![Poetry][poetry-badge]][poetry-link]
 [![Ruff][ruff-badge]][ruff-link]
 
-[language-badge]:       https://img.shields.io/badge/python-3.11_|_3.12-blue
+[language-badge]:       https://img.shields.io/badge/python-3.11_|_3.12_|_3.13-blue
 [language-link]:        http://www.python.org/
 [license-badge]:        http://img.shields.io/badge/license-MIT-blue.svg
 [license-link]:         https://github.com/fulcrumgenomics/prymer/blob/main/LICENSE
