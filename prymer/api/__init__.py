@@ -8,13 +8,13 @@ from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import BedLikeCoords
 from prymer.api.span import Span
 from prymer.api.span import Strand
-from prymer.api.variant_lookup import FileBasedVariantLookup
 from prymer.api.variant_lookup import SimpleVariant
+
+# from prymer.api.variant_lookup import _DiskBasedLookup
+# from prymer.api.variant_lookup import _InMemoryLookup
+# from prymer.api.variant_lookup import _VariantLookup
 from prymer.api.variant_lookup import VariantLookup
-from prymer.api.variant_lookup import VariantOverlapDetector
 from prymer.api.variant_lookup import VariantType
-from prymer.api.variant_lookup import cached
-from prymer.api.variant_lookup import disk_based
 
 __all__ = [
     "ClusteredIntervals",
@@ -30,8 +30,4 @@ __all__ = [
     "VariantType",
     "SimpleVariant",
     "VariantLookup",
-    "FileBasedVariantLookup",
-    "VariantOverlapDetector",
-    "cached",
-    "disk_based",
 ]

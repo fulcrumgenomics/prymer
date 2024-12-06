@@ -17,15 +17,15 @@ The genome FASTA must be provided to the `Primer3` constructor, such that design
 nucleotide sequences can be retrieved.  The full path to the `primer3` executable can provided,
 otherwise it is assumed to be on the PATH.  Furthermore, optionally a
 [`VariantLookup`][prymer.api.variant_lookup.VariantLookup] may be provided to
-hard-mask the design and target regions as to avoid design primers over polymorphic sites.
+hard-mask the design and target regions so as to avoid design primers over polymorphic sites.
 
 ```python
 >>> from pathlib import Path
->>> from prymer.api.variant_lookup import VariantLookup, VariantOverlapDetector
+>>> from prymer.api.variant_lookup import _VariantLookup, _InMemoryLookup
 >>> genome_fasta = Path("./tests/primer3/data/miniref.fa")
 >>> genome_vcf = Path("./tests/primer3/data/miniref.variants.vcf.gz")
->>> variant_lookup: VariantLookup = VariantOverlapDetector(vcf_paths=[genome_vcf], min_maf=0.01, include_missing_mafs=False)
->>> designer = Primer3(genome_fasta=genome_fasta, variant_lookup=variant_lookup)
+>>> variant_lookup: VariantLookup = VariantLookup(vcf_paths=[genome_vcf], min_maf=0.01, include_missing_mafs=False)
+>>> designer = Primer3(genome_fasta=genome_fasta, variants=variant_lookup)
 
 ```
 
@@ -229,13 +229,14 @@ class Primer3(ExecutableRunner):
         self,
         genome_fasta: Path,
         executable: Optional[str] = None,
-        variant_lookup: Optional[VariantLookup] = None,
+        variants: list[Path] | VariantLookup | None = None,
     ) -> None:
         """
         Args:
             genome_fasta: Path to reference genome .fasta file
             executable: string representation of the path to primer3_core
-            variant_lookup: VariantLookup object to facilitate hard-masking variants
+            variants: an optional list of VCF `Path`s or VariantLookup object to facilitate
+                hard-masking variants
 
         Assumes the sequence dictionary is located adjacent to the .fasta file and has the same
         base name with a .dict suffix.
@@ -246,12 +247,30 @@ class Primer3(ExecutableRunner):
         )
         command: list[str] = [f"{executable_path}"]
 
-        self.variant_lookup = variant_lookup
+        self.variant_lookup: Optional[VariantLookup]
+        # If no variants are given, or they are in a pre-constructed `VariantLookup` object,
+        # set the object attribute
+        if variants is None or isinstance(variants, VariantLookup):
+            self.variant_lookup = variants
+        # If `variants` is a list of `Path`s to indexed VCF files, create a `VariantLookup` object
+        # with default settings (no MAF filtering, do not include variants with missing MAFs)
+        elif isinstance(variants, list) and all(
+            isinstance(path, Path) for path in variants
+        ):  # if provided path, create appropriate `VariantLookup`
+            self.variant_lookup = VariantLookup(
+                vcf_paths=variants,
+                cached=True,
+                min_maf=0.00,
+                include_missing_mafs=False,
+            )
+        else:
+            raise ValueError(
+                "Variant lookup is required to be a list of `Path` objects or a"
+                f" pre-constructed `VariantLookup` object: received {variants}"
+            )
         self._fasta = pysam.FastaFile(filename=f"{genome_fasta}")
 
         dict_path = genome_fasta.with_suffix(".dict")
-        # TODO: This is a placeholder while waiting for #160  to be resolved
-        # https://github.com/fulcrumgenomics/fgpyo/pull/160
         with reader(dict_path, file_type=sam.SamFileType.SAM) as fh:
             self._dict: SequenceDictionary = SequenceDictionary.from_sam(header=fh.header)
 
