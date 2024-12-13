@@ -121,7 +121,8 @@ def build_primer_pairs(  # noqa: C901
         fasta_path: the path to the FASTA file from which the amplicon sequence will be retrieved.
 
     Returns:
-        an iterator over all the valid primer pairs, sorted by primer pair penalty
+        An iterator over all the valid primer pairs, sorted by primer pair penalty. 
+        Primer pairs with smaller penalties are returned first.
     """
     # Short circuit if we have no left primers or no right primers
     if not any(left_primers) or not any(right_primers):
