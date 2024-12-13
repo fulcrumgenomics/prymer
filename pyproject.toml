@@ -35,7 +35,7 @@ include = ["LICENSE"]
 [tool.poetry.dependencies]
 python = "^3.11"
 pyproject_hooks= "^1.0.0,!=1.1.0"
-pybedlite = "1.0.0"
+pybedlite = "^1.0.0"
 strenum = "^0.4.15"
 fgpyo = "^0.8.0"
 pysam = "^0.22.1"
