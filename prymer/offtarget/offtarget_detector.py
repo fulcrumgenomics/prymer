@@ -159,7 +159,9 @@ class OffTargetDetector(AbstractContextManager):
         three_prime_region_length: int,
         max_mismatches_in_three_prime_region: int,
         max_mismatches: int,
-        max_amplicon_size: int,
+        max_gap_opens: int = 0,
+        max_gap_extends: int = -1,
+        max_amplicon_size: int = 1000,
         min_primer_pair_hits: int = 1,
         cache_results: bool = True,
         threads: Optional[int] = None,
@@ -201,6 +203,12 @@ class OffTargetDetector(AbstractContextManager):
                 three_prime_region_length
             max_mismatches: the maximum number of mismatches allowed in the full length primer
                 (including any in the three prime region)
+            max_gap_opens: the maximum number of gaps (insertions or deletions) allowable in an
+                alignment of a oligo to the reference
+            max_gap_extends: the maximum number of gap extensions allowed; extending a gap
+                beyond a single base costs 1 gap extension.  Can be set to -1 to allow
+                unlimited extensions up to max diffs (aka max mismatches), while disallowing
+                "long gaps".
             max_amplicon_size: the maximum amplicon size to consider amplifiable
             cache_results: if True, cache results for faster re-querying
             threads: the number of threads to use when invoking bwa
@@ -220,6 +228,8 @@ class OffTargetDetector(AbstractContextManager):
             seed_length=three_prime_region_length,
             max_mismatches_in_seed=max_mismatches_in_three_prime_region,
             max_mismatches=max_mismatches,
+            max_gap_opens=max_gap_opens,
+            max_gap_extensions=max_gap_extends,
             max_hits=max_primer_hits,
         )
         self._max_primer_hits = max_primer_hits

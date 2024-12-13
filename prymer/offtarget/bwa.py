@@ -232,6 +232,7 @@ class BwaAlnInteractive(ExecutableRunner):
         max_mismatches_in_seed: int = 3,
         max_gap_opens: int = 0,
         max_gap_extensions: int = -1,
+        min_indel_to_end_distance: int = 3,
         seed_length: int = 20,
         reverse_complement: bool = False,
         include_alt_hits: bool = False,
@@ -248,6 +249,8 @@ class BwaAlnInteractive(ExecutableRunner):
             max_gap_opens: the maximum number of gap opens allowed in the full query sequence
             max_gap_extensions: the maximum number of gap extensions allowed in the full query
                                 sequence
+            min_indel_to_end_distance: do not place an indel within this many bp of the ends of
+                the query sequence
             seed_length: the length of the seed region
             reverse_complement: reverse complement each query sequence before alignment
             include_alt_hits: if true include hits to references with names ending in _alt,
@@ -288,6 +291,8 @@ class BwaAlnInteractive(ExecutableRunner):
             f"{max_gap_opens}",
             "-e",
             f"{max_gap_extensions}",
+            "-i",
+            f"{min_indel_to_end_distance}",
             "-l",
             f"{seed_length}",
             "-k",

@@ -222,6 +222,7 @@ def test_map_single_hit(
         max_hits=1,
         max_mismatches=5,
         max_gap_opens=1,
+        min_indel_to_end_distance=5,
         reverse_complement=reverse_complement,
     ) as bwa:
         query = Query(bases=bases, id=f"{hit}")
