@@ -40,6 +40,7 @@ strenum = "^0.4.15"
 fgpyo = "^0.8.0"
 pysam = "^0.22.1"
 ordered-set = "^4.1.0"
+primer3-py = "^2.0.3"
 
 [tool.poetry.group.dev.dependencies]
 poetry      = "^1.8.2"
@@ -118,7 +119,7 @@ warn_unused_ignores         = true
 exclude = ["site/", "docs/"]
 
 [[tool.mypy.overrides]]
-module = "defopt"
+module = ["defopt", "primer3"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
