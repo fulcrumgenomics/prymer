@@ -83,6 +83,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Optional
 from typing import Self
+from typing import TypeAlias
 from typing import TypeVar
 
 from ordered_set import OrderedSet
@@ -98,6 +99,9 @@ from prymer.offtarget.bwa import BwaResult
 from prymer.offtarget.bwa import Query
 
 PrimerType = TypeVar("PrimerType", bound=Oligo)
+
+ReferenceName: TypeAlias = str
+"""Alias for a reference sequence name."""
 
 
 @dataclass(init=True, frozen=True)
@@ -502,7 +506,7 @@ class OffTargetDetector(AbstractContextManager):
         if any(not h.negative for h in negative_hits):
             raise ValueError("Negative hits must be on the negative strand.")
 
-        refnames: set[str] = {h.refname for h in positive_hits + negative_hits}
+        refnames: set[ReferenceName] = {h.refname for h in positive_hits + negative_hits}
         if len(refnames) > 1:
             raise ValueError("Hits are present on more than one reference.")
 
