@@ -499,6 +499,11 @@ class OffTargetDetector(AbstractContextManager):
         if len(refnames) > 1:
             raise ValueError(f"Hits are present on more than one reference: {refnames}")
 
+        # Exit early if one of the hit lists is empty - this will save unnecessary sorting of the
+        # other list
+        if len(positive_hits) == 0 or len(negative_hits) == 0:
+            return []
+
         amplicons: list[Span] = []
         for positive_hit, negative_hit in itertools.product(positive_hits, negative_hits):
             if (
