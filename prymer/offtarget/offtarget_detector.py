@@ -504,20 +504,49 @@ class OffTargetDetector(AbstractContextManager):
         if len(positive_hits) == 0 or len(negative_hits) == 0:
             return []
 
+        # Sort the positive strand hits by start position and the negative strand hits by *end*
+        # position. The `max_len` cutoff is based on negative_hit.end - positive_hit.start + 1.
+        positive_hits_sorted = sorted(positive_hits, key=lambda h: h.start)
+        negative_hits_sorted = sorted(negative_hits, key=lambda h: h.end)
+
         amplicons: list[Span] = []
-        for positive_hit, negative_hit in itertools.product(positive_hits, negative_hits):
-            if (
-                negative_hit.start > positive_hit.end
-                and negative_hit.end - positive_hit.start + 1 <= max_len
+
+        # Track the position of the previously examined negative hit.
+        prev_negative_hit_index = 0
+        for positive_hit in positive_hits_sorted:
+            # Check only negative hits starting with the previously examined one.
+            for negative_hit_index, negative_hit in enumerate(
+                negative_hits_sorted[prev_negative_hit_index:],
+                start=prev_negative_hit_index,
             ):
-                amplicons.append(
-                    Span(
-                        refname=positive_hit.refname,
-                        start=positive_hit.start,
-                        end=negative_hit.end,
-                        strand=strand,
+                # TODO: Consider allowing overlapping positive and negative hits.
+                if (
+                    negative_hit.start > positive_hit.end
+                    and negative_hit.end - positive_hit.start + 1 <= max_len
+                ):
+                    # If the negative hit starts to the right of the positive hit, and the amplicon
+                    # length is <= max_len, add it to the list of amplicon hits to be returned.
+                    amplicons.append(
+                        Span(
+                            refname=positive_hit.refname,
+                            start=positive_hit.start,
+                            end=negative_hit.end,
+                            strand=strand,
+                        )
                     )
-                )
+
+                if negative_hit.end - positive_hit.start + 1 > max_len:
+                    # Stop searching for negative hits to pair with this positive hit.
+                    # All subsequence negative hits will have amplicon length > max_len
+                    break
+
+                if negative_hit.end < positive_hit.start:
+                    # This positive hit is genomically right of the current negative hit.
+                    # All subsequent positive hits will also be genomically right of this negative
+                    # hit, so we should start at the one after this. If this index is past the end
+                    # of the list, the slice `negative_hits_sorted[prev_negative_hit_index:]` will
+                    # be empty.
+                    prev_negative_hit_index = negative_hit_index + 1
 
         return amplicons
 

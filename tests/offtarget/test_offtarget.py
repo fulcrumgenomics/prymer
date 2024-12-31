@@ -228,10 +228,10 @@ def test_build_off_target_result(ref_fasta: Path) -> None:
             hits_by_primer=hits_by_primer,
         )
 
-    assert off_target_result.spans == [
+    assert set(off_target_result.spans) == {
         Span(refname="chr1", start=100, end=299, strand=Strand.POSITIVE),
         Span(refname="chr3", start=600, end=799, strand=Strand.NEGATIVE),
-    ]
+    }
 
 
 # Test that using the cache (or not) does not affect the results
