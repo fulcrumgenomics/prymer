@@ -510,7 +510,7 @@ class OffTargetDetector(AbstractContextManager):
             h.refname for h in itertools.chain(positive_hits, negative_hits)
         }
         if len(refnames) > 1:
-            raise ValueError("Hits are present on more than one reference.")
+            raise ValueError(f"Hits are present on more than one reference: {refnames}")
 
         amplicons: list[Span] = []
         for positive_hit, negative_hit in itertools.product(positive_hits, negative_hits):
