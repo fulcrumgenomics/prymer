@@ -516,7 +516,7 @@ class OffTargetDetector(AbstractContextManager):
         for positive_hit, negative_hit in itertools.product(positive_hits, negative_hits):
             if (
                 negative_hit.start > positive_hit.end
-                and (negative_hit.end - positive_hit.start + 1) <= max_len
+                and negative_hit.end - positive_hit.start + 1 <= max_len
             ):
                 amplicons.append(
                     Span(
