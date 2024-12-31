@@ -373,7 +373,7 @@ class OffTargetDetector(AbstractContextManager):
         # Get the set of reference names with hits
         hits_by_refname: dict[str, PrimerPairBwaHitsBySideAndStrand] = {
             hit.refname: PrimerPairBwaHitsBySideAndStrand()
-            for hit in left_bwa_result.hits + right_bwa_result.hits
+            for hit in itertools.chain(left_bwa_result.hits, right_bwa_result.hits)
         }
 
         # Split the hits for left and right by reference name and strand
@@ -506,7 +506,9 @@ class OffTargetDetector(AbstractContextManager):
         if any(not h.negative for h in negative_hits):
             raise ValueError("Negative hits must be on the negative strand.")
 
-        refnames: set[ReferenceName] = {h.refname for h in positive_hits + negative_hits}
+        refnames: set[ReferenceName] = {
+            h.refname for h in itertools.chain(positive_hits, negative_hits)
+        }
         if len(refnames) > 1:
             raise ValueError("Hits are present on more than one reference.")
 
