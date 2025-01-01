@@ -171,6 +171,7 @@ class OffTargetDetector(AbstractContextManager):
         max_gap_opens: int = 0,
         max_gap_extends: int = -1,
         max_amplicon_size: int = 1000,
+        min_amplicon_size: int = 1,
         min_primer_pair_hits: int = 1,
         cache_results: bool = True,
         threads: Optional[int] = None,
@@ -225,6 +226,8 @@ class OffTargetDetector(AbstractContextManager):
                 "long gaps". Must be greater than or equal to -1.
             max_amplicon_size: the maximum amplicon size to consider amplifiable. Must be greater
                 than 0.
+            min_amplicon_size: the minimum amplicon size to consider amplifiable. Must be between 1
+                and `max_amplicon_size` inclusive. Default 1bp.
             cache_results: if True, cache results for faster re-querying
             threads: the number of threads to use when invoking bwa
             keep_spans: if True, [[OffTargetResult]] objects will be reported with amplicon spans
@@ -310,9 +313,37 @@ class OffTargetDetector(AbstractContextManager):
         self._max_primer_pair_hits: int = max_primer_pair_hits
         self._min_primer_pair_hits: int = min_primer_pair_hits
         self._max_amplicon_size: int = max_amplicon_size
+        self._min_amplicon_size: int = min_amplicon_size
         self._cache_results: bool = cache_results
         self._keep_spans: bool = keep_spans
         self._keep_primer_spans: bool = keep_primer_spans
+
+    def __post_init__(self) -> None:
+        """
+        Validates parameters.
+
+        Raises:
+            ValueError: If `min_amplicon_size` is greater than `max_amplicon_size`, or if either
+                value is less than 1.
+            ValueError: If `max_primer_hits`, `max_primer_pair_hits`, or `min_primer_pair_hits` are
+                less than 0.
+        """
+        errors: list[str] = []
+        if self._min_amplicon_size < 1:
+            errors.append("'min_amplicon_size' must be greater than or equal to 1.")
+        if self._max_amplicon_size < 1:
+            errors.append("'max_amplicon_size' must be greater than or equal to 1.")
+        if self._min_amplicon_size > self._max_amplicon_size:
+            errors.append("'min_amplicon_size' must be less than or equal to 'max_amplicon_size'.")
+        if self._max_primer_hits < 0:
+            errors.append("'max_primer_hits' must be greater than or equal to 0.")
+        if self._max_primer_pair_hits < 0:
+            errors.append("'max_primer_pair_hits' must be greater than or equal to 0.")
+        if self._min_primer_pair_hits < 0:
+            errors.append("'min_primer_pair_hits' must be greater than or equal to 0.")
+
+        if len(errors) > 0:
+            raise ValueError("\n".join(errors))
 
     def filter(self, primers: list[PrimerType]) -> list[PrimerType]:
         """
@@ -546,14 +577,19 @@ class OffTargetDetector(AbstractContextManager):
 
     @staticmethod
     def _to_amplicons(
-        positive_hits: list[BwaHit], negative_hits: list[BwaHit], max_len: int, strand: Strand
+        positive_hits: list[BwaHit],
+        negative_hits: list[BwaHit],
+        max_len: int,
+        strand: Strand,
+        min_len: int = 1,
     ) -> list[Span]:
         """Takes lists of positive strand hits and negative strand hits and constructs amplicon
         mappings anywhere a positive strand hit and a negative strand hit occur where the end of
-        the negative strand hit is no more than `max_len` from the start of the positive strand
-        hit.
+        the negative strand hit is at least `min_len` and no more than `max_len` from the start of
+        the positive strand hit.
 
-        Primers may not overlap.
+        Primer hits may overlap if `min_len` is shorter than the length of the left and right
+        primers together.
 
         Args:
             positive_hits: List of hits on the positive strand for one of the primers in the pair.
@@ -563,6 +599,7 @@ class OffTargetDetector(AbstractContextManager):
                 `positive_hits` are for the left primer and `negative_hits` are for the right
                 primer. Set to Strand.NEGATIVE if `positive_hits` are for the right primer and
                 `negative_hits` are for the left primer.
+            min_len: Minimum length of amplicons to consider. Default 1.
 
         Raises:
             ValueError: If any of the positive hits are not on the positive strand, or any of the
