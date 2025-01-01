@@ -24,6 +24,7 @@ def _build_detector(
     three_prime_region_length: int = 20,
     max_mismatches_in_three_prime_region: int = 0,
     max_mismatches: int = 0,
+    min_amplicon_size: int = 10,
     max_amplicon_size: int = 250,
     cache_results: bool = True,
 ) -> OffTargetDetector:
@@ -35,6 +36,7 @@ def _build_detector(
         three_prime_region_length=three_prime_region_length,
         max_mismatches_in_three_prime_region=max_mismatches_in_three_prime_region,
         max_mismatches=max_mismatches,
+        min_amplicon_size=min_amplicon_size,
         max_amplicon_size=max_amplicon_size,
         cache_results=cache_results,
         keep_spans=True,
@@ -281,7 +283,11 @@ def test_to_amplicons(
 ) -> None:
     with _build_detector(ref_fasta=ref_fasta, cache_results=cache_results) as detector:
         actual = detector._to_amplicons(
-            positive_hits=[positive], negative_hits=[negative], max_len=250, strand=strand
+            positive_hits=[positive],
+            negative_hits=[negative],
+            min_len=200,
+            max_len=250,
+            strand=strand,
         )
         assert actual == expected, test_id
 
@@ -322,7 +328,11 @@ def test_to_amplicons_value_error(
         pytest.raises(ValueError, match=expected_error),
     ):
         detector._to_amplicons(
-            positive_hits=[positive], negative_hits=[negative], max_len=250, strand=Strand.POSITIVE
+            positive_hits=[positive],
+            negative_hits=[negative],
+            min_len=200,
+            max_len=250,
+            strand=Strand.POSITIVE,
         )
 
 

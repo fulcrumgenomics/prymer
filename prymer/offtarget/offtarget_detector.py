@@ -492,6 +492,7 @@ class OffTargetDetector(AbstractContextManager):
                 self._to_amplicons(
                     positive_hits=left_positive_hits[refname],
                     negative_hits=right_negative_hits[refname],
+                    min_len=self._min_amplicon_size,
                     max_len=self._max_amplicon_size,
                     strand=Strand.POSITIVE,
                 )
@@ -500,6 +501,7 @@ class OffTargetDetector(AbstractContextManager):
                 self._to_amplicons(
                     positive_hits=right_positive_hits[refname],
                     negative_hits=left_negative_hits[refname],
+                    min_len=self._min_amplicon_size,
                     max_len=self._max_amplicon_size,
                     strand=Strand.NEGATIVE,
                 )
@@ -629,6 +631,8 @@ class OffTargetDetector(AbstractContextManager):
 
         amplicons: list[Span] = []
 
+        print(min_len, max_len)
+
         # Track the position of the previously examined negative hit.
         prev_negative_hit_index = 0
         for positive_hit in positive_hits_sorted:
@@ -637,13 +641,11 @@ class OffTargetDetector(AbstractContextManager):
                 negative_hits_sorted[prev_negative_hit_index:],
                 start=prev_negative_hit_index,
             ):
-                # TODO: Consider allowing overlapping positive and negative hits.
-                if (
-                    negative_hit.start > positive_hit.end
-                    and negative_hit.end - positive_hit.start + 1 <= max_len
-                ):
+                amplicon_length: int = negative_hit.end - positive_hit.start + 1
+                if min_len <= amplicon_length <= max_len:
                     # If the negative hit starts to the right of the positive hit, and the amplicon
-                    # length is <= max_len, add it to the list of amplicon hits to be returned.
+                    # length is in the correct size range, add it to the list of amplicon hits to
+                    # be returned.
                     amplicons.append(
                         Span(
                             refname=positive_hit.refname,
