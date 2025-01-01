@@ -40,7 +40,7 @@ the off-target mappings.
 OffTargetResult(primer_pair=..., passes=False, cached=False, spans=[], left_primer_spans=[], right_primer_spans=[])
 >>> list(detector.check_all(primer_pairs=[primer_pair]).values())
 [OffTargetResult(primer_pair=..., passes=False, cached=True, spans=[], left_primer_spans=[], right_primer_spans=[])]
->>> detector = OffTargetDetector(ref=ref_fasta, max_primer_hits=204, max_primer_pair_hits=856, three_prime_region_length=20, max_mismatches_in_three_prime_region=0, max_mismatches=0, max_amplicon_size=250)
+>>> detector = OffTargetDetector(ref=ref_fasta, max_primer_hits=204, max_primer_pair_hits=856, three_prime_region_length=20, max_mismatches_in_three_prime_region=0, max_mismatches=0, min_amplicon_size=10, max_amplicon_size=250)
 >>> result = detector.check_one(primer_pair=primer_pair)
 >>> len(result.spans)
 856
