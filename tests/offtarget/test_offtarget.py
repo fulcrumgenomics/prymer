@@ -292,6 +292,69 @@ def test_to_amplicons(
         assert actual == expected, test_id
 
 
+# Test that using the cache (or not) does not affect the results
+# NB: BwaHit and Span coordinates are 1-based end-inclusive
+#
+# One mapping - Overlapping primers (1bp overlap)
+# >>>>>>>>>>
+#          <<<<<<<<<<
+# 19bp amplicon [1,19]
+#
+# One mapping - Overlapping primers (1bp amplicon)
+#          >>>>>>>>>>
+# <<<<<<<<<<
+# 1bp amplicon [10,10]
+#
+# No mappings - amplicon length would be 0.
+#           >>>>>>>>>>
+# <<<<<<<<<<
+@pytest.mark.parametrize("cache_results", [True, False])
+@pytest.mark.parametrize(
+    "test_id, positive, negative, strand, expected",
+    [
+        (
+            "One mapping - Overlapping primers (1bp overlap)",
+            BwaHit.build("chr1", 1, False, "10M", 0),
+            BwaHit.build("chr1", 10, True, "10M", 0),
+            Strand.POSITIVE,
+            [Span(refname="chr1", start=1, end=19, strand=Strand.POSITIVE)],
+        ),
+        (
+            "One mapping - Overlapping primers (1bp amplicon)",
+            BwaHit.build("chr1", 10, False, "10M", 0),
+            BwaHit.build("chr1", 1, True, "10M", 0),
+            Strand.POSITIVE,
+            [Span(refname="chr1", start=10, end=10, strand=Strand.POSITIVE)],
+        ),
+        (
+            "No mappings",
+            BwaHit.build("chr1", 11, False, "10M", 0),
+            BwaHit.build("chr1", 1, True, "10M", 0),
+            Strand.POSITIVE,
+            [],
+        ),
+    ],
+)
+def test_to_amplicons_overlapping(
+    ref_fasta: Path,
+    test_id: str,
+    positive: BwaHit,
+    negative: BwaHit,
+    strand: Strand,
+    expected: list[Span],
+    cache_results: bool,
+) -> None:
+    with _build_detector(ref_fasta=ref_fasta, cache_results=cache_results) as detector:
+        actual = detector._to_amplicons(
+            positive_hits=[positive],
+            negative_hits=[negative],
+            min_len=1,
+            max_len=250,
+            strand=strand,
+        )
+        assert actual == expected, test_id
+
+
 @pytest.mark.parametrize("cache_results", [True, False])
 @pytest.mark.parametrize(
     "positive, negative, expected_error",

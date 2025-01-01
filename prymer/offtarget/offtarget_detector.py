@@ -631,8 +631,6 @@ class OffTargetDetector(AbstractContextManager):
 
         amplicons: list[Span] = []
 
-        print(min_len, max_len)
-
         # Track the position of the previously examined negative hit.
         prev_negative_hit_index = 0
         for positive_hit in positive_hits_sorted:
@@ -641,6 +639,7 @@ class OffTargetDetector(AbstractContextManager):
                 negative_hits_sorted[prev_negative_hit_index:],
                 start=prev_negative_hit_index,
             ):
+                # Hit coordinates are 1-based end-inclusive.
                 amplicon_length: int = negative_hit.end - positive_hit.start + 1
                 if min_len <= amplicon_length <= max_len:
                     # If the negative hit starts to the right of the positive hit, and the amplicon
