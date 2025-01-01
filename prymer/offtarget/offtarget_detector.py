@@ -470,9 +470,12 @@ class OffTargetDetector(AbstractContextManager):
     def _to_amplicons(
         positive_hits: list[BwaHit], negative_hits: list[BwaHit], max_len: int, strand: Strand
     ) -> list[Span]:
-        """Takes a set of hits for one or more left primers and right primers and constructs
-        amplicon mappings anywhere a left primer hit and a right primer hit align in F/R
-        orientation up to `maxLen` apart on the same reference.  Primers may not overlap.
+        """Takes lists of positive strand hits and negative strand hits and constructs amplicon
+        mappings anywhere a positive strand hit and a negative strand hit occur where the end of
+        the negative strand hit is no more than `max_len` from the start of the positive strand
+        hit.
+
+        Primers may not overlap.
 
         Args:
             positive_hits: List of hits on the positive strand for one of the primers in the pair.
