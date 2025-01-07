@@ -231,13 +231,13 @@ class OffTargetDetector(AbstractContextManager):
             executable: string or Path representation of the `bwa` executable path
 
         Raises:
-            ValueError: If `max_amplicon_size` is less than 1.
+            ValueError: If `max_amplicon_size` is not greater than 0.
             ValueError: If any of `max_primer_hits`, `max_primer_pair_hits`, or
-                `min_primer_pair_hits` are less than 0.
-            ValueError: If `three_prime_region_length` is less than 1.
+                `min_primer_pair_hits` are not greater than or equal to 0.
+            ValueError: If `three_prime_region_length` is not greater than 0.
             ValueError: If `max_mismatches_in_three_prime_region` is outside the range 0 to
                 `three_prime_region_length`, inclusive.
-            ValueError: If `max_mismatches` is less than 0.
+            ValueError: If `max_mismatches` is not greater than or equal to 0.
         """
         errors: list[str] = []
         if max_amplicon_size < 1:
