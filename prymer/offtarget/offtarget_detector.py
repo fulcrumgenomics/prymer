@@ -40,7 +40,7 @@ the off-target mappings.
 OffTargetResult(primer_pair=..., passes=False, cached=False, spans=[], left_primer_spans=[], right_primer_spans=[])
 >>> list(detector.check_all(primer_pairs=[primer_pair]).values())
 [OffTargetResult(primer_pair=..., passes=False, cached=True, spans=[], left_primer_spans=[], right_primer_spans=[])]
->>> detector = OffTargetDetector(ref=ref_fasta, max_primer_hits=204, max_primer_pair_hits=856, three_prime_region_length=20, max_mismatches_in_three_prime_region=0, max_mismatches=0, min_amplicon_size=10, max_amplicon_size=250)
+>>> detector = OffTargetDetector(ref=ref_fasta, max_primer_hits=204, max_primer_pair_hits=856, three_prime_region_length=20, max_mismatches_in_three_prime_region=0, max_mismatches=0, max_amplicon_size=250)
 >>> result = detector.check_one(primer_pair=primer_pair)
 >>> len(result.spans)
 856
@@ -173,6 +173,7 @@ class OffTargetDetector(AbstractContextManager):
         max_amplicon_size: int = 1000,
         min_amplicon_size: int = 1,
         min_primer_pair_hits: int = 1,
+        allow_overlapping_hits: bool = False,
         cache_results: bool = True,
         threads: Optional[int] = None,
         keep_spans: bool = True,
@@ -191,7 +192,8 @@ class OffTargetDetector(AbstractContextManager):
            and `max_primer_hits`.
         2. Filtering of individual primers: `max_primer_hits`.
         3. Checking of primer pairs: `max_primer_hits`, `min_primer_pair_hits`,
-           `max_primer_pair_hits`, and `max_amplicon_size`.
+           `max_primer_pair_hits`, `allow_overlapping_hits`, `min_amplicon_size, and
+           `max_amplicon_size`.
 
         The `three_prime_region_length` parameter is used as the seed length for `bwa aln`.
 
@@ -227,7 +229,12 @@ class OffTargetDetector(AbstractContextManager):
             max_amplicon_size: the maximum amplicon size to consider amplifiable. Must be greater
                 than 0.
             min_amplicon_size: the minimum amplicon size to consider amplifiable. Must be between 1
-                and `max_amplicon_size` inclusive. Default 1bp.
+                and `max_amplicon_size` inclusive. If `allow_overlapping_hits` is False, primer
+                pair hits that overlap each other will not be considered, even if they would create
+                an amplicon of at least `min_amplicon_size`. Default 1bp.
+            allow_overlapping_hits: if True, allow hits to the invididual primers in a primer pair
+                to overlap with each other. If False, no overlap will be allowed, even if
+                `min_amplicon_size` would otherwise allow it. Default False.
             cache_results: if True, cache results for faster re-querying
             threads: the number of threads to use when invoking bwa
             keep_spans: if True, [[OffTargetResult]] objects will be reported with amplicon spans
@@ -321,6 +328,7 @@ class OffTargetDetector(AbstractContextManager):
         self._min_primer_pair_hits: int = min_primer_pair_hits
         self._max_amplicon_size: int = max_amplicon_size
         self._min_amplicon_size: int = min_amplicon_size
+        self._allow_overlapping_hits: bool = allow_overlapping_hits
         self._cache_results: bool = cache_results
         self._keep_spans: bool = keep_spans
         self._keep_primer_spans: bool = keep_primer_spans
@@ -368,7 +376,11 @@ class OffTargetDetector(AbstractContextManager):
 
         This method maps each primer to the specified reference with `bwa aln` to search for
         off-target hits. Possible amplicons are identified from the pairwise combinations of these
-        alignments, up to the specified `max_amplicon_size`.
+        alignments.
+
+        If `allow_overlapping_hits=True`, amplicons in the size range `min_amplicon_size` to
+        `max_amplicon_size` will be returned. If `allow_overlapping_hits=False`, the size range will
+        still apply, but will exclude amplicons with overlapping hits.
 
         Primer pairs are marked as passing if both of the following are true:
         1. Each primer has no more than `max_primer_hits` alignments to the genome.
@@ -474,6 +486,7 @@ class OffTargetDetector(AbstractContextManager):
                     negative_hits=right_negative_hits[refname],
                     min_len=self._min_amplicon_size,
                     max_len=self._max_amplicon_size,
+                    allow_overlapping_hits=self._allow_overlapping_hits,
                     strand=Strand.POSITIVE,
                 )
             )
@@ -483,6 +496,7 @@ class OffTargetDetector(AbstractContextManager):
                     negative_hits=left_negative_hits[refname],
                     min_len=self._min_amplicon_size,
                     max_len=self._max_amplicon_size,
+                    allow_overlapping_hits=self._allow_overlapping_hits,
                     strand=Strand.NEGATIVE,
                 )
             )
@@ -564,6 +578,7 @@ class OffTargetDetector(AbstractContextManager):
         max_len: int,
         strand: Strand,
         min_len: int = 1,
+        allow_overlapping_hits: bool = False,
     ) -> list[Span]:
         """Takes lists of positive strand hits and negative strand hits and constructs amplicon
         mappings anywhere a positive strand hit and a negative strand hit occur where the end of
@@ -571,7 +586,8 @@ class OffTargetDetector(AbstractContextManager):
         the positive strand hit.
 
         Primer hits may overlap if `min_len` is shorter than the length of the left and right
-        primers together.
+        primers together and `allow_overlapping_hits` is True. If `allow_overlapping_hits` is False,
+        these will not be returned.
 
         Args:
             positive_hits: List of hits on the positive strand for one of the primers in the pair.
@@ -581,7 +597,12 @@ class OffTargetDetector(AbstractContextManager):
                 `positive_hits` are for the left primer and `negative_hits` are for the right
                 primer. Set to Strand.NEGATIVE if `positive_hits` are for the right primer and
                 `negative_hits` are for the left primer.
-            min_len: Minimum length of amplicons to consider. Default 1.
+            min_len: Minimum length of amplicons to consider. If `allow_overlap` is False, primer
+                pair hits that overlap each other will not be considered, even if they would create
+                an amplicon of at least `min_len`. Default 1bp.
+            allow_overlapping_hits: if True, allow hits to the invididual primers in a primer pair
+                to overlap with each other. If False, no overlap will be allowed, even if
+                `min_amplicon_size` would otherwise allow it. Default False.
 
         Raises:
             ValueError: If any of the positive hits are not on the positive strand, or any of the
@@ -621,10 +642,13 @@ class OffTargetDetector(AbstractContextManager):
             ):
                 # Hit coordinates are 1-based end-inclusive.
                 amplicon_length: int = negative_hit.end - positive_hit.start + 1
-                if min_len <= amplicon_length <= max_len:
-                    # If the negative hit starts to the right of the positive hit, and the amplicon
-                    # length is in the correct size range, add it to the list of amplicon hits to
-                    # be returned.
+                if min_len <= amplicon_length <= max_len and (
+                    allow_overlapping_hits or negative_hit.start > positive_hit.end
+                ):
+                    # If overlapping hits are allowed and the amplicon length is in the correct
+                    # size range, -OR- if overlapping hits are not allowed, the negative hit starts
+                    # after the positive hit ends, and the amplicon length is less than or equal
+                    # to the allowed maximum, add it to the list of amplicon hits to be returned.
                     amplicons.append(
                         Span(
                             refname=positive_hit.refname,

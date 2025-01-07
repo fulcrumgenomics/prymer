@@ -24,8 +24,9 @@ def _build_detector(
     three_prime_region_length: int = 20,
     max_mismatches_in_three_prime_region: int = 0,
     max_mismatches: int = 0,
-    min_amplicon_size: int = 10,
+    min_amplicon_size: int = 1,
     max_amplicon_size: int = 250,
+    allow_overlapping_hits: bool = False,
     cache_results: bool = True,
 ) -> OffTargetDetector:
     """Builds an `OffTargetDetector` with strict defaults"""
@@ -38,6 +39,7 @@ def _build_detector(
         max_mismatches=max_mismatches,
         min_amplicon_size=min_amplicon_size,
         max_amplicon_size=max_amplicon_size,
+        allow_overlapping_hits=allow_overlapping_hits,
         cache_results=cache_results,
         keep_spans=True,
         keep_primer_spans=True,
@@ -350,6 +352,7 @@ def test_to_amplicons_overlapping(
             negative_hits=[negative],
             min_len=1,
             max_len=250,
+            allow_overlapping_hits=True,
             strand=strand,
         )
         assert actual == expected, test_id
