@@ -267,7 +267,7 @@ class OffTargetDetector(AbstractContextManager):
         ):
             errors.append(
                 "'max_mismatches_in_three_prime_region' must be between 0 and "
-                f"{three_prime_region_length} inclusive. "
+                f"'three_prime_region_length'={three_prime_region_length} inclusive. "
                 f"Saw {max_mismatches_in_three_prime_region}"
             )
         if max_mismatches < 0:
