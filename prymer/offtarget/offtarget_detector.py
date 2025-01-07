@@ -238,6 +238,8 @@ class OffTargetDetector(AbstractContextManager):
 
         Raises:
             ValueError: If `max_amplicon_size` is not greater than 0.
+            ValueError: If `min_amplicon_size` is outside the range 1 to `max_amplicon_size`,
+                inclusive.
             ValueError: If any of `max_primer_hits`, `max_primer_pair_hits`, or
                 `min_primer_pair_hits` are not greater than or equal to 0.
             ValueError: If `three_prime_region_length` is not greater than or equal to 8.
@@ -250,6 +252,11 @@ class OffTargetDetector(AbstractContextManager):
         errors: list[str] = []
         if max_amplicon_size < 1:
             errors.append(f"'max_amplicon_size' must be greater than 0. Saw {max_amplicon_size}")
+        if min_amplicon_size < 1 or min_amplicon_size > max_amplicon_size:
+            errors.append(
+                f"'min_amplicon_size' must be between 1 and 'max_amplicon_size'={max_amplicon_size}"
+                f" inclusive. Saw {min_amplicon_size}"
+            )
         if max_primer_hits < 0:
             errors.append(
                 f"'max_primer_hits' must be greater than or equal to 0. Saw {max_primer_hits}"
@@ -317,33 +324,6 @@ class OffTargetDetector(AbstractContextManager):
         self._cache_results: bool = cache_results
         self._keep_spans: bool = keep_spans
         self._keep_primer_spans: bool = keep_primer_spans
-
-    def __post_init__(self) -> None:
-        """
-        Validates parameters.
-
-        Raises:
-            ValueError: If `min_amplicon_size` is greater than `max_amplicon_size`, or if either
-                value is less than 1.
-            ValueError: If `max_primer_hits`, `max_primer_pair_hits`, or `min_primer_pair_hits` are
-                less than 0.
-        """
-        errors: list[str] = []
-        if self._min_amplicon_size < 1:
-            errors.append("'min_amplicon_size' must be greater than or equal to 1.")
-        if self._max_amplicon_size < 1:
-            errors.append("'max_amplicon_size' must be greater than or equal to 1.")
-        if self._min_amplicon_size > self._max_amplicon_size:
-            errors.append("'min_amplicon_size' must be less than or equal to 'max_amplicon_size'.")
-        if self._max_primer_hits < 0:
-            errors.append("'max_primer_hits' must be greater than or equal to 0.")
-        if self._max_primer_pair_hits < 0:
-            errors.append("'max_primer_pair_hits' must be greater than or equal to 0.")
-        if self._min_primer_pair_hits < 0:
-            errors.append("'min_primer_pair_hits' must be greater than or equal to 0.")
-
-        if len(errors) > 0:
-            raise ValueError("\n".join(errors))
 
     def filter(self, primers: list[PrimerType]) -> list[PrimerType]:
         """
