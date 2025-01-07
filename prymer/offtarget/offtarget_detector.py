@@ -193,20 +193,23 @@ class OffTargetDetector(AbstractContextManager):
             ref: the reference genome fasta file (must be indexed with BWA)
             max_primer_hits: the maximum number of hits an individual primer can have in the genome
                 before it is considered an invalid primer, and all primer pairs containing the
-                primer failed.
+                primer failed. Must be greater than or equal to 0.
             max_primer_pair_hits: the maximum number of amplicons a primer pair can make and be
-                considered passing
+                considered passing. Must be greater than or equal to 0.
             min_primer_pair_hits: The minimum number of amplicons a primer pair can make and be
                 considered passing. (In most cases, this is the number of amplicons a primer pair is
                 expected to generate.) The default is 1, which is appropriate when the primer pair
                 is being evaluated for off-target hits against the same reference genome from which
                 the primers were generated. If the primer pair was generated from a different
-                reference sequence, it may be appropriate to set this value to 0.
+                reference sequence, it may be appropriate to set this value to 0. Must be greater
+                    than or equal to 0.
             three_prime_region_length: the number of bases at the 3' end of the primer in which the
-                parameter max_mismatches_in_three_prime_region is evaluated
+                parameter `max_mismatches_in_three_prime_region` is evaluated. Must be greater than
+                    0.
             max_mismatches_in_three_prime_region: the maximum number of mismatches that are
                 tolerated in the three prime region of each primer defined by
-                three_prime_region_length
+                `three_prime_region_length`. Must be between 0 and `three_prime_region_length`,
+                inclusive.
             max_mismatches: the maximum number of mismatches allowed in the full length primer
                 (including any in the three prime region)
             max_gap_opens: the maximum number of gaps (insertions or deletions) allowable in an
@@ -216,6 +219,9 @@ class OffTargetDetector(AbstractContextManager):
                 unlimited extensions up to max diffs (aka max mismatches), while disallowing
                 "long gaps".
             max_amplicon_size: the maximum amplicon size to consider amplifiable
+                (including any in the three prime region). Must be greater than or equal to 0.
+            max_amplicon_size: the maximum amplicon size to consider amplifiable. Must be greater
+                than 0.
             cache_results: if True, cache results for faster re-querying
             threads: the number of threads to use when invoking bwa
             keep_spans: if True, [[OffTargetResult]] objects will be reported with amplicon spans
@@ -223,7 +229,57 @@ class OffTargetDetector(AbstractContextManager):
             keep_primer_spans: if True, [[OffTargetResult]] objects will be reported with left and
                 right primer spans
             executable: string or Path representation of the `bwa` executable path
+
+        Raises:
+            ValueError: If `max_amplicon_size` is less than 1.
+            ValueError: If any of `max_primer_hits`, `max_primer_pair_hits`, or
+                `min_primer_pair_hits` are less than 0.
+            ValueError: If `three_prime_region_length` is less than 1.
+            ValueError: If `max_mismatches_in_three_prime_region` is outside the range 0 to
+                `three_prime_region_length`, inclusive.
+            ValueError: If `max_mismatches` is less than 0.
         """
+        errors: list[str] = []
+        if max_amplicon_size < 1:
+            errors.append(
+                f"'max_amplicon_size' must be greater than or equal to 1. Saw {max_amplicon_size}"
+            )
+        if max_primer_hits < 0:
+            errors.append(
+                f"'max_primer_hits' must be greater than or equal to 0. Saw {max_primer_hits}"
+            )
+        if max_primer_pair_hits < 0:
+            errors.append(
+                "'max_primer_pair_hits' must be greater than or equal to 0. "
+                f"Saw {max_primer_pair_hits}"
+            )
+        if min_primer_pair_hits < 0:
+            errors.append(
+                "'min_primer_pair_hits' must be greater than or equal to 0. "
+                f"Saw {min_primer_pair_hits}"
+            )
+        if three_prime_region_length < 1:
+            errors.append(
+                "'three_prime_region_length' must be greater than or equal to 1. "
+                f"Saw {three_prime_region_length}"
+            )
+        if (
+            max_mismatches_in_three_prime_region < 0
+            or max_mismatches_in_three_prime_region > three_prime_region_length
+        ):
+            errors.append(
+                "'max_mismatches_in_three_prime_region' must be between 0 and "
+                f"{three_prime_region_length}, inclusive. "
+                f"Saw {max_mismatches_in_three_prime_region}"
+            )
+        if max_mismatches < 0:
+            errors.append(
+                f"'max_mismatches' must be greater than or equal to 0. Saw {max_mismatches}"
+            )
+
+        if len(errors) > 0:
+            raise ValueError("\n".join(errors))
+
         self._primer_cache: dict[str, BwaResult] = {}
         self._primer_pair_cache: dict[PrimerPair, OffTargetResult] = {}
         self._bwa = BwaAlnInteractive(
