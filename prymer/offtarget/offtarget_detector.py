@@ -241,9 +241,7 @@ class OffTargetDetector(AbstractContextManager):
         """
         errors: list[str] = []
         if max_amplicon_size < 1:
-            errors.append(
-                f"'max_amplicon_size' must be greater than or equal to 1. Saw {max_amplicon_size}"
-            )
+            errors.append(f"'max_amplicon_size' must be greater than 0. Saw {max_amplicon_size}")
         if max_primer_hits < 0:
             errors.append(
                 f"'max_primer_hits' must be greater than or equal to 0. Saw {max_primer_hits}"
@@ -260,7 +258,7 @@ class OffTargetDetector(AbstractContextManager):
             )
         if three_prime_region_length < 1:
             errors.append(
-                "'three_prime_region_length' must be greater than or equal to 1. "
+                "'three_prime_region_length' must be greater than 0. "
                 f"Saw {three_prime_region_length}"
             )
         if (
@@ -269,7 +267,7 @@ class OffTargetDetector(AbstractContextManager):
         ):
             errors.append(
                 "'max_mismatches_in_three_prime_region' must be between 0 and "
-                f"{three_prime_region_length}, inclusive. "
+                f"{three_prime_region_length} inclusive. "
                 f"Saw {max_mismatches_in_three_prime_region}"
             )
         if max_mismatches < 0:
