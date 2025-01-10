@@ -157,7 +157,7 @@ class OffTargetDetector(AbstractContextManager):
     alignments does not exceed the specified maximum number of primer pair hits.
     """
 
-    def __init__(
+    def __init__(  # noqa: C901
         self,
         ref: Path,
         max_primer_hits: int,
@@ -211,15 +211,13 @@ class OffTargetDetector(AbstractContextManager):
                 `three_prime_region_length`. Must be between 0 and `three_prime_region_length`,
                 inclusive.
             max_mismatches: the maximum number of mismatches allowed in the full length primer
-                (including any in the three prime region)
+                (including any in the three prime region). Must be greater than or equal to 0.
             max_gap_opens: the maximum number of gaps (insertions or deletions) allowable in an
-                alignment of a oligo to the reference
+                alignment of a oligo to the reference. Must be greater than or equal to 0.
             max_gap_extends: the maximum number of gap extensions allowed; extending a gap
                 beyond a single base costs 1 gap extension.  Can be set to -1 to allow
                 unlimited extensions up to max diffs (aka max mismatches), while disallowing
-                "long gaps".
-            max_amplicon_size: the maximum amplicon size to consider amplifiable
-                (including any in the three prime region). Must be greater than or equal to 0.
+                "long gaps". Must be greater than or equal to -1.
             max_amplicon_size: the maximum amplicon size to consider amplifiable. Must be greater
                 than 0.
             cache_results: if True, cache results for faster re-querying
@@ -238,6 +236,8 @@ class OffTargetDetector(AbstractContextManager):
             ValueError: If `max_mismatches_in_three_prime_region` is outside the range 0 to
                 `three_prime_region_length`, inclusive.
             ValueError: If `max_mismatches` is not greater than or equal to 0.
+            ValueError: If `max_gap_opens` is not greater than or equal to 0.
+            ValueError: If `max_gap_extends` is not -1 or greater than or equal to 0.
         """
         errors: list[str] = []
         if max_amplicon_size < 1:
@@ -273,6 +273,15 @@ class OffTargetDetector(AbstractContextManager):
         if max_mismatches < 0:
             errors.append(
                 f"'max_mismatches' must be greater than or equal to 0. Saw {max_mismatches}"
+            )
+        if max_gap_opens < 0:
+            errors.append(
+                f"'max_gap_opens' must be greater than or equal to 0. Saw {max_gap_opens}"
+            )
+        if max_gap_extends < -1:
+            errors.append(
+                "'max_gap_extends' must be -1 (for unlimited extensions up to 'max_mismatches'="
+                f"{max_mismatches}) or greater than or equal to 0. Saw {max_gap_extends}"
             )
 
         if len(errors) > 0:
