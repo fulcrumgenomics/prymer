@@ -11,6 +11,7 @@ from prymer.api.span import Strand
 from prymer.offtarget.bwa import BWA_EXECUTABLE_NAME
 from prymer.offtarget.bwa import BwaHit
 from prymer.offtarget.bwa import BwaResult
+from prymer.offtarget.bwa import Query
 from prymer.offtarget.offtarget_detector import OffTargetDetector
 from prymer.offtarget.offtarget_detector import OffTargetResult
 
@@ -171,66 +172,157 @@ def test_mappings_of(ref_fasta: Path, cache_results: bool) -> None:
             assert results_dict[p2.bases].hits[0] == expected_hit2
 
 
+# Test building an OffTargetResult for a primer pair with left/right hits on different references
+# and in different orientations
+def test_build_off_target_result(ref_fasta: Path) -> None:
+    hits_by_primer: dict[str, BwaResult] = {
+        "A" * 100: BwaResult(
+            query=Query(
+                id="left",
+                bases="A" * 100,
+            ),
+            hit_count=3,
+            hits=[
+                BwaHit.build("chr1", 100, False, "100M", 0),
+                BwaHit.build("chr1", 400, True, "100M", 0),
+                BwaHit.build("chr2", 100, False, "100M", 0),
+                BwaHit.build("chr3", 700, True, "100M", 0),
+            ],
+        ),
+        "C" * 100: BwaResult(
+            query=Query(
+                id="right",
+                bases="C" * 100,
+            ),
+            hit_count=2,
+            hits=[
+                BwaHit.build("chr1", 800, False, "100M", 0),
+                BwaHit.build("chr1", 200, True, "100M", 0),
+                BwaHit.build("chr3", 600, False, "100M", 0),
+            ],
+        ),
+    }
+
+    primer_pair = PrimerPair(
+        left_primer=Oligo(
+            tm=50,
+            penalty=0,
+            span=Span(refname="chr10", start=100, end=199, strand=Strand.POSITIVE),
+            bases="A" * 100,
+        ),
+        right_primer=Oligo(
+            tm=50,
+            penalty=0,
+            span=Span(refname="chr10", start=300, end=399, strand=Strand.NEGATIVE),
+            bases="C" * 100,
+        ),
+        amplicon_tm=100,
+        penalty=0,
+    )
+
+    with _build_detector(
+        ref_fasta=ref_fasta, max_primer_hits=10, max_primer_pair_hits=10
+    ) as detector:
+        off_target_result: OffTargetResult = detector._build_off_target_result(
+            primer_pair=primer_pair,
+            hits_by_primer=hits_by_primer,
+        )
+
+    assert set(off_target_result.spans) == {
+        Span(refname="chr1", start=100, end=299, strand=Strand.POSITIVE),
+        Span(refname="chr3", start=600, end=799, strand=Strand.NEGATIVE),
+    }
+
+
 # Test that using the cache (or not) does not affect the results
 @pytest.mark.parametrize("cache_results", [True, False])
 @pytest.mark.parametrize(
-    "test_id, left, right, expected",
+    "test_id, positive, negative, strand, expected",
     [
-        (
-            "No mappings - different refnames",
-            BwaHit.build("chr1", 100, False, "100M", 0),
-            BwaHit.build("chr2", 100, True, "100M", 0),
-            [],
-        ),
-        (
-            "No mappings - FF pair",
-            BwaHit.build("chr1", 100, True, "100M", 0),
-            BwaHit.build("chr1", 100, True, "100M", 0),
-            [],
-        ),
-        (
-            "No mappings - RR pair",
-            BwaHit.build("chr1", 100, False, "100M", 0),
-            BwaHit.build("chr1", 100, False, "100M", 0),
-            [],
-        ),
         (
             "No mappings - overlapping primers (1bp overlap)",
             BwaHit.build("chr1", 100, False, "100M", 0),
             BwaHit.build("chr1", 199, True, "100M", 0),
+            Strand.POSITIVE,
             [],
         ),
         (
             "No mappings - amplicon size too big (1bp too big)",
             BwaHit.build("chr1", 100, False, "100M", 0),
             BwaHit.build("chr1", 151, True, "100M", 0),
+            Strand.POSITIVE,
             [],
         ),
         (
             "Mappings - FR pair (R1 F)",
             BwaHit.build("chr1", 100, False, "100M", 0),
             BwaHit.build("chr1", 200, True, "100M", 0),
-            [Span(refname="chr1", start=100, end=299)],
+            Strand.POSITIVE,
+            [Span(refname="chr1", start=100, end=299, strand=Strand.POSITIVE)],
         ),
         (
             "Mappings - FR pair (R1 R)",
-            BwaHit.build("chr1", 200, True, "100M", 0),
             BwaHit.build("chr1", 100, False, "100M", 0),
-            [Span(refname="chr1", start=100, end=299)],
+            BwaHit.build("chr1", 200, True, "100M", 0),
+            Strand.NEGATIVE,
+            [Span(refname="chr1", start=100, end=299, strand=Strand.NEGATIVE)],
         ),
     ],
 )
 def test_to_amplicons(
     ref_fasta: Path,
     test_id: str,
-    left: BwaHit,
-    right: BwaHit,
+    positive: BwaHit,
+    negative: BwaHit,
+    strand: Strand,
     expected: list[Span],
     cache_results: bool,
 ) -> None:
     with _build_detector(ref_fasta=ref_fasta, cache_results=cache_results) as detector:
-        actual = detector._to_amplicons(lefts=[left], rights=[right], max_len=250)
+        actual = detector._to_amplicons(
+            positive_hits=[positive], negative_hits=[negative], max_len=250, strand=strand
+        )
         assert actual == expected, test_id
+
+
+@pytest.mark.parametrize("cache_results", [True, False])
+@pytest.mark.parametrize(
+    "positive, negative, expected_error",
+    [
+        (
+            # No mappings - different refnames
+            BwaHit.build("chr1", 100, False, "100M", 0),
+            BwaHit.build("chr2", 100, True, "100M", 0),
+            "Hits are present on more than one reference",
+        ),
+        (
+            # No mappings - FF pair
+            BwaHit.build("chr1", 100, True, "100M", 0),
+            BwaHit.build("chr1", 100, True, "100M", 0),
+            "Positive hits must be on the positive strand",
+        ),
+        (
+            # No mappings - RR pair
+            BwaHit.build("chr1", 100, False, "100M", 0),
+            BwaHit.build("chr1", 100, False, "100M", 0),
+            "Negative hits must be on the negative strand",
+        ),
+    ],
+)
+def test_to_amplicons_value_error(
+    ref_fasta: Path,
+    positive: BwaHit,
+    negative: BwaHit,
+    expected_error: str,
+    cache_results: bool,
+) -> None:
+    with (
+        _build_detector(ref_fasta=ref_fasta, cache_results=cache_results) as detector,
+        pytest.raises(ValueError, match=expected_error),
+    ):
+        detector._to_amplicons(
+            positive_hits=[positive], negative_hits=[negative], max_len=250, strand=Strand.POSITIVE
+        )
 
 
 def test_generic_filter(ref_fasta: Path) -> None:
