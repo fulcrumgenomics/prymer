@@ -363,7 +363,7 @@ def test_generic_filter(ref_fasta: Path) -> None:
         (-1, 1, 1, 20, 0, 0, 1, 0, 0, "'max_primer_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
         (1, -1, 1, 20, 0, 0, 1, 0, 0, "'max_primer_pair_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
         (1, 1, -1, 20, 0, 0, 1, 0, 0, "'min_primer_pair_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
-        (1, 1, 1, 0, 0, 0, 1, 0, 0, "'three_prime_region_length' must be greater than 0. Saw 0"),
+        (1, 1, 1, 5, 0, 0, 1, 0, 0, "'three_prime_region_length' must be greater than or equal to 8. Saw 5"),  # noqa: E501
         (1, 1, 1, 20, -1, 0, 1, 0, 0, "'max_mismatches_in_three_prime_region' must be between 0 and 'three_prime_region_length'=20 inclusive. Saw -1"),  # noqa: E501
         (1, 1, 1, 20, 21, 0, 1, 0, 0, "'max_mismatches_in_three_prime_region' must be between 0 and 'three_prime_region_length'=20 inclusive. Saw 21"),  # noqa: E501
         (1, 1, 1, 20, 0, -1, 1, 0, 0, "'max_mismatches' must be greater than or equal to 0. Saw -1"),  # noqa: E501

@@ -104,6 +104,9 @@ PrimerType = TypeVar("PrimerType", bound=Oligo)
 ReferenceName: TypeAlias = str
 """Alias for a reference sequence name."""
 
+MINIMUM_THREE_PRIME_REGION_LENGTH: int = 8
+"""Minimum allowable seed length for the 3' region."""
+
 
 @dataclass(init=True, frozen=True)
 class OffTargetResult:
@@ -189,6 +192,8 @@ class OffTargetDetector(AbstractContextManager):
         3. Checking of primer pairs: `max_primer_hits`, `min_primer_pair_hits`,
            `max_primer_pair_hits`, and `max_amplicon_size`.
 
+        The `three_prime_region_length` parameter is used as the seed length for `bwa aln`.
+
         Args:
             ref: the reference genome fasta file (must be indexed with BWA)
             max_primer_hits: the maximum number of hits an individual primer can have in the genome
@@ -204,8 +209,8 @@ class OffTargetDetector(AbstractContextManager):
                 reference sequence, it may be appropriate to set this value to 0. Must be greater
                     than or equal to 0.
             three_prime_region_length: the number of bases at the 3' end of the primer in which the
-                parameter `max_mismatches_in_three_prime_region` is evaluated. Must be greater than
-                    0.
+                parameter `max_mismatches_in_three_prime_region` is evaluated. This value is used as
+                the seed length (`bwa aln -l`). Must be a minimum of 8.
             max_mismatches_in_three_prime_region: the maximum number of mismatches that are
                 tolerated in the three prime region of each primer defined by
                 `three_prime_region_length`. Must be between 0 and `three_prime_region_length`,
@@ -232,7 +237,7 @@ class OffTargetDetector(AbstractContextManager):
             ValueError: If `max_amplicon_size` is not greater than 0.
             ValueError: If any of `max_primer_hits`, `max_primer_pair_hits`, or
                 `min_primer_pair_hits` are not greater than or equal to 0.
-            ValueError: If `three_prime_region_length` is not greater than 0.
+            ValueError: If `three_prime_region_length` is not greater than or equal to 8.
             ValueError: If `max_mismatches_in_three_prime_region` is outside the range 0 to
                 `three_prime_region_length`, inclusive.
             ValueError: If `max_mismatches` is not greater than or equal to 0.
@@ -256,10 +261,10 @@ class OffTargetDetector(AbstractContextManager):
                 "'min_primer_pair_hits' must be greater than or equal to 0. "
                 f"Saw {min_primer_pair_hits}"
             )
-        if three_prime_region_length < 1:
+        if three_prime_region_length < MINIMUM_THREE_PRIME_REGION_LENGTH:
             errors.append(
-                "'three_prime_region_length' must be greater than 0. "
-                f"Saw {three_prime_region_length}"
+                "'three_prime_region_length' must be greater than or equal to "
+                f"{MINIMUM_THREE_PRIME_REGION_LENGTH}. Saw {three_prime_region_length}"
             )
         if (
             max_mismatches_in_three_prime_region < 0
