@@ -385,9 +385,8 @@ class Primer3(AbstractContextManager):
         seq_args = {}
         global_args = {}
         for tag, value in assembled_primer3_tags.items():
-            tag_str = f"{tag}"
-            if tag_str.startswith("SEQUENCE"):
-                seq_args[tag_str] = value
+            if tag.is_sequence_arg:
+                seq_args[tag] = value
             else:
                 global_args[tag] = value
         design_primers_retval = primer3.design_primers(seq_args=seq_args, global_args=global_args)
@@ -397,22 +396,16 @@ class Primer3(AbstractContextManager):
             # Because Primer3 will emit both the input given and the output generated, we
             # discard the input that is echo'ed back by looking for tags (keys)
             # that do not match any Primer3InputTag
-            if not any(key == item.value for item in Primer3InputTag):
+            if key not in Primer3InputTag:
                 primer3_results[key] = value
-
-        def primer3_error(message: str) -> None:
-            """Formats the Primer3 error and raises a ValueError."""
-            error_message = f"{message}: "
-            # add in any reported PRIMER_ERROR
-            if "PRIMER_ERROR" in primer3_results:
-                error_message += primer3_results["PRIMER_ERROR"]
-            # raise the exception now
-            raise ValueError(error_message)
 
         # Check for any errors.  Typically, these are in error_lines, but also the results can
         # contain the PRIMER_ERROR key.
-        if "PRIMER_ERROR" in primer3_results :
-            primer3_error("Primer3 failed")
+        if "PRIMER_ERROR" in primer3_results:
+            if "PRIMER_ERROR" in primer3_results:
+                raise ValueError("Primer3 failed: " + primer3_results["PRIMER_ERROR"])
+            else:
+                raise ValueError("Primer3 failed")
 
         match design_input.task:
             case DesignPrimerPairsTask():  # Primer pair design

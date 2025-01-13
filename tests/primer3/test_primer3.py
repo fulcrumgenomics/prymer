@@ -361,9 +361,7 @@ def test_fasta_close_valid(
         task=DesignLeftPrimersTask(),
     )
 
-    with pytest.raises(
-        ValueError, match="I/O operation on closed file"
-    ):
+    with pytest.raises(ValueError, match="I/O operation on closed file"):
         designer.design(design_input=design_input)
 
 
