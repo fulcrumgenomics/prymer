@@ -232,7 +232,7 @@ class OffTargetDetector(AbstractContextManager):
                 and `max_amplicon_size` inclusive. If `allow_overlapping_hits` is False, primer
                 pair hits that overlap each other will not be considered, even if they would create
                 an amplicon of at least `min_amplicon_size`. Default 1bp.
-            allow_overlapping_hits: if True, allow hits to the invididual primers in a primer pair
+            allow_overlapping_hits: if True, allow hits to the individual primers in a primer pair
                 to overlap with each other. If False, no overlap will be allowed, even if
                 `min_amplicon_size` would otherwise allow it. Default False.
             cache_results: if True, cache results for faster re-querying
