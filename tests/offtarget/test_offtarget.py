@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -349,3 +350,52 @@ def test_generic_filter(ref_fasta: Path) -> None:
         # 2. Return a list of the same type.
         # NB: we're ignoring the unused value error because we want to check the type hint
         filtered_primers: list[CustomPrimer] = detector.filter(primers)  # noqa: F841
+
+
+# fmt: off
+@pytest.mark.parametrize(
+    (
+        "max_primer_hits,max_primer_pair_hits,min_primer_pair_hits,three_prime_region_length,"
+        "max_mismatches_in_three_prime_region,max_mismatches,max_amplicon_size,"
+        "max_gap_opens,max_gap_extends,expected_error"
+    ),
+    [
+        (-1, 1, 1, 20, 0, 0, 1, 0, 0, "'max_primer_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
+        (1, -1, 1, 20, 0, 0, 1, 0, 0, "'max_primer_pair_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
+        (1, 1, -1, 20, 0, 0, 1, 0, 0, "'min_primer_pair_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
+        (1, 1, 1, 5, 0, 0, 1, 0, 0, "'three_prime_region_length' must be greater than or equal to 8. Saw 5"),  # noqa: E501
+        (1, 1, 1, 20, -1, 0, 1, 0, 0, "'max_mismatches_in_three_prime_region' must be between 0 and 'three_prime_region_length'=20 inclusive. Saw -1"),  # noqa: E501
+        (1, 1, 1, 20, 21, 0, 1, 0, 0, "'max_mismatches_in_three_prime_region' must be between 0 and 'three_prime_region_length'=20 inclusive. Saw 21"),  # noqa: E501
+        (1, 1, 1, 20, 0, -1, 1, 0, 0, "'max_mismatches' must be greater than or equal to 0. Saw -1"),  # noqa: E501
+        (1, 1, 1, 20, 0, 0, 0, 0, 0, "'max_amplicon_size' must be greater than 0. Saw 0"),
+        (1, 1, 1, 20, 0, 0, 1, -1, 0, "'max_gap_opens' must be greater than or equal to 0. Saw -1"),
+        (1, 1, 1, 20, 0, 5, 1, 0, -2, re.escape("'max_gap_extends' must be -1 (for unlimited extensions up to 'max_mismatches'=5) or greater than or equal to 0. Saw -2")), #noqa: E501
+    ],
+)
+# fmt: on
+def test_init(
+    ref_fasta: Path,
+    max_primer_hits: int,
+    max_primer_pair_hits: int,
+    min_primer_pair_hits: int,
+    three_prime_region_length: int,
+    max_mismatches_in_three_prime_region: int,
+    max_mismatches: int,
+    max_amplicon_size: int,
+    max_gap_opens: int,
+    max_gap_extends: int,
+    expected_error: str,
+) -> None:
+    with pytest.raises(ValueError, match=expected_error):
+        OffTargetDetector(
+            ref=ref_fasta,
+            max_primer_hits=max_primer_hits,
+            max_primer_pair_hits=max_primer_pair_hits,
+            min_primer_pair_hits=min_primer_pair_hits,
+            three_prime_region_length=three_prime_region_length,
+            max_mismatches_in_three_prime_region=max_mismatches_in_three_prime_region,
+            max_mismatches=max_mismatches,
+            max_amplicon_size=max_amplicon_size,
+            max_gap_opens=max_gap_opens,
+            max_gap_extends=max_gap_extends,
+        )
