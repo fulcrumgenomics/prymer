@@ -597,9 +597,9 @@ class OffTargetDetector(AbstractContextManager):
                 `positive_hits` are for the left primer and `negative_hits` are for the right
                 primer. Set to Strand.NEGATIVE if `positive_hits` are for the right primer and
                 `negative_hits` are for the left primer.
-            min_len: Minimum length of amplicons to consider. If `allow_overlap` is False, primer
-                pair hits that overlap each other will not be considered, even if they would create
-                an amplicon of at least `min_len`. Default 1bp.
+            min_len: Minimum length of amplicons to consider. If `allow_overlapping_hits` is False,
+                primer pair hits that overlap each other will not be considered, even if they would
+                create an amplicon of at least `min_len`. Default 1bp.
             allow_overlapping_hits: if True, allow hits to the individual primers in a primer pair
                 to overlap with each other. If False, no overlap will be allowed, even if
                 `min_amplicon_size` would otherwise allow it. Default False.
