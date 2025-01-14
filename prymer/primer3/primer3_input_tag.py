@@ -29,6 +29,18 @@ class Primer3InputTag(UppercaseStrEnum):
        Errors in these "global" input tags are fatal.
     """
 
+    # Developer note: sequence-specific tags must be specified prior to global tags
+
+    @property
+    def is_sequence_arg(self) -> bool:
+        """True if this is a sequence input tag (query-specific)"""
+        return self.name.startswith("SEQUENCE")
+
+    @property
+    def is_global_arg(self) -> bool:
+        """True if this is a global input tags (will persist across primer3 queries)"""
+        return not self.is_sequence_arg
+
     # Sequence input tags; query-specific
     SEQUENCE_EXCLUDED_REGION = auto()
     SEQUENCE_INCLUDED_REGION = auto()

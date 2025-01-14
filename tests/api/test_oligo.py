@@ -94,7 +94,7 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=0.0,
             longest_hp=1,
             longest_dinuc=4,
-            str_fields=["ATAT", "1.0", "2.0", "chr1:1-4:+"],
+            str_fields=["ATAT", "1.00", "2.00", "chr1:1-4:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -106,7 +106,7 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=16.667,
             longest_hp=6,
             longest_dinuc=6,
-            str_fields=["ACGTAAAAAATT", "1.0", "2.0", "chr1:1-12:+"],
+            str_fields=["ACGTAAAAAATT", "1.00", "2.00", "chr1:1-12:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -118,7 +118,7 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=25.0,
             longest_hp=1,
             longest_dinuc=2,
-            str_fields=["ATAC", "1.0", "2.0", "chr1:1-4:+"],
+            str_fields=["ATAC", "1.00", "2.00", "chr1:1-4:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -130,7 +130,7 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=33.333,
             longest_hp=2,
             longest_dinuc=4,
-            str_fields=["ATATCC", "1.0", "2.0", "chr1:1-6:+"],
+            str_fields=["ATATCC", "1.00", "2.00", "chr1:1-6:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -142,7 +142,7 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=50.0,
             longest_hp=1,
             longest_dinuc=2,
-            str_fields=["AGCT", "1.0", "2.0", "chr1:1-4:+"],
+            str_fields=["AGCT", "1.00", "2.00", "chr1:1-4:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -154,7 +154,7 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=100.0,
             longest_hp=5,
             longest_dinuc=4,
-            str_fields=["GGGGG", "1.0", "2.0", "chr1:1-5:+"],
+            str_fields=["GGGGG", "1.00", "2.00", "chr1:1-5:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -166,7 +166,7 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=62.5,
             longest_hp=2,
             longest_dinuc=2,
-            str_fields=["ccgTATGC", "1.0", "2.0", "chr1:1-8:+"],
+            str_fields=["ccgTATGC", "1.00", "2.00", "chr1:1-8:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -178,7 +178,7 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=50.0,
             longest_hp=1,
             longest_dinuc=0,
-            str_fields=["ACGT", "1.0", "2.0", "chr1:1-4:+"],
+            str_fields=["ACGT", "1.00", "2.00", "chr1:1-4:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -190,7 +190,7 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=46.154,
             longest_hp=1,
             longest_dinuc=8,
-            str_fields=["ACACACTCTCTCT", "1.0", "2.0", "chr1:1-13:+"],
+            str_fields=["ACACACTCTCTCT", "1.00", "2.00", "chr1:1-13:+"],
         ),
     ]
 

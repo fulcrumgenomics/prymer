@@ -4,13 +4,6 @@
 This module contains the [`Primer3`][prymer.primer3.primer3.Primer3] class, a class to
 facilitate exchange of input and output data with Primer3, a command line tool.
 
-Similar to the [`NtThermoAlign`][prymer.ntthal.NtThermoAlign] and
-[`BwaAlnInteractive`][prymer.offtarget.bwa.BwaAlnInteractive] classes in the `prymer`
-library, the Primer3 class extends the
-[`ExecutableRunner`][prymer.util.executable_runner.ExecutableRunner] base class to
-initiate an underlying subprocess, read and write input and output data, and gracefully terminate
-any remaining subprocesses.
-
 ## Examples
 
 The genome FASTA must be provided to the `Primer3` constructor, such that design and target
@@ -93,19 +86,18 @@ that the proper type is returned (i.e. [`Primer`][prymer.api.primer.Primer] or
 ```python
 >>> for primer in left_result.primers(): \
     print(primer)
-TCTGAACAGGACGAACTGGATTTCCTCAT	65.686	1.953897	chr1:163-191:+
-CTCTGAACAGGACGAACTGGATTTCCTCAT	66.152	2.293213	chr1:162-191:+
-TCTGAACAGGACGAACTGGATTTCCTCATG	66.33	2.514048	chr1:163-192:+
-AACAGGACGAACTGGATTTCCTCATGGAA	66.099	2.524986	chr1:167-195:+
-CTGAACAGGACGAACTGGATTTCCTCATG	65.47	2.556859	chr1:164-192:+
+TCTGAACAGGACGAACTGGATTTCCTCAT	65.69	1.95	chr1:163-191:+
+CTCTGAACAGGACGAACTGGATTTCCTCAT	66.15	2.29	chr1:162-191:+
+TCTGAACAGGACGAACTGGATTTCCTCATG	66.33	2.51	chr1:163-192:+
+AACAGGACGAACTGGATTTCCTCATGGAA	66.10	2.52	chr1:167-195:+
+CTGAACAGGACGAACTGGATTTCCTCATG	65.47	2.56	chr1:164-192:+
 
 ```
 
-Finally, the designer should be closed to terminate the sub-process:
+Finally, the designer should be closed to close access to the FASTA:
 
 ```python
 >>> designer.close()
-True
 
 ```
 
@@ -119,19 +111,22 @@ True
 
 """  # noqa: E501
 
-import logging
-import subprocess
 import typing
 from collections import Counter
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from dataclasses import replace
 from pathlib import Path
+from types import TracebackType
+from typing import Any
 from typing import Generic
 from typing import Optional
+from typing import Self
 from typing import TypeVar
 from typing import Union
 from typing import assert_never
 
+import primer3
 import pysam
 from fgpyo import sam
 from fgpyo.fasta.sequence_dictionary import SequenceDictionary
@@ -153,7 +148,6 @@ from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
 from prymer.primer3.primer3_task import DesignRightPrimersTask
 from prymer.primer3.primer3_task import PickHybProbeOnly
-from prymer.util.executable_runner import ExecutableRunner
 
 
 @dataclass(init=True, slots=True, frozen=True)
@@ -216,7 +210,7 @@ class Primer3Result(Generic[OligoLikeType]):
             raise ValueError("Cannot call `primer_pairs` on `Oligo` results") from ex
 
 
-class Primer3(ExecutableRunner):
+class Primer3(AbstractContextManager):
     """
     Enables interaction with command line tool, primer3.
 
@@ -228,24 +222,17 @@ class Primer3(ExecutableRunner):
     def __init__(
         self,
         genome_fasta: Path,
-        executable: Optional[str] = None,
         variant_lookup: Optional[VariantLookup] = None,
     ) -> None:
         """
         Args:
             genome_fasta: Path to reference genome .fasta file
-            executable: string representation of the path to primer3_core
             variant_lookup: VariantLookup object to facilitate hard-masking variants
 
         Assumes the sequence dictionary is located adjacent to the .fasta file and has the same
         base name with a .dict suffix.
 
         """
-        executable_path = ExecutableRunner.validate_executable_path(
-            executable="primer3_core" if executable is None else executable
-        )
-        command: list[str] = [f"{executable_path}"]
-
         self.variant_lookup = variant_lookup
         self._fasta = pysam.FastaFile(filename=f"{genome_fasta}")
 
@@ -255,21 +242,22 @@ class Primer3(ExecutableRunner):
         with reader(dict_path, file_type=sam.SamFileType.SAM) as fh:
             self._dict: SequenceDictionary = SequenceDictionary.from_sam(header=fh.header)
 
-        super().__init__(command=command, stderr=subprocess.STDOUT)
+    def __enter__(self) -> Self:
+        return self
 
-    def close(self) -> bool:
-        """Closes fasta file regardless of underlying subprocess status.
-        Logs an error if the underlying subprocess is not successfully closed.
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        """Gracefully terminates any running subprocesses."""
+        super().__exit__(exc_type, exc_value, traceback)
+        self.close()
 
-        Returns:
-            True: if the subprocess was terminated successfully
-            False: if the subprocess failed to terminate or was not already running
-        """
+    def close(self) -> None:
+        """Closes fasta file."""
         self._fasta.close()
-        subprocess_close = super().close()
-        if not subprocess_close:
-            logging.getLogger(__name__).debug("Did not successfully close underlying subprocess")
-        return subprocess_close
 
     def get_design_sequences(self, region: Span) -> tuple[str, str]:
         """Extracts the reference sequence that corresponds to the design region.
@@ -354,17 +342,10 @@ class Primer3(ExecutableRunner):
             Primer3Result containing both the valid and failed designs emitted by Primer3
 
         Raises:
-            RuntimeError: if underlying subprocess is not alive
             ValueError: if Primer3 returns errors or does not return output
             ValueError: if Primer3 output is malformed
             ValueError: if an unknown design task is given
         """
-
-        if not self.is_alive:
-            raise RuntimeError(
-                f"Error, trying to use a subprocess that has already been "
-                f"terminated, return code {self._subprocess.returncode}"
-            )
         design_region: Span
         match design_input.task:
             case PickHybProbeOnly():
@@ -399,55 +380,33 @@ class Primer3(ExecutableRunner):
             **global_primer3_params,
             **design_input.to_input_tags(design_region=design_region),
         }
-        # Submit inputs to primer3
+
+        # split the tags into sequence and non-sequence tags
+        seq_args = {}
+        global_args = {}
         for tag, value in assembled_primer3_tags.items():
-            self._subprocess.stdin.write(f"{tag}={value}")
-            self._subprocess.stdin.write("\n")
-        self._subprocess.stdin.write("=\n")
-        self._subprocess.stdin.flush()
+            if tag.is_sequence_arg:
+                seq_args[tag] = value
+            else:
+                global_args[tag] = value
+        design_primers_retval = primer3.design_primers(seq_args=seq_args, global_args=global_args)
+        primer3_results: dict[str, Any] = {}  # key-value pairs of results reported by Primer3
 
-        error_lines: list[str] = []  # list of errors as reported by primer3
-        primer3_results: dict[str, str] = {}  # key-value pairs of results reported by Primer3
-
-        def primer3_error(message: str) -> None:
-            """Formats the Primer3 error and raises a ValueError."""
-            error_message = f"{message}: "
-            # add in any reported PRIMER_ERROR
-            if "PRIMER_ERROR" in primer3_results:
-                error_message += primer3_results["PRIMER_ERROR"]
-            # add in any error lines
-            if len(error_lines) > 0:
-                error_message += "\n".join(f"\t\t{e}" for e in error_lines)
-            # raise the exception now
-            raise ValueError(error_message)
-
-        while True:
-            # Get the next line.  Since we want to distinguish between empty lines, which we ignore,
-            # and the end-of-file, which is just an empty string, check for an empty string before
-            # stripping the line of any trailing newline or carriage return characters.
-            line: str = self._subprocess.stdout.readline()
-            if line == "":  # EOF
-                primer3_error("Primer3 exited prematurely")
-            line = line.rstrip("\r\n")
-
-            if line == "=":  # stop when we find the line just "="
-                break
-            elif line == "":  # ignore empty lines
-                continue
-            elif "=" not in line:  # error lines do not have the equals character in them, usually
-                error_lines.append(line)
-            else:  # parse and store the result
-                key, value = line.split("=", maxsplit=1)
-                # Because Primer3 will emit both the input given and the output generated, we
-                # discard the input that is echo'ed back by looking for tags (keys)
-                # that do not match any Primer3InputTag
-                if not any(key == item.value for item in Primer3InputTag):
-                    primer3_results[key] = value
+        for key, value in design_primers_retval.items():
+            # Because Primer3 will emit both the input given and the output generated, we
+            # discard the input that is echo'ed back by looking for tags (keys)
+            # that do not match any Primer3InputTag
+            # NB:`key not in Primer3InputTag` is supported in python 3.12+, but not in 3.11,
+            # so we handle a KeyError
+            try:
+                Primer3InputTag[key]  # checks if key is in the input tags
+            except KeyError:  # the key is **not** in the input tags, so add it to the results
+                primer3_results[key] = value
 
         # Check for any errors.  Typically, these are in error_lines, but also the results can
         # contain the PRIMER_ERROR key.
-        if "PRIMER_ERROR" in primer3_results or len(error_lines) > 0:
-            primer3_error("Primer3 failed")
+        if "PRIMER_ERROR" in primer3_results:
+            raise ValueError("Primer3 failed: " + primer3_results["PRIMER_ERROR"])
 
         match design_input.task:
             case DesignPrimerPairsTask():  # Primer pair design
@@ -484,7 +443,7 @@ class Primer3(ExecutableRunner):
     @staticmethod
     def _build_oligos(
         design_input: Primer3Input,
-        design_results: dict[str, str],
+        design_results: dict[str, Any],
         design_region: Span,
         design_task: Union[DesignLeftPrimersTask, DesignRightPrimersTask, PickHybProbeOnly],
         unmasked_design_seq: str,
@@ -510,7 +469,7 @@ class Primer3(ExecutableRunner):
         primers: list[Oligo] = []
         for idx in range(count):
             key = f"PRIMER_{design_task.task_type}_{idx}"
-            str_position, str_length = design_results[key].split(",", maxsplit=1)
+            str_position, str_length = design_results[key]
             position, length = int(str_position), int(str_length)  # position is 1-based
 
             match design_task:
@@ -589,7 +548,7 @@ class Primer3(ExecutableRunner):
     @staticmethod
     def _build_primer_pairs(
         design_input: Primer3Input,
-        design_results: dict[str, str],
+        design_results: dict[str, Any],
         design_region: Span,
         unmasked_design_seq: str,
     ) -> list[PrimerPair]:
@@ -652,7 +611,7 @@ class Primer3(ExecutableRunner):
     @staticmethod
     def _assemble_primer_pairs(
         design_input: Primer3Input,
-        design_results: dict[str, str],
+        design_results: dict[str, Any],
         unfiltered_designs: list[PrimerPair],
     ) -> Primer3Result:
         """Helper function to organize primer pairs into valid and failed designs.

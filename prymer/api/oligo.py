@@ -208,7 +208,7 @@ class Oligo(OligoLike, Metric["Oligo"]):
         """
         # If the bases field is None, replace with MISSING_BASES_STRING
         bases: str = self.bases if self.bases is not None else MISSING_BASES_STRING
-        return f"{bases}\t{self.tm}\t{self.penalty}\t{self.span}"
+        return f"{bases}\t{self.tm:.2f}\t{self.penalty:.2f}\t{self.span}"
 
     @classmethod
     def _parsers(cls) -> Dict[type, Callable[[str], Any]]:
