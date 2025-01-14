@@ -40,7 +40,7 @@ returned.
 Suppose we have the following design and target regions:
 
 ```python
->>> from prymer.api import Strand
+>>> from prymer.model import Strand
 >>> design_region = Span(refname="chr1", start=1, end=500, strand=Strand.POSITIVE)
 >>> target = Span(refname="chr1", start=200, end=300, strand=Strand.POSITIVE)
 >>> design_region.contains(target)
@@ -101,7 +101,7 @@ from typing import final
 
 from strenum import UppercaseStrEnum
 
-from prymer.api.span import Span
+from prymer.model import Span
 from prymer.primer3.primer3_input_tag import Primer3InputTag
 
 Primer3TaskType: TypeAlias = Union[

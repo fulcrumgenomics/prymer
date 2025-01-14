@@ -26,10 +26,10 @@ from typing import Tuple
 from pysam import FastaFile
 
 from prymer.api.melting import calculate_long_seq_tm
-from prymer.api.minoptmax import MinOptMax
-from prymer.api.oligo import Oligo
-from prymer.api.primer_pair import PrimerPair
-from prymer.api.span import Span
+from prymer.model import MinOptMax
+from prymer.model import Oligo
+from prymer.model import PrimerPair
+from prymer.model import Span
 from prymer.ntthal import NtThermoAlign
 from prymer.primer3 import PrimerAndAmpliconWeights
 

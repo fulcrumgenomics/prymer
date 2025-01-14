@@ -69,7 +69,7 @@ from dataclasses import fields
 from typing import Any
 from typing import Optional
 
-from prymer.api.minoptmax import MinOptMax
+from prymer.model import MinOptMax
 from prymer.primer3.primer3_input_tag import Primer3InputTag
 
 

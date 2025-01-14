@@ -5,10 +5,10 @@ from pathlib import Path
 import pytest
 from fgpyo.sam import Cigar
 
-from prymer.api.oligo import Oligo
-from prymer.api.primer_pair import PrimerPair
-from prymer.api.span import Span
-from prymer.api.span import Strand
+from prymer.model import Oligo
+from prymer.model import PrimerPair
+from prymer.model import Span
+from prymer.model import Strand
 from prymer.offtarget.bwa import BWA_EXECUTABLE_NAME
 from prymer.offtarget.bwa import BwaHit
 from prymer.offtarget.bwa import BwaResult
