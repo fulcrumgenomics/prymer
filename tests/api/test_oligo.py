@@ -23,7 +23,7 @@ from prymer.api.span import Strand
         ),
     ],
 )
-def test_valid_primer_config(bases: str, tm: float, penalty: float, test_span: Span) -> None:
+def test_valid_primer_construction(bases: str, tm: float, penalty: float, test_span: Span) -> None:
     """Test Oligo construction with valid input and ensure reported lengths match"""
     test_primer = Oligo(bases=bases, tm=tm, penalty=penalty, span=test_span)
     assert test_primer.length == test_primer.span.length
@@ -40,7 +40,7 @@ def test_span_returns_span(test_span: Span) -> None:
     assert test_primer.span == test_span
 
 
-def test_invalid_primer_config_raises() -> None:
+def test_invalid_primer_construction_raises() -> None:
     """Test Oligo construction with invalid input raises ValueError"""
     with pytest.raises(ValueError, match="Bases must not be an empty string"):
         Oligo(
@@ -51,7 +51,7 @@ def test_invalid_primer_config_raises() -> None:
         )
 
     with pytest.raises(
-        ValueError, match="Conflicting lengths: span length=1000, sequence length=4"
+        ValueError, match="Conflicting lengths"
     ):
         Oligo(
             bases="ACGT",
@@ -70,15 +70,12 @@ class OligoTestCase:
         gc_pct: the expected value for the `Oligo.percent_gc_content` method
         longest_hp: the expected value for the `Oligo.longest_homopolymer` method
         longest_dinuc: the expected value for the `Oligo.longest_dinucleotide_run` method
-        str_fields: the fields, that when tab-delimited, are the expected string for the
-            `Oligo.__str__` method.
     """
 
     primer: Oligo
     gc_pct: float
     longest_hp: int
     longest_dinuc: int
-    str_fields: list[str]
 
 
 def build_primer_test_cases() -> list[OligoTestCase]:
@@ -94,7 +91,6 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=0.0,
             longest_hp=1,
             longest_dinuc=4,
-            str_fields=["ATAT", "1.00", "2.00", "chr1:1-4:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -106,7 +102,6 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=16.667,
             longest_hp=6,
             longest_dinuc=6,
-            str_fields=["ACGTAAAAAATT", "1.00", "2.00", "chr1:1-12:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -118,7 +113,6 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=25.0,
             longest_hp=1,
             longest_dinuc=2,
-            str_fields=["ATAC", "1.00", "2.00", "chr1:1-4:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -130,7 +124,6 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=33.333,
             longest_hp=2,
             longest_dinuc=4,
-            str_fields=["ATATCC", "1.00", "2.00", "chr1:1-6:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -142,7 +135,6 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=50.0,
             longest_hp=1,
             longest_dinuc=2,
-            str_fields=["AGCT", "1.00", "2.00", "chr1:1-4:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -154,7 +146,6 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=100.0,
             longest_hp=5,
             longest_dinuc=4,
-            str_fields=["GGGGG", "1.00", "2.00", "chr1:1-5:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -166,7 +157,6 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=62.5,
             longest_hp=2,
             longest_dinuc=2,
-            str_fields=["ccgTATGC", "1.00", "2.00", "chr1:1-8:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -178,7 +168,6 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=50.0,
             longest_hp=1,
             longest_dinuc=0,
-            str_fields=["ACGT", "1.00", "2.00", "chr1:1-4:+"],
         ),
         OligoTestCase(
             primer=Oligo(
@@ -190,7 +179,6 @@ def build_primer_test_cases() -> list[OligoTestCase]:
             gc_pct=46.154,
             longest_hp=1,
             longest_dinuc=8,
-            str_fields=["ACACACTCTCTCT", "1.00", "2.00", "chr1:1-13:+"],
         ),
     ]
 
@@ -207,7 +195,7 @@ def test_gc_content_calc(test_case: OligoTestCase) -> None:
 @pytest.mark.parametrize("test_case", OLIGO_TEST_CASES)
 def test_longest_homopolymer_len_calc(test_case: OligoTestCase) -> None:
     """Test that longest homopolymer run is calculated correctly."""
-    assert test_case.primer.longest_hp_length() == test_case.longest_hp
+    assert test_case.primer.longest_hp_length == test_case.longest_hp
 
 
 @pytest.mark.parametrize(
@@ -259,7 +247,7 @@ def test_bases_with_tail(
         span=Span(refname="chr1", start=1, end=4, strand=Strand.POSITIVE),
         tail=tail_seq,
     )
-    assert test_primer.bases_with_tail() == expected_result
+    assert test_primer.bases_with_tail == expected_result
 
 
 @pytest.mark.parametrize(
@@ -292,7 +280,7 @@ def test_with_name(init: Optional[str], value: str, expected: Optional[str]) -> 
     "name, expected_id",
     [
         ("test", "test"),
-        (None, "chr1_1_10_F"),
+        (None, "chr1:1-10:+"),
     ],
 )
 def test_id_generation(
@@ -315,37 +303,9 @@ def test_id_generation(
     assert primer.id == expected_id
 
 
-def test_to_bed12_row(test_span: Span) -> None:
-    """Asserts that the to_bed12_row method exists and returns the expected value."""
-    primer = Oligo(
-        name="test",
-        span=test_span,
-        bases="AAAAAAAAAA",
-        tm=1.0,
-        penalty=1.0,
-        tail="AAA",
-    )
-    assert primer.to_bed12_row() == "\t".join(
-        [
-            "chr1",
-            "0",
-            "10",
-            "test",
-            "500",
-            "+",
-            "0",
-            "10",
-            "100,100,100",
-            "1",
-            "10",
-            "0",
-        ],
-    )
-
-
 @pytest.mark.parametrize("test_case", OLIGO_TEST_CASES)
 def test_untailed_length(test_case: OligoTestCase) -> None:
-    assert test_case.primer.length == test_case.primer.untailed_length()
+    assert test_case.primer.length == test_case.primer.untailed_length
 
 
 @pytest.mark.parametrize(
@@ -366,16 +326,7 @@ def test_tailed_length(tail_seq: str, expected_length: int) -> None:
         span=Span(refname="chr1", start=1, end=4, strand=Strand.POSITIVE),
         tail=tail_seq,
     )
-    assert test_primer.tailed_length() == expected_length
-
-
-@pytest.mark.parametrize("test_case", OLIGO_TEST_CASES)
-def test_primer_str(test_case: OligoTestCase) -> None:
-    """Test whether the __str__ method returns the expected string representation"""
-
-    # For each of the primer objects supplied, look up the expected set of string values & join
-    # them with tabs. Then, assert that the string representation of the primer object matches
-    assert f"{test_case.primer}" == "\t".join(test_case.str_fields)
+    assert test_primer.tailed_length == expected_length
 
 
 def test_primer_serialization_roundtrip() -> None:

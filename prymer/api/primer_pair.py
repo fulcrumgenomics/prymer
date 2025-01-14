@@ -33,12 +33,9 @@ used to create the pairing.
 Span(refname='chr1', start=1, end=120, strand=<Strand.POSITIVE: '+'>)
 >>> primer_pair.span
 Span(refname='chr1', start=1, end=120, strand=<Strand.POSITIVE: '+'>)
->>> primer_pair.inner
-Span(refname='chr1', start=21, end=100, strand=<Strand.POSITIVE: '+'>)
 
 >>> list(primer_pair)
-[Oligo(name=None, tm=70.0, penalty=-123.0, span=Span(refname='chr1', start=1, end=20, strand=<Strand.POSITIVE: '+'>), tm_homodimer=None, tm_3p_anchored_homodimer=None, tm_secondary_structure=None, bases='GGGGGGGGGGGGGGGGGGGG', tail=None), Oligo(name=None, tm=70.0, penalty=-123.0, span=Span(refname='chr1', start=101, end=120, strand=<Strand.NEGATIVE: '-'>), tm_homodimer=None, tm_3p_anchored_homodimer=None, tm_secondary_structure=None, bases='TTTTTTTTTTTTTTTTTTTT', tail=None)]
-
+[Oligo(bases='GGGGGGGGGGGGGGGGGGGG', tm=70.0, span=Span(refname='chr1', start=1, end=20, strand=<Strand.POSITIVE: '+'>), penalty=-123.0, name=None, tm_homodimer=None, tm_3p_anchored_homodimer=None, tm_secondary_structure=None, tail=None), Oligo(bases='TTTTTTTTTTTTTTTTTTTT', tm=70.0, span=Span(refname='chr1', start=101, end=120, strand=<Strand.NEGATIVE: '-'>), penalty=-123.0, name=None, tm_homodimer=None, tm_3p_anchored_homodimer=None, tm_secondary_structure=None, tail=None)]
 """  # noqa: E501
 
 from dataclasses import dataclass
@@ -48,15 +45,14 @@ from typing import Iterator
 from typing import Optional
 
 from fgpyo.fasta.sequence_dictionary import SequenceDictionary
+from fgpyo.sequence import gc_content
 
 from prymer.api.oligo import Oligo
-from prymer.api.oligo_like import MISSING_BASES_STRING
-from prymer.api.oligo_like import OligoLike
 from prymer.api.span import Span
 
 
 @dataclass(frozen=True, init=True, kw_only=True)
-class PrimerPair(OligoLike):
+class PrimerPair:
     """
     Represents a pair of primers that work together to amplify an amplicon. The
     coordinates of the amplicon are determined to span from the start of the left
@@ -78,7 +74,27 @@ class PrimerPair(OligoLike):
     right_primer: Oligo
     amplicon_tm: float
     penalty: float
+    name: Optional[str] = None
     amplicon_sequence: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        # Force generation of the amplicon span, which validates the relative positions
+        # of the left and right primers
+        amp = self.amplicon
+
+        # If supplied, bases must be the same length as the span length
+        if self.bases is not None:
+            if len(self.bases) == 0:
+                raise ValueError("Bases must not be an empty string")
+            elif len(self.bases) != amp.length:
+                raise ValueError(
+                    f"Conflicting lengths: span={amp.length}, sequence={len(self.bases)}"
+                )
+
+    @property
+    def id(self) -> str:
+        """Returns the name if there is one, otherwise the span."""
+        return self.name if self.name is not None else str(self.span)
 
     @cached_property
     def amplicon(self) -> Span:
@@ -100,27 +116,13 @@ class PrimerPair(OligoLike):
         """Returns the length of the amplicon"""
         return self.amplicon.length
 
-    @property
-    def inner(self) -> Span:
-        """
-        Returns the inner region of the amplicon (not including the primers). I.e. the region of
-        the genome covered by the primer pair, without the primer regions.  If the primers
-        overlap, then the inner mapping is the midpoint at where they overlap
-        """
-        if self.left_primer.span.overlaps(self.right_primer.span):
-            # Use a flooring division as these values are all ints
-            midpoint = (self.left_primer.span.end + self.right_primer.span.start) // 2
-            return replace(
-                self.left_primer.span,
-                start=midpoint,
-                end=midpoint,
-            )
+    @cached_property
+    def percent_gc_content(self) -> float:
+        """The GC of the amplicon sequence in the range 0-100, or 0 if amplicon sequence is None."""
+        if self.bases is None:
+            return 0.0
         else:
-            return replace(
-                self.left_primer.span,
-                start=self.left_primer.span.end + 1,
-                end=self.right_primer.span.start - 1,
-            )
+            return round(gc_content(self.bases) * 100, 3)
 
     def with_tails(self, left_tail: str, right_tail: str) -> "PrimerPair":
         """
@@ -159,61 +161,13 @@ class PrimerPair(OligoLike):
             right_primer=self.right_primer.with_name(rp_name),
         )
 
-    def to_bed12_row(self) -> str:
-        """
-        Returns the BED detail format view: https://genome.ucsc.edu/FAQ/FAQformat.html#format1.7.
-
-        NB: BED is 0-based and Prymer is 1-based, so we need to convert
-        """
-        block_sizes = ",".join(
-            [
-                f"{gm.length}"
-                for gm in [
-                    self.left_primer.span,
-                    self.inner,
-                    self.right_primer.span,
-                ]
-            ]
-        )
-
-        block_starts = ",".join(
-            [
-                f"{self.amplicon.get_offset(gm.start)}"
-                for gm in [
-                    self.left_primer.span,
-                    self.inner,
-                    self.right_primer.span,
-                ]
-            ],
-        )
-        bed_like_coords = self.span.get_bedlike_coords()
-        return "\t".join(
-            map(
-                str,
-                [
-                    self.span.refname,  # contig
-                    bed_like_coords.start,  # start
-                    bed_like_coords.end,  # end
-                    self.id,  # name
-                    500,  # score
-                    self.span.strand.value,  # strand
-                    bed_like_coords.start,  # thick start
-                    bed_like_coords.end,  # thick end
-                    "100,100,100",  # color
-                    3,  # block count
-                    block_sizes,
-                    block_starts,  # relative to `start`
-                ],
-            )
-        )
-
     def __iter__(self) -> Iterator[Oligo]:
         """Returns an iterator of left and right primers"""
         return iter([self.left_primer, self.right_primer])
 
     def __str__(self) -> str:
         """Returns a string representation of the primer pair"""
-        sequence = self.amplicon_sequence if self.amplicon_sequence else MISSING_BASES_STRING
+        sequence = self.amplicon_sequence if self.amplicon_sequence else "*"
         return (
             f"{self.left_primer}\t{self.right_primer}\t{sequence}\t"
             + f"{self.amplicon_tm}\t{self.penalty}"

@@ -1,6 +1,5 @@
 from prymer.api.minoptmax import MinOptMax
 from prymer.api.oligo import Oligo
-from prymer.api.oligo_like import OligoLike
 from prymer.api.picking import build_primer_pairs
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import BedLikeCoords
@@ -15,11 +14,8 @@ from prymer.api.variant_lookup import cached
 from prymer.api.variant_lookup import disk_based
 
 __all__ = [
-    "ClusteredIntervals",
-    "cluster_intervals",
     "MinOptMax",
     "build_primer_pairs",
-    "OligoLike",
     "Oligo",
     "PrimerPair",
     "Span",

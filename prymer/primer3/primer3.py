@@ -119,10 +119,8 @@ from dataclasses import replace
 from pathlib import Path
 from types import TracebackType
 from typing import Any
-from typing import Generic
 from typing import Optional
 from typing import Self
-from typing import TypeVar
 from typing import Union
 from typing import assert_never
 
@@ -135,7 +133,6 @@ from fgpyo.sequence import reverse_complement
 from fgpyo.util.metric import Metric
 
 from prymer.api.oligo import Oligo
-from prymer.api.oligo_like import OligoLike
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
 from prymer.api.span import Strand
@@ -165,12 +162,8 @@ class Primer3Failure(Metric["Primer3Failure"]):
     count: int
 
 
-OligoLikeType = TypeVar("OligoLikeType", bound=OligoLike)
-"""Type variable for a `Primer3Result`, which must implement `OligoLike`"""
-
-
 @dataclass(init=True, slots=True, frozen=True)
-class Primer3Result(Generic[OligoLikeType]):
+class Primer3Result[ResultType: (Oligo, PrimerPair)]:
     """Encapsulates Primer3 design results (both valid designs and failures).
 
     Attributes:
@@ -180,20 +173,20 @@ class Primer3Result(Generic[OligoLikeType]):
             count
     """
 
-    designs: list[OligoLikeType]
+    designs: list[ResultType]
     failures: list[Primer3Failure]
 
     def as_primer_result(self) -> "Primer3Result[Oligo]":
         """Returns this Primer3Result assuming the design results are of type `Primer`."""
         if len(self.designs) > 0 and not isinstance(self.designs[0], Oligo):
             raise ValueError("Cannot call `as_primer_result` on `PrimerPair` results")
-        return typing.cast(Primer3Result[Oligo], self)
+        return typing.cast(Primer3Result[Oligo], self)  # type: ignore
 
     def as_primer_pair_result(self) -> "Primer3Result[PrimerPair]":
         """Returns this Primer3Result assuming the design results are of type `PrimerPair`."""
         if len(self.designs) > 0 and not isinstance(self.designs[0], PrimerPair):
             raise ValueError("Cannot call `as_primer_pair_result` on `Oligo` results")
-        return typing.cast(Primer3Result[PrimerPair], self)
+        return typing.cast(Primer3Result[PrimerPair], self)  # type: ignore
 
     def primers(self) -> list[Oligo]:
         """Returns the design results as a list `Primer`s"""
@@ -316,13 +309,13 @@ class Primer3(AbstractContextManager):
         for primer_pair in designed_primer_pairs:
             valid: bool = True
             if (
-                primer_pair.left_primer.longest_dinucleotide_run_length()
+                primer_pair.left_primer.longest_dinucleotide_run_length
                 > design_input.primer_and_amplicon_params.primer_max_dinuc_bases
             ):  # if the left primer has too many dinucleotide bases, fail it
                 dinuc_pair_failures.append(primer_pair.left_primer)
                 valid = False
             if (
-                primer_pair.right_primer.longest_dinucleotide_run_length()
+                primer_pair.right_primer.longest_dinucleotide_run_length
                 > design_input.primer_and_amplicon_params.primer_max_dinuc_bases
             ):  # if the right primer has too many dinucleotide bases, fail it
                 dinuc_pair_failures.append(primer_pair.right_primer)
@@ -757,10 +750,10 @@ def _has_acceptable_dinuc_run(design_input: Primer3Input, oligo_design: Oligo) -
     Returns:
 
     """
-    max_dinuc_bases: int
+    max_dinuc_bases: int = -1
     if design_input.task.requires_primer_amplicon_params:
         max_dinuc_bases = design_input.primer_and_amplicon_params.primer_max_dinuc_bases
     elif design_input.task.requires_probe_params:
         max_dinuc_bases = design_input.probe_params.probe_max_dinuc_bases
 
-    return oligo_design.longest_dinucleotide_run_length() <= max_dinuc_bases
+    return oligo_design.longest_dinucleotide_run_length <= max_dinuc_bases

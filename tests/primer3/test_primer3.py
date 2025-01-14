@@ -187,7 +187,7 @@ def test_left_primer_valid_designs(
             assert all(isinstance(design, Oligo) for design in designed_lefts)
             for actual_design in designed_lefts:
                 assert (
-                    actual_design.longest_dinucleotide_run_length()
+                    actual_design.longest_dinucleotide_run_length
                     <= single_primer_params.primer_max_dinuc_bases
                 )
                 assert (
@@ -234,7 +234,7 @@ def test_right_primer_valid_designs(
 
             for actual_design in designed_rights:
                 assert (
-                    actual_design.longest_dinucleotide_run_length()
+                    actual_design.longest_dinucleotide_run_length
                     <= single_primer_params.primer_max_dinuc_bases
                 )
                 assert (
@@ -445,11 +445,11 @@ def test_screen_pair_results(
         assert design_input.primer_and_amplicon_params is not None
         for primer_pair in base_primer_pair_designs:
             assert (
-                primer_pair.left_primer.longest_dinucleotide_run_length()
+                primer_pair.left_primer.longest_dinucleotide_run_length
                 <= design_input.primer_and_amplicon_params.primer_max_dinuc_bases
             )
             assert (
-                primer_pair.right_primer.longest_dinucleotide_run_length()
+                primer_pair.right_primer.longest_dinucleotide_run_length
                 <= design_input.primer_and_amplicon_params.primer_max_dinuc_bases
             )
             assert _has_acceptable_dinuc_run(
@@ -466,7 +466,7 @@ def test_screen_pair_results(
         )
         assert altered_design_input.primer_and_amplicon_params is not None
         assert [
-            design.longest_dinucleotide_run_length()
+            design.longest_dinucleotide_run_length
             > altered_design_input.primer_and_amplicon_params.primer_max_dinuc_bases
             for design in altered_dinuc_failures
         ]

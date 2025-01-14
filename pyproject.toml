@@ -18,7 +18,6 @@ documentation = "https://github.com/fulcrumgenomics/prymer"
 keywords = ["bioinformatics", "genomics", "dna"]
 classifiers = [
 	"Development Status :: 3 - Alpha",
-	"Programming Language :: Python :: 3.11",
 	"Programming Language :: Python :: 3.12",
 	"Programming Language :: Python :: 3.13",
 	"Environment :: Console",
@@ -34,7 +33,7 @@ classifiers = [
 include = ["LICENSE"]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 pyproject_hooks= "^1.0.0,!=1.1.0"
 pybedlite = "^1.0.0"
 strenum = "^0.4.15"
@@ -103,7 +102,7 @@ filter_commits = false
 
 [tool.mypy]
 files                       = ["prymer", "tests"]
-python_version              = "3.11"
+python_version              = "3.12"
 strict_optional             = false
 check_untyped_defs          = true
 disallow_incomplete_defs    = true
