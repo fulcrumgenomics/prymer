@@ -141,7 +141,8 @@ class Oligo(Metric["Oligo"]):
     @property
     def id(self) -> str:
         """Returns the name if there is one, otherwise the span."""
-        return self.name if self.name is not None else str(self.span)
+        return self.name if self.name is not None else f"{self.span}"
+        
 
     @property
     def length(self) -> int:
