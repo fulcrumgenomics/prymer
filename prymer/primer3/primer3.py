@@ -396,7 +396,11 @@ class Primer3(AbstractContextManager):
             # Because Primer3 will emit both the input given and the output generated, we
             # discard the input that is echo'ed back by looking for tags (keys)
             # that do not match any Primer3InputTag
-            if key not in Primer3InputTag:
+            # NB:`key not in Primer3InputTag` is supported in python 3.12+, but not in 3.11,
+            # so we handle a KeyError
+            try:
+                Primer3InputTag[key]  # checks if key is in the input tags
+            except KeyError:  # the key is **not** in the input tags, so add it to the results
                 primer3_results[key] = value
 
         # Check for any errors.  Typically, these are in error_lines, but also the results can

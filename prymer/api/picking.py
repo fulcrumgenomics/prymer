@@ -165,13 +165,13 @@ def build_primer_pairs(  # noqa: C901
 
             # If the right primer isn't "to the right" of the left primer, move on
             if rp.span.start < lp.span.start or lp.span.end > rp.span.end:
-                first_right_primer_idx = max(first_right_primer_idx, j+1)
+                first_right_primer_idx = max(first_right_primer_idx, j + 1)
                 continue
 
             amp_span = PrimerPair.calculate_amplicon_span(lp, rp)
 
             if amp_span.length < amplicon_sizes.min:
-                first_right_primer_idx = max(first_right_primer_idx, j+1)
+                first_right_primer_idx = max(first_right_primer_idx, j + 1)
                 continue
 
             if amp_span.length > amplicon_sizes.max:
