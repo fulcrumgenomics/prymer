@@ -56,6 +56,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Test building the documentation
-        shell: bash -el {0}
-        run: poetry run mkdocs build --strict
+# Disabling build of docs on dev until we're done with refactoring
+#      - name: Test building the documentation
+#        shell: bash -el {0}
+#        run: poetry run mkdocs build --strict

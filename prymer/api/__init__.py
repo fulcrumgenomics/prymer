@@ -1,5 +1,3 @@
-from prymer.api.clustering import ClusteredIntervals
-from prymer.api.clustering import cluster_intervals
 from prymer.api.minoptmax import MinOptMax
 from prymer.api.oligo import Oligo
 from prymer.api.oligo_like import OligoLike
