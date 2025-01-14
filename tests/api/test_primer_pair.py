@@ -28,11 +28,8 @@ class PrimerPairTestCase:
     """
 
     primer_pair: PrimerPair
-    bed_12_fields: list[str]
     gc_pct: float
-    inner: Span
     length: int
-    str_fields: list[str]
 
     @staticmethod
     def primer_pair_from_left_primer(left: Oligo, right_offset: int = 50) -> PrimerPair:
@@ -117,36 +114,8 @@ def build_primer_pair_test_cases() -> list[PrimerPairTestCase]:
                     span=Span(refname="chr1", start=1, end=7, strand=Strand.POSITIVE),
                 )
             ),
-            bed_12_fields=[
-                "chr1",
-                "0",
-                "57",
-                "chr1_1_57_F",
-                "500",
-                "+",
-                "0",
-                "57",
-                "100,100,100",
-                "3",
-                "7,43,7",
-                "0,7,50",
-            ],
             gc_pct=29.825,
-            inner=Span(refname="chr1", start=8, end=50),
             length=57,
-            str_fields=[
-                "GATTACA",
-                "12.34",
-                "56.78",
-                "chr1:1-7:+",
-                "TGTAATC",
-                "22.34",
-                "66.78",
-                "chr1:51-57:-",
-                "GTAGTTTAAACTACGTAGTTTAAACTACGTAGTTTAAACTACGTAGTTTAAACTACG",
-                "34.68",
-                "123.56",
-            ],
         ),
         PrimerPairTestCase(
             primer_pair=PrimerPairTestCase.primer_pair_from_left_primer(
@@ -157,76 +126,20 @@ def build_primer_pair_test_cases() -> list[PrimerPairTestCase]:
                     span=Span(refname="chr22", start=100, end=106, strand=Strand.POSITIVE),
                 )
             ),
-            bed_12_fields=[
-                "chr22",
-                "99",
-                "156",
-                "chr22_100_156_F",
-                "500",
-                "+",
-                "99",
-                "156",
-                "100,100,100",
-                "3",
-                "7,43,7",
-                "0,7,50",
-            ],
             gc_pct=28.07,
-            inner=Span(refname="chr22", start=107, end=149),
             length=57,
-            str_fields=[
-                "TGTAATC",
-                "87.65",
-                "43.21",
-                "chr22:100-106:+",
-                "GATTACA",
-                "97.65",
-                "53.21",
-                "chr22:150-156:-",
-                "TGGATTATAATCCATGGATTATAATCCATGGATTATAATCCATGGATTATAATCCAT",
-                "185.3",
-                "96.42",
-            ],
         ),
         PrimerPairTestCase(
             primer_pair=PrimerPairTestCase.primer_pair_from_left_primer(
                 left=Oligo(
-                    bases=None,
+                    bases="A" * 40,
                     tm=12.34,
                     penalty=56.78,
                     span=Span(refname="chr1", start=1, end=40, strand=Strand.POSITIVE),
                 )
             ),
-            bed_12_fields=[
-                "chr1",
-                "0",
-                "90",
-                "chr1_1_90_F",
-                "500",
-                "+",
-                "0",
-                "90",
-                "100,100,100",
-                "3",
-                "40,10,40",
-                "0,40,50",
-            ],
             gc_pct=0.0,
-            inner=Span(refname="chr1", start=41, end=50),
             length=90,
-            str_fields=[
-                "*",
-                "12.34",
-                "56.78",
-                "chr1:1-40:+",
-                "*",
-                "22.34",
-                "66.78",
-                "chr1:51-90:-",
-                "*",
-                "34.68",
-                "123.56",
-            ],
         ),
         PrimerPairTestCase(
             primer_pair=PrimerPairTestCase.primer_pair_from_left_primer(
@@ -237,36 +150,8 @@ def build_primer_pair_test_cases() -> list[PrimerPairTestCase]:
                     span=Span(refname="chr1", start=1, end=7, strand=Strand.POSITIVE),
                 )
             ),
-            bed_12_fields=[
-                "chr1",
-                "0",
-                "57",
-                "chr1_1_57_F",
-                "500",
-                "+",
-                "0",
-                "57",
-                "100,100,100",
-                "3",
-                "7,43,7",
-                "0,7,50",
-            ],
             gc_pct=100.0,
-            inner=Span(refname="chr1", start=8, end=50),
             length=57,
-            str_fields=[
-                "GGGGGGG",
-                "12.34",
-                "56.78",
-                "chr1:1-7:+",
-                "CCCCCCC",
-                "22.34",
-                "66.78",
-                "chr1:51-57:-",
-                "GCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCG",
-                "34.68",
-                "123.56",
-            ],
         ),
         # This one is written out long form in order to override the automated
         # generation of the right primer. We want to handle a case where the primers
@@ -288,47 +173,13 @@ def build_primer_pair_test_cases() -> list[PrimerPairTestCase]:
                 amplicon_tm=25,
                 penalty=99.99,
             ),
-            bed_12_fields=[
-                "chr1",
-                "0",
-                "11",
-                "chr1_1_11_F",
-                "500",
-                "+",
-                "0",
-                "11",
-                "100,100,100",
-                "3",
-                "7,1,7",
-                "0,5,4",
-            ],
             gc_pct=0,
-            inner=Span(refname="chr1", start=6, end=6),
             length=11,
-            str_fields=[
-                "GATTACA",
-                "12.34",
-                "56.78",
-                "chr1:1-7:+",
-                "TGTAATC",
-                "87.65",
-                "43.21",
-                "chr1:5-11:-",
-                "*",
-                "25",
-                "99.99",
-            ],
         ),
     ]
 
 
 PRIMER_PAIR_TEST_CASES = build_primer_pair_test_cases()
-
-
-@pytest.mark.parametrize("test_case", PRIMER_PAIR_TEST_CASES)
-def test_primer_pair_inner(test_case: PrimerPairTestCase) -> None:
-    """Test the `PrimerPair.inner` property."""
-    assert test_case.primer_pair.inner == test_case.inner
 
 
 @pytest.mark.parametrize("test_case", PRIMER_PAIR_TEST_CASES)
@@ -338,21 +189,9 @@ def test_primer_pair_gc_content(test_case: PrimerPairTestCase) -> None:
 
 
 @pytest.mark.parametrize("test_case", PRIMER_PAIR_TEST_CASES)
-def test_primer_pair_str(test_case: PrimerPairTestCase) -> None:
-    """Test the `PrimerPair.__str__` method."""
-    assert str(test_case.primer_pair) == "\t".join(test_case.str_fields)
-
-
-@pytest.mark.parametrize("test_case", PRIMER_PAIR_TEST_CASES)
 def test_primer_pair_length(test_case: PrimerPairTestCase) -> None:
     """Test the `PrimerPair.length` property"""
     assert test_case.primer_pair.length == test_case.length
-
-
-@pytest.mark.parametrize("test_case", PRIMER_PAIR_TEST_CASES)
-def test_primer_pair_to_bed12_row(test_case: PrimerPairTestCase) -> None:
-    """Test the `PrimerPair.to_bed12_row` method."""
-    assert test_case.primer_pair.to_bed12_row() == "\t".join(test_case.bed_12_fields)
 
 
 @pytest.mark.parametrize("test_case", PRIMER_PAIR_TEST_CASES)

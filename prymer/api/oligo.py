@@ -17,23 +17,23 @@ oligo (if applicable). Optional attributes also include the thermodynamic result
 >>> from prymer.api.span import Span, Strand
 >>> oligo_span = Span(refname="chr1", start=1, end=20)
 >>> oligo = Oligo(tm=70.0, penalty=-123.0, span=oligo_span, bases="AGCT" * 5)
->>> oligo.longest_hp_length()
+>>> oligo.longest_hp_length
 1
 >>> oligo.length
 20
 >>> oligo.name is None
 True
 >>> oligo = Oligo(tm=70.0, penalty=-123.0, span=oligo_span, bases="GACGG"*4)
->>> oligo.longest_hp_length()
+>>> oligo.longest_hp_length
 3
->>> oligo.untailed_length()
+>>> oligo.untailed_length
 20
->>> oligo.tailed_length()
+>>> oligo.tailed_length
 20
 >>> primer = oligo.with_tail(tail="GATTACA")
->>> primer.untailed_length()
+>>> primer.untailed_length
 20
->>> primer.tailed_length()
+>>> primer.tailed_length
 27
 >>> primer = primer.with_name(name="fwd_primer")
 >>> primer.name
@@ -64,23 +64,23 @@ Oligos may also be written to a file and subsequently read back in, as the `Olig
 
 from dataclasses import dataclass
 from dataclasses import replace
+from functools import cached_property
 from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import Optional
 
 from fgpyo.fasta.sequence_dictionary import SequenceDictionary
+from fgpyo.sequence import gc_content
 from fgpyo.sequence import longest_dinucleotide_run_length
 from fgpyo.sequence import longest_homopolymer_length
 from fgpyo.util.metric import Metric
 
-from prymer.api.oligo_like import MISSING_BASES_STRING
-from prymer.api.oligo_like import OligoLike
 from prymer.api.span import Span
 
 
 @dataclass(frozen=True, init=True, kw_only=True, slots=True)
-class Oligo(OligoLike, Metric["Oligo"]):
+class Oligo(Metric["Oligo"]):
     """Stores the properties of the designed oligo.
 
     Oligos can include both single primer and internal probe designs. Primer3 emits information
@@ -106,58 +106,77 @@ class Oligo(OligoLike, Metric["Oligo"]):
     likely to form stable hairpins or dimers, leading to reduced efficiency of the reaction.
 
     Attributes:
+        bases: the base sequence of the oligo (excluding any tail)
         tm: the calculated melting temperature of the oligo
-        penalty: the penalty or score for the oligo
         span: the mapping of the primer to the genome
+        penalty: the penalty or score for the oligo
         name: an optional name to use for the primer
         tm_homodimer: calculated melting temperature that represents
             the tendency of an oligo to bind to itself (self-complementarity)
         tm_3p_anchored_homodimer: calculated melting temperature that represents
             the tendency of a primer to bind to the 3'-END of an identical primer
         tm_secondary_structure: calculated melting temperature of the oligo hairpin structure
-        bases: the base sequence of the oligo (excluding any tail)
         tail: an optional tail sequence to put on the 5' end of the primer
 
     """
 
+    bases: str
     tm: float
-    penalty: float
     span: Span
+    penalty: float
+    name: Optional[str] = None
     tm_homodimer: Optional[float] = None
     tm_3p_anchored_homodimer: Optional[float] = None
     tm_secondary_structure: Optional[float] = None
-    bases: Optional[str] = None
     tail: Optional[str] = None
 
     def __post_init__(self) -> None:
-        super(Oligo, self).__post_init__()
+        if len(self.bases) == 0:
+            raise ValueError("Bases must not be an empty string.")
+        elif self.span.length != len(self.bases):
+            raise ValueError(
+                f"Conflicting lengths: span={self.span.length}, bases={len(self.bases)}"
+            )
 
-    def longest_hp_length(self) -> int:
-        """Length of longest homopolymer in the oligo."""
-        if self.bases is None:
-            return 0
-        else:
-            return longest_homopolymer_length(self.bases)
+    @property
+    def id(self) -> str:
+        """Returns the name if there is one, otherwise the span."""
+        return self.name if self.name is not None else f"{self.span}"
 
     @property
     def length(self) -> int:
         """Length of un-tailed oligo."""
         return self.span.length
 
+    @property
     def untailed_length(self) -> int:
         """Length of un-tailed oligo."""
         return self.span.length
 
+    @property
     def tailed_length(self) -> int:
         """Length of tailed oligo."""
-        return self.span.length if self.tail is None else self.span.length + len(self.tail)
+        return self.span.length + (0 if self.tail is None else len(self.tail))
 
+    @cached_property
+    def longest_hp_length(self) -> int:
+        """Length of longest homopolymer in the oligo."""
+        return longest_homopolymer_length(self.bases)
+
+    @cached_property
+    def percent_gc_content(self) -> float:
+        """The GC of the amplicon sequence in the range 0-100."""
+        return round(gc_content(self.bases) * 100, 3)
+
+    @cached_property
     def longest_dinucleotide_run_length(self) -> int:
-        """Number of bases in the longest dinucleotide run in a oligo.
+        """
+        Number of bases in the longest dinucleotide run in a oligo.
 
         A dinucleotide run is when length two repeat-unit is repeated. For example,
         TCTC (length = 4) or ACACACACAC (length = 10). If there are no such runs, returns 2
-        (or 0 if there are fewer than 2 bases)."""
+        (or 0 if there are fewer than 2 bases).
+        """
         return longest_dinucleotide_run_length(self.bases)
 
     def with_tail(self, tail: str) -> "Oligo":
@@ -168,7 +187,8 @@ class Oligo(OligoLike, Metric["Oligo"]):
         """Returns a copy of oligo object with the given name."""
         return replace(self, name=name)
 
-    def bases_with_tail(self) -> Optional[str]:
+    @property
+    def bases_with_tail(self) -> str:
         """
         Returns the sequence of the oligo prepended by the tail.
 
@@ -176,39 +196,12 @@ class Oligo(OligoLike, Metric["Oligo"]):
         """
         if self.tail is None:
             return self.bases
-        return f"{self.tail}{self.bases}"
-
-    def to_bed12_row(self) -> str:
-        """Returns the BED detail format view:
-        https://genome.ucsc.edu/FAQ/FAQformat.html#format1.7"""
-        bed_coord = self.span.get_bedlike_coords()
-        return "\t".join(
-            map(
-                str,
-                [
-                    self.span.refname,  # contig
-                    bed_coord.start,  # start
-                    bed_coord.end,  # end
-                    self.id,  # name
-                    500,  # score
-                    self.span.strand.value,  # strand
-                    bed_coord.start,  # thick start
-                    bed_coord.end,  # thick end
-                    "100,100,100",  # color
-                    1,  # block count
-                    f"{self.length}",  # block sizes
-                    "0",  # block starts (relative to `start`)
-                ],
-            )
-        )
+        else:
+            return f"{self.tail}{self.bases}"
 
     def __str__(self) -> str:
-        """
-        Returns a string representation of this oligo
-        """
-        # If the bases field is None, replace with MISSING_BASES_STRING
-        bases: str = self.bases if self.bases is not None else MISSING_BASES_STRING
-        return f"{bases}\t{self.tm:.2f}\t{self.penalty:.2f}\t{self.span}"
+        """Returns a string representation of this oligo."""
+        return f"{self.bases}\t{self.tm:.2f}\t{self.penalty:.2f}\t{self.span}"
 
     @classmethod
     def _parsers(cls) -> Dict[type, Callable[[str], Any]]:
