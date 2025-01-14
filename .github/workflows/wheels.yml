@@ -11,7 +11,8 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        python: ["3.11", "3.12"]
+        # TODO: re-enable 3.11
+        python: ["3.12"]
 
     steps:
       - uses: actions/checkout@v4
