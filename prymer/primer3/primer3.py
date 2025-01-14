@@ -402,10 +402,7 @@ class Primer3(AbstractContextManager):
         # Check for any errors.  Typically, these are in error_lines, but also the results can
         # contain the PRIMER_ERROR key.
         if "PRIMER_ERROR" in primer3_results:
-            if "PRIMER_ERROR" in primer3_results:
-                raise ValueError("Primer3 failed: " + primer3_results["PRIMER_ERROR"])
-            else:
-                raise ValueError("Primer3 failed")
+            raise ValueError("Primer3 failed: " + primer3_results["PRIMER_ERROR"])
 
         match design_input.task:
             case DesignPrimerPairsTask():  # Primer pair design
