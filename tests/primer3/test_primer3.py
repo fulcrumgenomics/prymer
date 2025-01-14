@@ -159,7 +159,7 @@ def test_design_raises(
         primer_and_amplicon_params=illegal_primer3_params,
         task=DesignLeftPrimersTask(),
     )
-    with pytest.raises(ValueError, match="Primer3 failed"):
+    with pytest.raises(ValueError, match="Illegal PRIMER_NUM_RETURN value: invalid"):
         Primer3(genome_fasta=genome_ref).design(design_input=invalid_design_input)
     # TODO: add other Value Errors
 
@@ -213,7 +213,6 @@ def test_left_primer_valid_designs(
                     end=actual_design.span.end,
                 )
                 assert actual_design.bases == underlying_ref_seq
-        assert designer.is_alive
 
 
 def test_right_primer_valid_designs(
@@ -262,7 +261,6 @@ def test_right_primer_valid_designs(
                     end=actual_design.span.end,
                 )
                 assert actual_design.bases == reverse_complement(underlying_ref_seq)
-        assert designer.is_alive
 
 
 def test_primer_pair_design(
@@ -356,7 +354,6 @@ def test_fasta_close_valid(
     assert designer._fasta.is_open()
     designer.close()
     assert designer._fasta.closed
-    assert not designer.is_alive
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
     design_input = Primer3Input(
         target=target,
@@ -364,9 +361,7 @@ def test_fasta_close_valid(
         task=DesignLeftPrimersTask(),
     )
 
-    with pytest.raises(
-        RuntimeError, match="Error, trying to use a subprocess that has already been terminated"
-    ):
+    with pytest.raises(ValueError, match="I/O operation on closed file"):
         designer.design(design_input=design_input)
 
 
