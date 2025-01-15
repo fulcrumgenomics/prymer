@@ -62,7 +62,7 @@ PRIMER_MAX_HAIRPIN_TH -> 53.0
 
 ```
 """
-
+import typing
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from dataclasses import fields
@@ -77,6 +77,18 @@ from prymer.primer3.primer3_task import Primer3TaskType
 class Primer3Parameters(ABC):
     target: Span
     task: Primer3TaskType
+
+    def as_amplicon_params(self) -> "AmpliconParameters":
+        """Use this method when you want to treat these parameters as amplicon parameters."""
+        if isinstance(self, AmpliconParameters):
+            return typing.cast(AmpliconParameters, self)
+        raise Exception("The parameters are not amplicon parameters")
+
+    def as_probe_params(self) -> "ProbeParameters":
+        """Use this method when you want to treat these parameters as probe parameters."""
+        if isinstance(self, ProbeParameters):
+            return typing.cast(ProbeParameters, self)
+        raise Exception("The parameters are not amplicon parameters")
 
     @abstractmethod
     def _to_input_tags(self) -> dict[Primer3InputTag, Any]: ...
