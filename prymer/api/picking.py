@@ -30,7 +30,6 @@ from prymer.model import MinOptMax
 from prymer.model import Oligo
 from prymer.model import PrimerPair
 from prymer.model import Span
-from prymer.ntthal import NtThermoAlign
 from prymer.primer3 import PrimerAndAmpliconWeights
 
 
@@ -206,23 +205,22 @@ def build_primer_pairs(  # noqa: C901
     # Sort by the penalty, ascending
     pairings.sort(key=lambda tup: tup[2])
 
-    with NtThermoAlign() as ntthal:
-        for i, j, penalty, tm in pairings:
-            lp = left_primers[i]
-            rp = right_primers[j]
+    for i, j, penalty, tm in pairings:
+        lp = left_primers[i]
+        rp = right_primers[j]
 
-            if max_heterodimer_tm is not None:
-                if ntthal.duplex_tm(lp.bases, rp.bases) > max_heterodimer_tm:
-                    continue
+        if max_heterodimer_tm is not None:
+            if thermo.heterodimer_tm(lp.bases, rp.bases) > max_heterodimer_tm:
+                continue
 
-            amp_bases = bases[lp.span.start - region_start : rp.span.end - region_start + 1]
+        amp_bases = bases[lp.span.start - region_start : rp.span.end - region_start + 1]
 
-            pp = PrimerPair(
-                left_primer=lp,
-                right_primer=rp,
-                amplicon_sequence=amp_bases,
-                amplicon_tm=tm,
-                penalty=penalty,
-            )
+        pp = PrimerPair(
+            left_primer=lp,
+            right_primer=rp,
+            amplicon_sequence=amp_bases,
+            amplicon_tm=tm,
+            penalty=penalty,
+        )
 
-            yield pp
+        yield pp
