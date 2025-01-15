@@ -25,12 +25,11 @@ from typing import Tuple
 
 from pysam import FastaFile
 
-from prymer.api.melting import calculate_long_seq_tm
+from prymer import Thermo
 from prymer.model import MinOptMax
 from prymer.model import Oligo
 from prymer.model import PrimerPair
 from prymer.model import Span
-from prymer.ntthal import NtThermoAlign
 from prymer.primer3 import PrimerAndAmpliconWeights
 
 
@@ -102,6 +101,7 @@ def build_primer_pairs(  # noqa: C901
     max_heterodimer_tm: Optional[float],
     weights: PrimerAndAmpliconWeights,
     fasta_path: Path,
+    thermo: Optional[Thermo] = None,
 ) -> Iterator[PrimerPair]:
     """Builds primer pairs from individual left and primers.
 
@@ -116,9 +116,11 @@ def build_primer_pairs(  # noqa: C901
         amplicon_sizes: minimum, optimal, and maximum amplicon sizes (lengths)
         amplicon_tms: minimum, optimal, and maximum amplicon Tms
         max_heterodimer_tm: if supplied, heterodimer Tms will be calculated for primer pairs,
-            and those exceeding the maximum Tm will be discarded
+          and those exceeding the maximum Tm will be discarded
         weights: the set of penalty weights
         fasta_path: the path to the FASTA file from which the amplicon sequence will be retrieved.
+        thermo: a [`Thermo`][prymer.Thermo] instance for performing thermodynamic calculations
+          including amplicon tm; if not provided, a default Thermo instance will be created
 
     Returns:
         An iterator over all the valid primer pairs, sorted by primer pair penalty.
@@ -143,6 +145,9 @@ def build_primer_pairs(  # noqa: C901
         region_start = min(p.span.start for p in left_primers)
         region_end = max(p.span.end for p in right_primers)
         bases = fasta.fetch(target.refname, region_start - 1, region_end)
+
+    # Make sure we can do thermodynamic/Tm calculations
+    thermo = thermo if thermo is not None else Thermo()
 
     # Each tuple is left_idx, right_idx, penalty, tm
     pairings: list[Tuple[int, int, float, float]] = []
@@ -180,7 +185,7 @@ def build_primer_pairs(  # noqa: C901
             # Since the amplicon span and the region_start are both 1-based, the minuend
             # becomes a zero-based offset
             amp_bases = bases[amp_span.start - region_start : amp_span.end - region_start + 1]
-            amp_tm = calculate_long_seq_tm(amp_bases)
+            amp_tm = thermo.tm(amp_bases)
 
             if amp_tm < amplicon_tms.min or amp_tm > amplicon_tms.max:
                 continue
@@ -200,23 +205,22 @@ def build_primer_pairs(  # noqa: C901
     # Sort by the penalty, ascending
     pairings.sort(key=lambda tup: tup[2])
 
-    with NtThermoAlign() as ntthal:
-        for i, j, penalty, tm in pairings:
-            lp = left_primers[i]
-            rp = right_primers[j]
+    for i, j, penalty, tm in pairings:
+        lp = left_primers[i]
+        rp = right_primers[j]
 
-            if max_heterodimer_tm is not None:
-                if ntthal.duplex_tm(lp.bases, rp.bases) > max_heterodimer_tm:
-                    continue
+        if max_heterodimer_tm is not None:
+            if thermo.heterodimer_tm(lp.bases, rp.bases) > max_heterodimer_tm:
+                continue
 
-            amp_bases = bases[lp.span.start - region_start : rp.span.end - region_start + 1]
+        amp_bases = bases[lp.span.start - region_start : rp.span.end - region_start + 1]
 
-            pp = PrimerPair(
-                left_primer=lp,
-                right_primer=rp,
-                amplicon_sequence=amp_bases,
-                amplicon_tm=tm,
-                penalty=penalty,
-            )
+        pp = PrimerPair(
+            left_primer=lp,
+            right_primer=rp,
+            amplicon_sequence=amp_bases,
+            amplicon_tm=tm,
+            penalty=penalty,
+        )
 
-            yield pp
+        yield pp
