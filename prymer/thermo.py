@@ -84,43 +84,6 @@ class Thermo:
             salt_corrections_method=self.salt_corrections_method,
         )
 
-    # @staticmethod
-    # def from_primer_params(p: PrimerAndAmpliconParameters) -> "Thermo":
-    #     return Thermo(
-    #         mv_conc_mm=p.,
-    #         dv_conc_mm=p.,
-    #         dntp_conc_mm=p.,
-    #         dna_conc_nm=p.,
-    #         dmso_conc_pct=p.,
-    #         dmso_correction_factor=p.,
-    #         formamide_conc_mol=p.,
-    #         annealing_temp_c=p.,
-    #         temp_c=p.,
-    #         max_nn_length=p.,
-    #         max_loop=p.,
-    #         tm_method=p.,
-    #         salt_corrections_method=p.,
-    #     )
-    #
-    # @staticmethod
-    # def from_probe_params(p: ProbeParameters) -> "Thermo":
-    #     return Thermo(
-    #         mv_conc_mm=p.,
-    #         dv_conc_mm=p.,
-    #         dntp_conc_mm=p.,
-    #         dna_conc_nm=p.,
-    #         dmso_conc_pct=p.,
-    #         dmso_correction_factor=p.,
-    #         formamide_conc_mol=p.,
-    #         annealing_temp_c=p.,
-    #         temp_c=p.,
-    #         max_nn_length=p.,
-    #         max_loop=p.,
-    #         tm_method=p.,
-    #         salt_corrections_method=p.,
-    #     )
-
-
     def tm(self, bases: str) -> float:
         """
         Calculates the melting temperature of a sequence of bases.  The calculation used differs
