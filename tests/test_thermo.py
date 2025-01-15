@@ -5,17 +5,15 @@ from prymer import Thermo
 # This module provides some very basic tests for the Thermo class on the assumption that
 # the underlying functionality from ntthal is robust.
 
+
 def test_all_tm_and_correction_methods() -> None:
     salt_methods = [
         Thermo.SALT_CORRECTION_METHOD_SANTALUCIA,
         Thermo.SALT_CORRECTION_METHOD_SCHILDKRAUT,
-        Thermo.SALT_CORRECTION_METHOD_OWCZARZY
+        Thermo.SALT_CORRECTION_METHOD_OWCZARZY,
     ]
 
-    tm_methods = [
-        Thermo.TM_METHOD_SANTALUCIA,
-        Thermo.TM_METHOD_BRESLAUER
-    ]
+    tm_methods = [Thermo.TM_METHOD_SANTALUCIA, Thermo.TM_METHOD_BRESLAUER]
 
     bases = "CGCTAATCGGGCTAGCTAG"
 

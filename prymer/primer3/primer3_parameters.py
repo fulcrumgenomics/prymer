@@ -121,8 +121,6 @@ class PrimerAndAmpliconParameters:
     primer_max_3p_homodimer_tm: Optional[float] = None
     primer_max_hairpin_tm: Optional[float] = None
 
-
-
     def __post_init__(self) -> None:
         if self.primer_max_dinuc_bases % 2 == 1:
             raise ValueError("Primer Max Dinuc Bases must be an even number of bases")
