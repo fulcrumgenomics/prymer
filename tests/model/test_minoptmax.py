@@ -2,7 +2,7 @@ from typing import TypeVar
 
 import pytest
 
-from prymer.api.minoptmax import MinOptMax
+from prymer import MinOptMax
 
 Numeric = TypeVar("Numeric", int, float)
 

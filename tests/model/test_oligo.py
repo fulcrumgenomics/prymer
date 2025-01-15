@@ -6,9 +6,9 @@ from typing import Optional
 import pytest
 from fgpyo.fasta.sequence_dictionary import SequenceDictionary
 
-from prymer.api.oligo import Oligo
-from prymer.api.span import Span
-from prymer.api.span import Strand
+from prymer import Oligo
+from prymer import Span
+from prymer import Strand
 
 
 @pytest.mark.parametrize(
@@ -50,9 +50,7 @@ def test_invalid_primer_construction_raises() -> None:
             span=Span(refname="chr1", start=1, end=4, strand=Strand.POSITIVE),
         )
 
-    with pytest.raises(
-        ValueError, match="Conflicting lengths"
-    ):
+    with pytest.raises(ValueError, match="Conflicting lengths"):
         Oligo(
             bases="ACGT",
             tm=1.0,

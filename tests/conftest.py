@@ -5,9 +5,11 @@ Fixtures intended to be shared across multiple files in the tests directory.
 from pathlib import Path
 
 import pytest
+from fgpyo.fasta.sequence_dictionary import SequenceDictionary
+from fgpyo.fasta.sequence_dictionary import SequenceMetadata
 
-from prymer.api.span import Span
-from prymer.api.span import Strand
+from prymer import Span
+from prymer import Strand
 
 
 @pytest.fixture
@@ -24,3 +26,13 @@ def data_dir() -> Path:
 @pytest.fixture(scope="session")
 def genome_ref(data_dir: Path) -> Path:
     return data_dir / "miniref.fa"
+
+
+@pytest.fixture
+def seq_dict() -> SequenceDictionary:
+    metadatas: list[SequenceMetadata] = [
+        SequenceMetadata(name="chr1", length=1000000, index=0),
+        SequenceMetadata(name="chr2", length=1000000, index=1),
+        SequenceMetadata(name="chr3", length=1000000, index=2),
+    ]
+    return SequenceDictionary(metadatas)
