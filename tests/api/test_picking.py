@@ -11,8 +11,8 @@ from prymer import MinOptMax
 from prymer import Oligo
 from prymer import PrimerPair
 from prymer import Span
+from prymer import Thermo
 from prymer.api import picking
-from prymer.api.melting import calculate_long_seq_tm
 from prymer.primer3 import PrimerAndAmpliconWeights
 
 
@@ -97,7 +97,7 @@ def pp(lp: Oligo, rp: Oligo, bases: Optional[str] = None, tm: Optional[float] = 
         name="pair",
         left_primer=lp,
         right_primer=rp,
-        amplicon_tm=tm if tm is not None else calculate_long_seq_tm(bases),
+        amplicon_tm=tm if tm is not None else Thermo().tm(bases),
         amplicon_sequence=bases,
         penalty=0,
     )
@@ -338,10 +338,10 @@ def test_build_primer_pairs_amplicon_tm_filtering(
     weights: PrimerAndAmpliconWeights,
 ) -> None:
     amp_bases = REF_BASES[200:300]
-    amp_tm = calculate_long_seq_tm(amp_bases)
-    assert floor(amp_tm) == 84
+    amp_tm = Thermo().tm(amp_bases)
+    assert floor(amp_tm) == 77
 
-    for max_tm in [83, 84, 85]:
+    for max_tm in [76, 77, 78]:
         pairs = list(
             picking.build_primer_pairs(
                 left_primers=[p(REF_BASES[200:220], tm=60.1, pos=201, pen=1.0)],
@@ -350,7 +350,7 @@ def test_build_primer_pairs_amplicon_tm_filtering(
                 ],
                 target=Span("chr1", 240, 260),
                 amplicon_sizes=MinOptMax(0, 0, 500),
-                amplicon_tms=MinOptMax(0, 80, max_tm),
+                amplicon_tms=MinOptMax(0, 75, max_tm),
                 max_heterodimer_tm=None,
                 weights=weights,
                 fasta_path=fasta,
