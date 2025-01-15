@@ -56,8 +56,8 @@ def test_heterodimer_tm() -> None:
 
 def test_heterodimer_3p_anchored_tm() -> None:
     thermo = Thermo()
-    tm1 = thermo. heterodimer_3p_anchored_tm("AAAAAAAAAA", "CCCCCCCCCC")
-    tm2 = thermo. heterodimer_3p_anchored_tm("AAAAAAAAAA", "TTTTTTTTTT")
+    tm1 = thermo.heterodimer_3p_anchored_tm("AAAAAAAAAA", "CCCCCCCCCC")
+    tm2 = thermo.heterodimer_3p_anchored_tm("AAAAAAAAAA", "TTTTTTTTTT")
 
     assert tm1 == 0
     assert tm2 > 0
