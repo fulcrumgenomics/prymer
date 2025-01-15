@@ -4,13 +4,13 @@ import pytest
 
 from prymer import MinOptMax
 from prymer.primer3.primer3_input_tag import Primer3InputTag
-from prymer.primer3.primer3_parameters import PrimerAndAmpliconParameters
+from prymer.primer3.primer3_parameters import AmpliconParameters
 from prymer.primer3.primer3_parameters import ProbeParameters
 
 
 @pytest.fixture
-def valid_primer_amplicon_params() -> PrimerAndAmpliconParameters:
-    return PrimerAndAmpliconParameters(
+def valid_primer_amplicon_params() -> AmpliconParameters:
+    return AmpliconParameters(
         amplicon_sizes=MinOptMax(min=200, opt=250, max=300),
         amplicon_tms=MinOptMax(min=55.0, opt=60.0, max=65.0),
         primer_sizes=MinOptMax(min=18, opt=21, max=27),
@@ -29,7 +29,7 @@ def valid_probe_params() -> ProbeParameters:
 
 
 def test_primer_amplicon_param_construction_valid(
-    valid_primer_amplicon_params: PrimerAndAmpliconParameters,
+    valid_primer_amplicon_params: AmpliconParameters,
 ) -> None:
     """Test PrimerAndAmpliconParameters class instantiation with valid input"""
     assert valid_primer_amplicon_params.amplicon_sizes.min == 200
@@ -61,7 +61,7 @@ def test_probe_param_construction_valid(
 
 
 def test_primer_amplicon_param_construction_raises(
-    valid_primer_amplicon_params: PrimerAndAmpliconParameters,
+    valid_primer_amplicon_params: AmpliconParameters,
 ) -> None:
     """Test that PrimerAndAmpliconParameters post_init raises with invalid input."""
     # overriding mypy here to test a case that normally would be caught by mypy
@@ -96,7 +96,7 @@ def test_primer_probe_param_construction_raises(
 
 
 def test_primer_amplicon_params_to_input_tags(
-    valid_primer_amplicon_params: PrimerAndAmpliconParameters,
+    valid_primer_amplicon_params: AmpliconParameters,
 ) -> None:
     """Test that to_input_tags() works as expected"""
     test_dict = valid_primer_amplicon_params.to_input_tags()
@@ -125,7 +125,7 @@ def test_primer_amplicon_params_to_input_tags(
     assert ambiguous_dict[Primer3InputTag.PRIMER_LOWERCASE_MASKING] == 0
 
 
-def test_max_ampl_length(valid_primer_amplicon_params: PrimerAndAmpliconParameters) -> None:
+def test_max_ampl_length(valid_primer_amplicon_params: AmpliconParameters) -> None:
     """Test that max_amplicon_length() returns expected int"""
     assert valid_primer_amplicon_params.max_amplicon_length == 300
     change_max_length = replace(
@@ -134,7 +134,7 @@ def test_max_ampl_length(valid_primer_amplicon_params: PrimerAndAmpliconParamete
     assert change_max_length.max_amplicon_length == 1000
 
 
-def test_max_primer_length(valid_primer_amplicon_params: PrimerAndAmpliconParameters) -> None:
+def test_max_primer_length(valid_primer_amplicon_params: AmpliconParameters) -> None:
     """Test that max_primer_length() returns expected int"""
     assert valid_primer_amplicon_params.max_primer_length == 27
     change_max_length = replace(

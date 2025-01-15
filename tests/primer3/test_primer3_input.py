@@ -8,7 +8,7 @@ from prymer.primer3 import DesignPrimerPairsTask
 from prymer.primer3 import DesignRightPrimersTask
 from prymer.primer3 import Primer3Input
 from prymer.primer3.primer3_input_tag import Primer3InputTag
-from prymer.primer3.primer3_parameters import PrimerAndAmpliconParameters
+from prymer.primer3.primer3_parameters import AmpliconParameters
 from prymer.primer3.primer3_parameters import ProbeParameters
 from prymer.primer3.primer3_task import PickHybProbeOnly
 from prymer.primer3.primer3_task import Primer3TaskType
@@ -17,8 +17,8 @@ from prymer.primer3.primer3_weights import ProbeWeights
 
 
 @pytest.fixture
-def valid_primer_amplicon_params() -> PrimerAndAmpliconParameters:
-    return PrimerAndAmpliconParameters(
+def valid_primer_amplicon_params() -> AmpliconParameters:
+    return AmpliconParameters(
         amplicon_sizes=MinOptMax(min=200, opt=250, max=300),
         amplicon_tms=MinOptMax(min=55.0, opt=60.0, max=65.0),
         primer_sizes=MinOptMax(min=18, opt=21, max=27),
@@ -55,7 +55,7 @@ def valid_probe_weights() -> ProbeWeights:
     ],
 )
 def test_primer_design_only_valid(
-    valid_primer_amplicon_params: PrimerAndAmpliconParameters,
+    valid_primer_amplicon_params: AmpliconParameters,
     task_type: Primer3TaskType,
     valid_primer_weights: PrimerAndAmpliconWeights,
 ) -> None:
@@ -163,7 +163,7 @@ def test_no_params_given_raises(
 def test_requires_params_sets(
     task_type: Primer3TaskType,
     valid_probe_params: ProbeParameters,
-    valid_primer_amplicon_params: PrimerAndAmpliconParameters,
+    valid_primer_amplicon_params: AmpliconParameters,
     valid_primer_weights: PrimerAndAmpliconWeights,
     valid_probe_weights: ProbeWeights,
     expected_req_primer_amplicon_params: bool,

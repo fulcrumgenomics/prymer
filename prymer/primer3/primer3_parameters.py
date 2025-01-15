@@ -27,7 +27,7 @@ specify the acceptable ranges of probe sizes, melting temperatures, and GC conte
 ## Examples
 
 ```python
->>> params = PrimerAndAmpliconParameters( \
+>>> params = AmpliconParameters( \
     amplicon_sizes=MinOptMax(min=100, max=250, opt=200), \
     amplicon_tms=MinOptMax(min=55.0, max=100.0, opt=70.0), \
     primer_sizes=MinOptMax(min=29, max=31, opt=30), \
@@ -63,18 +63,48 @@ PRIMER_MAX_HAIRPIN_TH -> 53.0
 ```
 """
 
-import warnings
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from dataclasses import fields
 from typing import Any
 from typing import Optional
 
-from prymer.model import MinOptMax
+from prymer.model import MinOptMax, Span
 from prymer.primer3.primer3_input_tag import Primer3InputTag
+from prymer.primer3.primer3_task import Primer3TaskType
+
+
+class Primer3Parameters(ABC):
+    target: Span
+    task: Primer3TaskType
+
+    @abstractmethod
+    def _to_input_tags(self) -> dict[Primer3InputTag, Any]: ...
+
+    def to_input_tags(self, design_region: Span) -> dict[Primer3InputTag, Any]:
+        """Assembles `Primer3InputTag` and values for input to `Primer3`
+
+             The target region must be wholly contained within design region.
+
+             Args:
+                 task: TODO
+                 design_region: the design region, which wholly contains the target region, in which
+                         primers are to be designed.
+
+             Returns:
+                 a mapping of `Primer3InputTag`s to associated value
+             """
+        primer3_task_params = self.task.to_input_tags(
+            design_region=design_region, target=self.target
+        )
+        assembled_tags: dict[Primer3InputTag, Any] = {**primer3_task_params}
+        assembled_tags.update(self._to_input_tags())
+
+        return assembled_tags
 
 
 @dataclass(frozen=True, init=True, slots=True)
-class PrimerAndAmpliconParameters:
+class AmpliconParameters(Primer3Parameters):
     """Holds common primer and amplicon design options that Primer3 uses to inform primer design.
 
     Attributes:
@@ -93,6 +123,26 @@ class PrimerAndAmpliconParameters:
         primer_max_3p_homodimer_tm: the max melting temperature acceptable for self-complementarity
             anchored at the 3' end
         primer_max_hairpin_tm: the max melting temperature acceptable for secondary structure
+        product_size_lt: weight for products shorter than
+            `PrimerAndAmpliconParameters.amplicon_sizes.opt`
+        product_size_gt: weight for products longer than
+            `PrimerAndAmpliconParameters.amplicon_sizes.opt`
+        product_tm_lt: weight for products with a Tm lower than
+            `PrimerAndAmpliconParameters.amplicon_tms.opt`
+        product_tm_gt: weight for products with a Tm greater than
+            `PrimerAndAmpliconParameters.amplicon_tms.opt`
+        primer_end_stability: penalty for the calculated maximum stability
+            for the last five 3' bases of primer
+        primer_gc_lt: penalty for primers with GC percent lower than
+            `PrimerAndAmpliconParameters.primer_gcs.opt`
+        primer_gc_gt: weight for primers with GC percent higher than
+            `PrimerAndAmpliconParameters.primer_gcs.opt`
+        primer_homodimer_wt: penalty for the individual primer self binding value as specified
+            in `PrimerAndAmpliconParameters.primer_max_homodimer_tm`
+        primer_3p_homodimer_wt: weight for the 3'-anchored primer self binding value as specified in
+            `PrimerAndAmpliconParameters.primer_max_3p_homodimer_tm`
+        primer_secondary_structure_wt: penalty weight for the primer hairpin structure melting
+            temperature as defined in `PrimerAndAmpliconParameters.PRIMER_MAX_HAIRPIN_TH`
 
     Please see the Primer3 manual for additional details: https://primer3.org/manual.html#globalTags
 
@@ -105,7 +155,8 @@ class PrimerAndAmpliconParameters:
     melting temperature threshold (i.e. when provided, values should be specified independent
     of primer design.)
     """
-
+    target: Span
+    task: Primer3TaskType
     amplicon_sizes: MinOptMax[int]
     amplicon_tms: MinOptMax[float]
     primer_sizes: MinOptMax[int]
@@ -120,6 +171,22 @@ class PrimerAndAmpliconParameters:
     primer_max_homodimer_tm: Optional[float] = None
     primer_max_3p_homodimer_tm: Optional[float] = None
     primer_max_hairpin_tm: Optional[float] = None
+    product_size_lt: float = 1.0
+    product_size_gt: float = 1.0
+    product_tm_lt: float = 0.0
+    product_tm_gt: float = 0.0
+    primer_end_stability: float = 0.25
+    primer_gc_lt: float = 0.25
+    primer_gc_gt: float = 0.25
+    primer_self_any: float = 0.1
+    primer_self_end: float = 0.1
+    primer_size_lt: float = 0.5
+    primer_size_gt: float = 0.1
+    primer_tm_lt: float = 1.0
+    primer_tm_gt: float = 1.0
+    primer_homodimer_wt: float = 0.0
+    primer_3p_homodimer_wt: float = 0.0
+    primer_secondary_structure_wt: float = 0.0
 
     def __post_init__(self) -> None:
         if self.primer_max_dinuc_bases % 2 == 1:
@@ -169,6 +236,22 @@ class PrimerAndAmpliconParameters:
             Primer3InputTag.PRIMER_MAX_SELF_ANY_TH: self.primer_max_homodimer_tm,
             Primer3InputTag.PRIMER_MAX_SELF_END_TH: self.primer_max_3p_homodimer_tm,
             Primer3InputTag.PRIMER_MAX_HAIRPIN_TH: self.primer_max_hairpin_tm,
+            Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_SIZE_LT: self.product_size_lt,
+            Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_SIZE_GT: self.product_size_gt,
+            Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_TM_LT: self.product_tm_lt,
+            Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_TM_GT: self.product_tm_gt,
+            Primer3InputTag.PRIMER_WT_END_STABILITY: self.primer_end_stability,
+            Primer3InputTag.PRIMER_WT_GC_PERCENT_LT: self.primer_gc_lt,
+            Primer3InputTag.PRIMER_WT_GC_PERCENT_GT: self.primer_gc_gt,
+            Primer3InputTag.PRIMER_WT_SELF_ANY: self.primer_self_any,
+            Primer3InputTag.PRIMER_WT_SELF_END: self.primer_self_end,
+            Primer3InputTag.PRIMER_WT_SIZE_LT: self.primer_size_lt,
+            Primer3InputTag.PRIMER_WT_SIZE_GT: self.primer_size_gt,
+            Primer3InputTag.PRIMER_WT_TM_LT: self.primer_tm_lt,
+            Primer3InputTag.PRIMER_WT_TM_GT: self.primer_tm_gt,
+            Primer3InputTag.PRIMER_WT_SELF_ANY_TH: self.primer_homodimer_wt,
+            Primer3InputTag.PRIMER_WT_SELF_END_TH: self.primer_3p_homodimer_wt,
+            Primer3InputTag.PRIMER_WT_HAIRPIN_TH: self.primer_secondary_structure_wt,
         }
 
         return mapped_dict
@@ -190,19 +273,7 @@ class PrimerAndAmpliconParameters:
 
 
 @dataclass(frozen=True, init=True, slots=True)
-class Primer3Parameters(PrimerAndAmpliconParameters):
-    """A deprecated alias for `PrimerAndAmpliconParameters` intended to maintain backwards
-    compatibility with earlier releases of `prymer`."""
-
-    warnings.warn(
-        "The Primer3Parameters class was deprecated, use PrimerAndAmpliconParameters instead",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-
-
-@dataclass(frozen=True, init=True, slots=True)
-class ProbeParameters:
+class ProbeParameters(Primer3Parameters):
     """Holds common primer design options that Primer3 uses to inform internal probe design.
 
     Attributes:
@@ -217,6 +288,18 @@ class ProbeParameters:
         probe_max_3p_homodimer_tm: the max melting temperature acceptable for self-complementarity
             anchored at the 3' end
         probe_max_hairpin_tm: the max melting temperature acceptable for secondary structure
+        probe_size_lt: penalty for probes shorter than `ProbeParameters.probe_sizes.opt`
+        probe_size_gt: penalty for probes longer than `ProbeParameters.probe_sizes.opt`
+        probe_tm_lt: penalty for probes with a Tm lower than `ProbeParameters.probe_tms.opt`
+        probe_tm_gt: penalty for probes with a Tm greater than `ProbeParameters.probe_tms.opt`
+        probe_gc_lt: penalty for probes with GC content lower than `ProbeParameters.probe_gcs.opt`
+        probe_gc_gt: penalty for probes with GC content greater than `ProbeParameters.probe_gcs.opt`
+        probe_homodimer_wt: penalty for probe self-complementarity as defined in
+            `ProbeParameters.probe_max_self_any_thermo`
+        probe_3p_homodimer_wt: penalty for probe 3' complementarity as defined in
+            `ProbeParameters.probe_max_self_end_thermo`
+        probe_secondary_structure_wt: penalty for the most stable primer hairpin structure value as
+            defined in `ProbeParameters.probe_max_hairpin_thermo`
 
     The attributes that have default values specified take their default values from the
     Primer3 manual.
@@ -237,7 +320,8 @@ class ProbeParameters:
     of probe design.)
 
     """
-
+    target: Span
+    task: Primer3TaskType
     probe_sizes: MinOptMax[int]
     probe_tms: MinOptMax[float]
     probe_gcs: MinOptMax[float]
@@ -248,6 +332,15 @@ class ProbeParameters:
     probe_max_homodimer_tm: Optional[float] = None
     probe_max_3p_homodimer_tm: Optional[float] = None
     probe_max_hairpin_tm: Optional[float] = None
+    probe_size_lt: float = 1.0
+    probe_size_gt: float = 1.0
+    probe_tm_lt: float = 1.0
+    probe_tm_gt: float = 1.0
+    probe_gc_lt: float = 0.0
+    probe_gc_gt: float = 0.0
+    probe_homodimer_wt: float = 0.0
+    probe_3p_homodimer_wt: float = 0.0
+    probe_secondary_structure_wt: float = 0.0
 
     def __post_init__(self) -> None:
         if not isinstance(self.probe_sizes.min, int):
@@ -285,6 +378,15 @@ class ProbeParameters:
             Primer3InputTag.PRIMER_INTERNAL_MAX_SELF_END_TH: self.probe_max_3p_homodimer_tm,
             Primer3InputTag.PRIMER_INTERNAL_MAX_HAIRPIN_TH: self.probe_max_hairpin_tm,
             Primer3InputTag.PRIMER_NUM_RETURN: self.number_probes_return,
+            Primer3InputTag.PRIMER_INTERNAL_WT_SIZE_LT: self.probe_size_lt,
+            Primer3InputTag.PRIMER_INTERNAL_WT_SIZE_GT: self.probe_size_gt,
+            Primer3InputTag.PRIMER_INTERNAL_WT_TM_LT: self.probe_tm_lt,
+            Primer3InputTag.PRIMER_INTERNAL_WT_TM_GT: self.probe_tm_gt,
+            Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_LT: self.probe_gc_lt,
+            Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_GT: self.probe_gc_gt,
+            Primer3InputTag.PRIMER_INTERNAL_WT_SELF_ANY_TH: self.probe_homodimer_wt,
+            Primer3InputTag.PRIMER_INTERNAL_WT_SELF_END_TH: self.probe_3p_homodimer_wt,
+            Primer3InputTag.PRIMER_INTERNAL_WT_HAIRPIN_TH: self.probe_secondary_structure_wt,
         }
 
         return mapped_dict
