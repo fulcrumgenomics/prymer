@@ -11,11 +11,11 @@ class Thermo:
     """
     Class for performing thermodynamic calculations.  Available calculations include:
 
-      1. melting temperature (Tm) for short and long sequences
-      2. hairpin / secondary structure Tm for single sequences
-      3. homodimer Tm - the Tm of a duplex formed from two copies of the same sequence
-      4. heterodimer Tm - the Tm of a duplex formed from two different sequences
-      5. 3' anchored heterodimer Tm - the heterodimer Tm when annealing of the 3' end is prioritized
+      1. melting temperature (Tm) for short and long sequences ([`tm()`][prymer.thermo.Thermo.tm])
+      2. hairpin / secondary structure Tm for single sequences ([`hairpin_tm`][prymer.thermo.Thermo.hairpin_tm])
+      3. homodimer Tm - the Tm of a duplex formed from two copies of the same sequence ([`homodimer_tm `][prymer.thermo.Thermo. homodimer_tm])
+      4. heterodimer Tm - the Tm of a duplex formed from two different sequences ([`heterodimer_tm `][prymer.thermo.Thermo. heterodimer_tm])
+      5. 3' anchored heterodimer Tm - the heterodimer Tm when annealing of the 3' end is prioritized ([`heterodimer_3p_anchored_tm `][prymer.thermo.Thermo. heterodimer_3p_anchored_tm])
 
     The `tm` method can be used for sequences of any length.  For sequences up to `max_nn_length`
     (default value 60 bases) the nearest neighborhood Tm calculation is used.  For sequences above
