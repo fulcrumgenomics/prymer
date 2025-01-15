@@ -101,6 +101,7 @@ class NtThermoAlign(ExecutableRunner):
             >>> t = NtThermoAlign()
             >>> t.duplex_tm(s1 = "ACGT", s2 = "ACGT")
             -46.542706
+
             ```
 
         Returns:

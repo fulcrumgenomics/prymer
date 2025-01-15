@@ -119,6 +119,7 @@ class Span(Metric["Span"]):
     Span(refname='chr1', start=6, end=10, strand=<Strand.POSITIVE: '+'>)
     >>> print(span.length)
     10
+
     ```
 
     """
@@ -158,6 +159,7 @@ class Span(Metric["Span"]):
         >>> span_string = "chr1:1-10:+"
         >>> Span.from_string(span_string)
         Span(refname='chr1', start=1, end=10, strand=<Strand.POSITIVE: '+'>)
+
         ```
 
         """
@@ -565,6 +567,7 @@ class PrimerPair:
         Span(refname='chr1', start=1, end=120, strand=<Strand.POSITIVE: '+'>)
         >>> list(primer_pair)
         [Oligo(bases='GGGGGGGGGGGGGGGGGGGG', tm=70.0, span=Span(refname='chr1', start=1, end=20, strand=<Strand.POSITIVE: '+'>), penalty=-123.0, name=None, tm_homodimer=None, tm_3p_anchored_homodimer=None, tm_secondary_structure=None, tail=None), Oligo(bases='TTTTTTTTTTTTTTTTTTTT', tm=70.0, span=Span(refname='chr1', start=101, end=120, strand=<Strand.NEGATIVE: '-'>), penalty=-123.0, name=None, tm_homodimer=None, tm_3p_anchored_homodimer=None, tm_secondary_structure=None, tail=None)]
+
         ```
 
     """  # noqa: E501
