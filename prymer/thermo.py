@@ -51,8 +51,8 @@ class Thermo:
     SALT_CORRECTION_METHOD_SANTALUCIA: ClassVar[str] = "santalucia"
 
     mv_conc_mm: float = 50.0
-    dv_conc_mm: float = 0.0
-    dntp_conc_mm: float = 0.0
+    dv_conc_mm: float = 1.5
+    dntp_conc_mm: float = 0.6
     dna_conc_nm: float = 50.0
     dmso_conc_pct: float = 0.0
     dmso_correction_factor: float = 0.6
