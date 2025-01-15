@@ -349,7 +349,7 @@ class Oligo(Metric["Oligo"]):
     ## Examples of interacting with the `Oligo` class
 
     ```python
-    >>> from prymer.model import Span, Strand
+    >>> from prymer import Span, Strand
     >>> oligo_span = Span(refname="chr1", start=1, end=20)
     >>> oligo = Oligo(tm=70.0, penalty=-123.0, span=oligo_span, bases="AGCT" * 5)
     >>> oligo.longest_hp_length
@@ -537,7 +537,7 @@ class PrimerPair:
         ValueError: if the chromosomes of the left and right primers are not the same
 
     Examples:
-        >>> from prymer.model import Strand
+        >>> from prymer import Strand
         >>> left_span = Span(refname="chr1", start=1, end=20)
         >>> left_primer = Oligo(tm=70.0, penalty=-123.0, span=left_span, bases="G"*20)
         >>> right_span = Span(refname="chr1", start=101, end=120, strand=Strand.NEGATIVE)

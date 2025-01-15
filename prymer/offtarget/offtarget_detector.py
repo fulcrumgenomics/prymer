@@ -11,7 +11,7 @@ to the genome.
 
 ```python
 >>> from pathlib import Path
->>> from prymer.model import Strand
+>>> from prymer import Strand
 >>> ref_fasta = Path("./tests/offtarget/data/miniref.fa")
 >>> left_primer =  Oligo(bases="AAAAA", tm=37, penalty=0, span=Span("chr1", start=67, end=71))
 >>> right_primer = Oligo(bases="TTTTT", tm=37, penalty=0, span=Span("chr1", start=75, end=79, strand=Strand.NEGATIVE))

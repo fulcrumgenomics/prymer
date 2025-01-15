@@ -42,7 +42,7 @@ parameters and target region.
 
 ```python
 >>> from prymer.primer3.primer3_parameters import PrimerAndAmpliconParameters
->>> from prymer.model import MinOptMax
+>>> from prymer import MinOptMax
 >>> target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
 >>> params = PrimerAndAmpliconParameters( \
     amplicon_sizes=MinOptMax(min=100, max=250, opt=200), \

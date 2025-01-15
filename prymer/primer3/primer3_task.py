@@ -40,7 +40,7 @@ returned.
 Suppose we have the following design and target regions:
 
 ```python
->>> from prymer.model import Strand
+>>> from prymer import Strand
 >>> design_region = Span(refname="chr1", start=1, end=500, strand=Strand.POSITIVE)
 >>> target = Span(refname="chr1", start=200, end=300, strand=Strand.POSITIVE)
 >>> design_region.contains(target)

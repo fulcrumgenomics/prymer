@@ -29,7 +29,7 @@ The main purpose of this class is to generate the
 The following examples builds the `Primer3` tags for designing left primers:
 
 ```python
->>> from prymer.model import MinOptMax, Strand, Span
+>>> from prymer import MinOptMax, Strand, Span
 >>> from prymer.primer3 import DesignLeftPrimersTask
 >>> target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
 >>> design_region = Span(refname="chr1", start=150, end=300, strand=Strand.POSITIVE)
