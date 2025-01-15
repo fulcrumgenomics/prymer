@@ -15,7 +15,10 @@ def get_closed_end(start: int, length: int) -> int:
         The closed end of the interval.
 
     Example:
+        ```python
         >>> get_closed_end(start=10, length=5)
         14
+
+        ```
     """
     return start + length - 1
