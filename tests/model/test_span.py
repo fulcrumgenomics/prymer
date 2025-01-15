@@ -1,9 +1,8 @@
 import pytest
 from fgpyo.fasta.sequence_dictionary import SequenceDictionary
 
-from prymer.api.span import BedLikeCoords
-from prymer.api.span import Span
-from prymer.api.span import Strand
+from prymer import Span
+from prymer import Strand
 
 
 @pytest.mark.parametrize(
@@ -18,32 +17,6 @@ def test_invalid_span(refname: str, invalid_start: int, invalid_end: int, strand
     """Test that invalid spans raise an error"""
     with pytest.raises(ValueError):
         Span(refname, invalid_start, invalid_end, Strand(strand))
-
-
-@pytest.mark.parametrize(
-    "invalid_start, invalid_end",
-    [
-        (-1, 10),  # start < 0
-        (30, 20),  # start > end
-        (21, 20),  # start > end
-    ],
-)
-def test_invalid_coords(invalid_start: int, invalid_end: int) -> None:
-    """Test that invalid spans raise an error"""
-    with pytest.raises(ValueError):
-        BedLikeCoords(invalid_start, invalid_end)
-
-
-@pytest.mark.parametrize(
-    "valid_start, valid_end",
-    [
-        (0, 10),  # start == 0
-        (20, 20),  # start == end
-    ],
-)
-def test_valid_coords(valid_start: int, valid_end: int) -> None:
-    """Test that valid spans are OK"""
-    BedLikeCoords(valid_start, valid_end)
 
 
 @pytest.mark.parametrize(
@@ -138,9 +111,6 @@ def test_span_from_valid_string(line: str, expected_span: Span, expected_length:
     span = Span.from_string(line)
     assert span == expected_span
     assert span.length == expected_length
-    bedlike_coords = span.get_bedlike_coords()
-    assert bedlike_coords.end - bedlike_coords.start == expected_length
-    assert bedlike_coords.end == span.end
 
 
 @pytest.mark.parametrize(

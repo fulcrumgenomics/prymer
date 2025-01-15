@@ -42,7 +42,7 @@ parameters and target region.
 
 ```python
 >>> from prymer.primer3.primer3_parameters import PrimerAndAmpliconParameters
->>> from prymer.api import MinOptMax
+>>> from prymer import MinOptMax
 >>> target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
 >>> params = PrimerAndAmpliconParameters( \
     amplicon_sizes=MinOptMax(min=100, max=250, opt=200), \
@@ -132,12 +132,12 @@ from fgpyo.sam import reader
 from fgpyo.sequence import reverse_complement
 from fgpyo.util.metric import Metric
 
-from prymer.api.oligo import Oligo
-from prymer.api.primer_pair import PrimerPair
-from prymer.api.span import Span
-from prymer.api.span import Strand
 from prymer.api.variant_lookup import SimpleVariant
 from prymer.api.variant_lookup import VariantLookup
+from prymer.model import Oligo
+from prymer.model import PrimerPair
+from prymer.model import Span
+from prymer.model import Strand
 from prymer.primer3.primer3_failure_reason import Primer3FailureReason
 from prymer.primer3.primer3_input import Primer3Input
 from prymer.primer3.primer3_input_tag import Primer3InputTag

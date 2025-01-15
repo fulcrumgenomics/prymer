@@ -11,7 +11,7 @@ to the genome.
 
 ```python
 >>> from pathlib import Path
->>> from prymer.api.span import Strand
+>>> from prymer import Strand
 >>> ref_fasta = Path("./tests/offtarget/data/miniref.fa")
 >>> left_primer =  Oligo(bases="AAAAA", tm=37, penalty=0, span=Span("chr1", start=67, end=71))
 >>> right_primer = Oligo(bases="TTTTT", tm=37, penalty=0, span=Span("chr1", start=75, end=79, strand=Strand.NEGATIVE))
@@ -89,10 +89,10 @@ from typing import TypeVar
 
 from ordered_set import OrderedSet
 
-from prymer.api.oligo import Oligo
-from prymer.api.primer_pair import PrimerPair
-from prymer.api.span import Span
-from prymer.api.span import Strand
+from prymer.model import Oligo
+from prymer.model import PrimerPair
+from prymer.model import Span
+from prymer.model import Strand
 from prymer.offtarget.bwa import BWA_EXECUTABLE_NAME
 from prymer.offtarget.bwa import BwaAlnInteractive
 from prymer.offtarget.bwa import BwaHit

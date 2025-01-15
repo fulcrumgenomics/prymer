@@ -77,8 +77,8 @@ from pysam import VariantFile
 from pysam import VariantRecord
 from strenum import UppercaseStrEnum
 
-from prymer.api.span import Span
-from prymer.api.span import Strand
+from prymer.model import Span
+from prymer.model import Strand
 
 _logger = logging.getLogger(__name__)
 

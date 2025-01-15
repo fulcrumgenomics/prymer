@@ -12,8 +12,8 @@ from fgpyo.vcf.builder import VcfFieldNumber
 from fgpyo.vcf.builder import VcfFieldType
 from pysam import VariantRecord
 
-from prymer.api.span import Span
-from prymer.api.span import Strand
+from prymer import Span
+from prymer import Strand
 from prymer.api.variant_lookup import FileBasedVariantLookup
 from prymer.api.variant_lookup import SimpleVariant
 from prymer.api.variant_lookup import VariantOverlapDetector

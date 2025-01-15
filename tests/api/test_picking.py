@@ -7,10 +7,10 @@ import pytest
 from fgpyo.fasta.builder import FastaBuilder
 from fgpyo.sequence import reverse_complement
 
-from prymer.api import MinOptMax
-from prymer.api import Oligo
-from prymer.api import PrimerPair
-from prymer.api import Span
+from prymer import MinOptMax
+from prymer import Oligo
+from prymer import PrimerPair
+from prymer import Span
 from prymer.api import picking
 from prymer.api.melting import calculate_long_seq_tm
 from prymer.primer3 import PrimerAndAmpliconWeights
