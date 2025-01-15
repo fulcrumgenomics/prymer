@@ -12,6 +12,8 @@ from fgpyo.vcf.builder import VcfFieldNumber
 from fgpyo.vcf.builder import VcfFieldType
 from pysam import VariantRecord
 
+from prymer import Span
+from prymer import Strand
 from prymer.api.variant_lookup import FileBasedVariantLookup
 from prymer.api.variant_lookup import SimpleVariant
 from prymer.api.variant_lookup import VariantOverlapDetector
@@ -19,8 +21,6 @@ from prymer.api.variant_lookup import VariantType
 from prymer.api.variant_lookup import cached
 from prymer.api.variant_lookup import calc_maf_from_filter
 from prymer.api.variant_lookup import disk_based
-from prymer.model import Span
-from prymer.model import Strand
 
 
 @pytest.mark.parametrize(

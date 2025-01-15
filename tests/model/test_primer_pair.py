@@ -6,10 +6,10 @@ import pytest
 from fgpyo.fasta.sequence_dictionary import SequenceDictionary
 from fgpyo.sequence import reverse_complement
 
-from prymer.model import Oligo
-from prymer.model import PrimerPair
-from prymer.model import Span
-from prymer.model import Strand
+from prymer import Oligo
+from prymer import PrimerPair
+from prymer import Span
+from prymer import Strand
 
 
 @dataclass(init=True, frozen=True)

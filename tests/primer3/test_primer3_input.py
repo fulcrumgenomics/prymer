@@ -1,8 +1,8 @@
 import pytest
 
-from prymer.model import MinOptMax
-from prymer.model import Span
-from prymer.model import Strand
+from prymer import MinOptMax
+from prymer import Span
+from prymer import Strand
 from prymer.primer3 import DesignLeftPrimersTask
 from prymer.primer3 import DesignPrimerPairsTask
 from prymer.primer3 import DesignRightPrimersTask

@@ -6,12 +6,12 @@ import pysam
 import pytest
 from fgpyo.sequence import reverse_complement
 
+from prymer import MinOptMax
+from prymer import Oligo
+from prymer import PrimerPair
+from prymer import Span
+from prymer import Strand
 from prymer.api.variant_lookup import cached
-from prymer.model import MinOptMax
-from prymer.model import Oligo
-from prymer.model import PrimerPair
-from prymer.model import Span
-from prymer.model import Strand
 from prymer.primer3.primer3 import Primer3
 from prymer.primer3.primer3 import Primer3Failure
 from prymer.primer3.primer3 import Primer3Result

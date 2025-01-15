@@ -1,7 +1,7 @@
 import pytest
 
-from prymer.model import Span
-from prymer.model import Strand
+from prymer import Span
+from prymer import Strand
 from prymer.primer3.primer3_input_tag import Primer3InputTag
 from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask

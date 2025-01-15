@@ -1,8 +1,8 @@
 import pytest
 from fgpyo.fasta.sequence_dictionary import SequenceDictionary
 
-from prymer.model import Span
-from prymer.model import Strand
+from prymer import Span
+from prymer import Strand
 
 
 @pytest.mark.parametrize(
