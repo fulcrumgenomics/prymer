@@ -14,13 +14,18 @@ to score a primer design and help define what an "optimal" design looks like.
 By modifying these weights, users can prioritize specific primer design characteristics. Each of
 the defaults provided here are derived from the Primer3 manual: https://primer3.org/manual.html
 
-## Examples of interacting with the `PrimerAndAmpliconWeights` class
+## Examples of interacting with the PrimerAndAmpliconWeights class
 
 Example:
+
+```python
 >>> PrimerAndAmpliconWeights() # default implementation
 PrimerAndAmpliconWeights(product_size_lt=1.0, product_size_gt=1.0, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0, primer_homodimer_wt=0.0, primer_3p_homodimer_wt=0.0, primer_secondary_structure_wt=0.0)
 >>> PrimerAndAmpliconWeights(product_size_lt=5.0)
 PrimerAndAmpliconWeights(product_size_lt=5.0, product_size_gt=1.0, product_tm_lt=0.0, product_tm_gt=0.0, primer_end_stability=0.25, primer_gc_lt=0.25, primer_gc_gt=0.25, primer_self_any=0.1, primer_self_end=0.1, primer_size_lt=0.5, primer_size_gt=0.1, primer_tm_lt=1.0, primer_tm_gt=1.0, primer_homodimer_wt=0.0, primer_3p_homodimer_wt=0.0, primer_secondary_structure_wt=0.0)
+
+```
+
 """  # noqa: E501
 
 from dataclasses import dataclass

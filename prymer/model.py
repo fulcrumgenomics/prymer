@@ -102,21 +102,25 @@ class Span(Metric["Span"]):
         strand: the strand of the Span (POSITIVE by default)
 
     Examples:
-        >>> span_string = "chr1:1-10:+"
-        >>> span = Span.from_string(span_string)
-        >>> span
-        Span(refname='chr1', start=1, end=10, strand=<Strand.POSITIVE: '+'>)
-        >>> print(span.start)
-        1
-        >>> # get 0-based position within span at position 10
-        >>> span.get_offset(position=10)
-        9
-        >>> # create a new subspan derived from the source map
-        >>> new_subspan = span.get_subspan(offset=5, subspan_length=5)
-        >>> new_subspan
-        Span(refname='chr1', start=6, end=10, strand=<Strand.POSITIVE: '+'>)
-        >>> print(span.length)
-        10
+
+    ```python
+    >>> span_string = "chr1:1-10:+"
+    >>> span = Span.from_string(span_string)
+    >>> span
+    Span(refname='chr1', start=1, end=10, strand=<Strand.POSITIVE: '+'>)
+    >>> print(span.start)
+    1
+    >>> # get 0-based position within span at position 10
+    >>> span.get_offset(position=10)
+    9
+    >>> # create a new subspan derived from the source map
+    >>> new_subspan = span.get_subspan(offset=5, subspan_length=5)
+    >>> new_subspan
+    Span(refname='chr1', start=6, end=10, strand=<Strand.POSITIVE: '+'>)
+    >>> print(span.length)
+    10
+    ```
+
     """
 
     refname: str
@@ -149,9 +153,13 @@ class Span(Metric["Span"]):
             ValueError: if there are not at least 2 colon-delimited fields in string
 
         Example:
-            >>> span_string = "chr1:1-10:+"
-            >>> Span.from_string(span_string)
-            Span(refname='chr1', start=1, end=10, strand=<Strand.POSITIVE: '+'>)
+
+        ```python
+        >>> span_string = "chr1:1-10:+"
+        >>> Span.from_string(span_string)
+        Span(refname='chr1', start=1, end=10, strand=<Strand.POSITIVE: '+'>)
+        ```
+
         """
         parts = line.strip().split(":")
         if len(parts) == 3:
@@ -346,7 +354,7 @@ class Oligo(Metric["Oligo"]):
     than the intended melting temperature for target binding indicates the primer or probe is
     likely to form stable hairpins or dimers, leading to reduced efficiency of the reaction.
 
-    ## Examples of interacting with the `Oligo` class
+    Examples of interacting with the `Oligo` class
 
     ```python
     >>> from prymer import Span, Strand
@@ -537,6 +545,7 @@ class PrimerPair:
         ValueError: if the chromosomes of the left and right primers are not the same
 
     Examples:
+        ```python
         >>> from prymer import Strand
         >>> left_span = Span(refname="chr1", start=1, end=20)
         >>> left_primer = Oligo(tm=70.0, penalty=-123.0, span=left_span, bases="G"*20)
@@ -554,9 +563,10 @@ class PrimerPair:
         Span(refname='chr1', start=1, end=120, strand=<Strand.POSITIVE: '+'>)
         >>> primer_pair.span
         Span(refname='chr1', start=1, end=120, strand=<Strand.POSITIVE: '+'>)
-
         >>> list(primer_pair)
         [Oligo(bases='GGGGGGGGGGGGGGGGGGGG', tm=70.0, span=Span(refname='chr1', start=1, end=20, strand=<Strand.POSITIVE: '+'>), penalty=-123.0, name=None, tm_homodimer=None, tm_3p_anchored_homodimer=None, tm_secondary_structure=None, tail=None), Oligo(bases='TTTTTTTTTTTTTTTTTTTT', tm=70.0, span=Span(refname='chr1', start=101, end=120, strand=<Strand.NEGATIVE: '-'>), penalty=-123.0, name=None, tm_homodimer=None, tm_3p_anchored_homodimer=None, tm_secondary_structure=None, tail=None)]
+    ```
+
     """  # noqa: E501
 
     left_primer: Oligo

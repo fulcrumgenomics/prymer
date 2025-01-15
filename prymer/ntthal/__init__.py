@@ -97,9 +97,11 @@ class NtThermoAlign(ExecutableRunner):
             s2: the sequence of oligo 2 (5'->3' orientation)
 
         Example:
+            ```python
             >>> t = NtThermoAlign()
             >>> t.duplex_tm(s1 = "ACGT", s2 = "ACGT")
             -46.542706
+            ```
 
         Returns:
             result: ntthal-calculated melting temperature
