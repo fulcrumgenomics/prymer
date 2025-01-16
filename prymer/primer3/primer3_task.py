@@ -197,14 +197,6 @@ class DesignPrimerPairsTask(Primer3Task, task_type=TaskType.PAIR):
             f"{target.length}",
         }
 
-    @property
-    def requires_primer_amplicon_params(self) -> bool:
-        return True
-
-    @property
-    def requires_probe_params(self) -> bool:
-        return False
-
 
 class DesignLeftPrimersTask(Primer3Task, task_type=TaskType.LEFT):
     """Stores task-specific characteristics for designing left primers."""
@@ -218,14 +210,6 @@ class DesignLeftPrimersTask(Primer3Task, task_type=TaskType.LEFT):
             Primer3InputTag.PRIMER_PICK_INTERNAL_OLIGO: 0,
             Primer3InputTag.SEQUENCE_INCLUDED_REGION: f"1,{target.start - design_region.start}",
         }
-
-    @property
-    def requires_primer_amplicon_params(self) -> bool:
-        return True
-
-    @property
-    def requires_probe_params(self) -> bool:
-        return False
 
 
 class DesignRightPrimersTask(Primer3Task, task_type=TaskType.RIGHT):
@@ -243,14 +227,6 @@ class DesignRightPrimersTask(Primer3Task, task_type=TaskType.RIGHT):
             Primer3InputTag.SEQUENCE_INCLUDED_REGION: f"{start},{length}",
         }
 
-    @property
-    def requires_primer_amplicon_params(self) -> bool:
-        return True
-
-    @property
-    def requires_probe_params(self) -> bool:
-        return False
-
 
 class PickHybProbeOnly(Primer3Task, task_type=TaskType.INTERNAL):
     """Stores task-specific characteristics for designing an internal hybridization probe."""
@@ -263,11 +239,3 @@ class PickHybProbeOnly(Primer3Task, task_type=TaskType.INTERNAL):
             Primer3InputTag.PRIMER_PICK_RIGHT_PRIMER: 0,
             Primer3InputTag.PRIMER_PICK_INTERNAL_OLIGO: 1,
         }
-
-    @property
-    def requires_primer_amplicon_params(self) -> bool:
-        return False
-
-    @property
-    def requires_probe_params(self) -> bool:
-        return True
