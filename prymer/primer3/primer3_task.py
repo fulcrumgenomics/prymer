@@ -169,31 +169,21 @@ class Primer3Task(ABC):
     count_tag: ClassVar[str] = NotImplemented
     """The tag returned by Primer3 that provides the number of primers returned"""
 
-    is_amplicon_design_task: ClassVar[bool] = NotImplemented
-    """True if this task designs amplicons (primer or primer pairs)"""
-
-    is_probe_design_task: ClassVar[bool] = NotImplemented
-    """True if this task designs probes"""
-
     @classmethod
     @abstractmethod
     def _to_input_tags(cls, target: Span, design_region: Span) -> dict[Primer3InputTag, Any]:
         """Aligns the set of input parameters specific to primer pair or single primer design"""
 
     @classmethod
-    def __init_subclass__(
-        cls, task_type: TaskType, is_amplicon_design_task: bool, **kwargs: Any
-    ) -> None:
+    def __init_subclass__(cls, task_type: TaskType, **kwargs: Any) -> None:
         # See: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
         super().__init_subclass__(**kwargs)
 
         cls.task_type = task_type
         cls.count_tag = f"PRIMER_{task_type}_NUM_RETURNED"
-        cls.is_amplicon_design_task = is_amplicon_design_task
-        cls.is_probe_design_task = not is_amplicon_design_task
 
 
-class DesignPrimerPairsTask(Primer3Task, task_type=TaskType.PAIR, is_amplicon_design_task=True):
+class DesignPrimerPairsTask(Primer3Task, task_type=TaskType.PAIR):
     """Stores task-specific Primer3 settings for designing primer pairs"""
 
     @classmethod
@@ -208,7 +198,7 @@ class DesignPrimerPairsTask(Primer3Task, task_type=TaskType.PAIR, is_amplicon_de
         }
 
 
-class DesignLeftPrimersTask(Primer3Task, task_type=TaskType.LEFT, is_amplicon_design_task=True):
+class DesignLeftPrimersTask(Primer3Task, task_type=TaskType.LEFT):
     """Stores task-specific characteristics for designing left primers."""
 
     @classmethod
@@ -222,7 +212,7 @@ class DesignLeftPrimersTask(Primer3Task, task_type=TaskType.LEFT, is_amplicon_de
         }
 
 
-class DesignRightPrimersTask(Primer3Task, task_type=TaskType.RIGHT, is_amplicon_design_task=True):
+class DesignRightPrimersTask(Primer3Task, task_type=TaskType.RIGHT):
     """Stores task-specific characteristics for designing right primers"""
 
     @classmethod
@@ -238,7 +228,7 @@ class DesignRightPrimersTask(Primer3Task, task_type=TaskType.RIGHT, is_amplicon_
         }
 
 
-class PickHybProbeOnly(Primer3Task, task_type=TaskType.INTERNAL, is_amplicon_design_task=False):
+class PickHybProbeOnly(Primer3Task, task_type=TaskType.INTERNAL):
     """Stores task-specific characteristics for designing an internal hybridization probe."""
 
     @classmethod

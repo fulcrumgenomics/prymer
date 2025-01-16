@@ -30,22 +30,14 @@ specify the acceptable ranges of probe sizes, melting temperatures, and GC conte
 >>> from prymer.primer3 import DesignPrimerPairsTask
 >>> from prymer import Strand
 >>> params = AmpliconParameters( \
-    task=DesignPrimerPairsTask(), \
-    target=Span(refname="chr1", start=200, end=300, strand=Strand.POSITIVE), \
     amplicon_sizes=MinOptMax(min=100, max=250, opt=200), \
     amplicon_tms=MinOptMax(min=55.0, max=100.0, opt=70.0), \
     primer_sizes=MinOptMax(min=29, max=31, opt=30), \
     primer_tms=MinOptMax(min=63.0, max=67.0, opt=65.0), \
     primer_gcs=MinOptMax(min=30.0, max=65.0, opt=45.0), \
 )
->>> design_region = Span(refname="chr1", start=1, end=500, strand=Strand.POSITIVE)
->>> for tag, value in params.to_input_tags(design_region=design_region).items(): \
+>>> for tag, value in params.to_input_tags().items(): \
     print(f"{tag.value} -> {value}")
-PRIMER_TASK -> generic
-PRIMER_PICK_LEFT_PRIMER -> 1
-PRIMER_PICK_RIGHT_PRIMER -> 1
-PRIMER_PICK_INTERNAL_OLIGO -> 0
-SEQUENCE_TARGET -> 200,101
 PRIMER_PRODUCT_OPT_SIZE -> 200
 PRIMER_PRODUCT_SIZE_RANGE -> 100-250
 PRIMER_PRODUCT_MIN_TM -> 55.0
@@ -93,35 +85,15 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from dataclasses import fields
-from functools import cached_property
 from typing import Any
 from typing import Optional
 
 from prymer.model import MinOptMax
-from prymer.model import Span
 from prymer.model import WeightRange
 from prymer.primer3.primer3_input_tag import Primer3InputTag
-from prymer.primer3.primer3_task import Primer3TaskType
 
 
 class Primer3Parameters(ABC):
-    target: Span
-    task: Primer3TaskType
-
-    @cached_property
-    def as_amplicon_params(self) -> "AmpliconParameters":
-        """Use this method when you want to treat these parameters as amplicon parameters."""
-        if isinstance(self, AmpliconParameters):
-            return self
-        raise Exception("The parameters are not amplicon parameters")
-
-    @cached_property
-    def as_probe_params(self) -> "ProbeParameters":
-        """Use this method when you want to treat these parameters as probe parameters."""
-        if isinstance(self, ProbeParameters):
-            return self
-        raise Exception("The parameters are not probe parameters")
-
     @property
     @abstractmethod
     def max_dinuc_bases(self) -> int:
@@ -129,27 +101,7 @@ class Primer3Parameters(ABC):
         pass
 
     @abstractmethod
-    def _to_input_tags(self) -> dict[Primer3InputTag, Any]: ...
-
-    def to_input_tags(self, design_region: Span) -> dict[Primer3InputTag, Any]:
-        """Assembles `Primer3InputTag` and values for input to `Primer3`
-
-        The target region must be wholly contained within design region.
-
-        Args:
-            design_region: the design region, which wholly contains the target region, in which
-                    primers are to be designed.
-
-        Returns:
-            a mapping of `Primer3InputTag`s to associated value
-        """
-        primer3_task_params = self.task.to_input_tags(
-            design_region=design_region, target=self.target
-        )
-        assembled_tags: dict[Primer3InputTag, Any] = {**primer3_task_params}
-        assembled_tags.update(self._to_input_tags())
-
-        return assembled_tags
+    def to_input_tags(self) -> dict[Primer3InputTag, Any]: ...
 
 
 @dataclass(frozen=True, init=True, slots=True)
@@ -203,8 +155,6 @@ class AmpliconParameters(Primer3Parameters):
     length).
     """
 
-    target: Span
-    task: Primer3TaskType
     amplicon_sizes: MinOptMax[int]
     amplicon_tms: MinOptMax[float]
     primer_sizes: MinOptMax[int]
@@ -232,9 +182,6 @@ class AmpliconParameters(Primer3Parameters):
     primer_secondary_structure_wt: float = 0.0
 
     def __post_init__(self) -> None:
-        if not self.task.is_amplicon_design_task:
-            raise ValueError(f"Task '{self.task}' must be an amplicon design task.")
-
         if self.primer_max_dinuc_bases % 2 == 1:
             raise ValueError("Primer Max Dinuc Bases must be an even number of bases")
         if not isinstance(self.amplicon_sizes.min, int) or not isinstance(
@@ -258,7 +205,7 @@ class AmpliconParameters(Primer3Parameters):
     def max_dinuc_bases(self) -> int:
         return self.primer_max_dinuc_bases
 
-    def _to_input_tags(self) -> dict[Primer3InputTag, Any]:
+    def to_input_tags(self) -> dict[Primer3InputTag, Any]:
         """Converts input params to Primer3InputTag to feed directly into Primer3."""
         mapped_dict: dict[Primer3InputTag, Any] = {
             Primer3InputTag.PRIMER_PRODUCT_OPT_SIZE: self.amplicon_sizes.opt,
@@ -372,8 +319,6 @@ class ProbeParameters(Primer3Parameters):
     length).
     """
 
-    target: Span
-    task: Primer3TaskType
     probe_sizes: MinOptMax[int]
     probe_tms: MinOptMax[float]
     probe_gcs: MinOptMax[float]
@@ -392,9 +337,6 @@ class ProbeParameters(Primer3Parameters):
     probe_secondary_structure_wt: float = 0.0
 
     def __post_init__(self) -> None:
-        if not self.task.is_probe_design_task:
-            raise ValueError(f"Task '{self.task}' must be an probe design task.")
-
         if not isinstance(self.probe_sizes.min, int):
             raise TypeError("Probe sizes must be integers")
         if not isinstance(self.probe_tms.min, float) or not isinstance(self.probe_gcs.min, float):
@@ -416,7 +358,7 @@ class ProbeParameters(Primer3Parameters):
     def max_dinuc_bases(self) -> int:
         return self.probe_max_dinuc_bases
 
-    def _to_input_tags(self) -> dict[Primer3InputTag, Any]:
+    def to_input_tags(self) -> dict[Primer3InputTag, Any]:
         """Converts input params to Primer3InputTag to feed directly into Primer3."""
         mapped_dict: dict[Primer3InputTag, Any] = {
             Primer3InputTag.PRIMER_INTERNAL_MIN_SIZE: self.probe_sizes.min,

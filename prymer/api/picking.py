@@ -116,11 +116,11 @@ def build_primer_pairs(  # noqa: C901
         amplicon_sizes: minimum, optimal, and maximum amplicon sizes (lengths)
         amplicon_tms: minimum, optimal, and maximum amplicon Tms
         max_heterodimer_tm: if supplied, heterodimer Tms will be calculated for primer pairs,
-          and those exceeding the maximum Tm will be discarded
+            and those exceeding the maximum Tm will be discarded
         params: the set of penalty params
         fasta_path: the path to the FASTA file from which the amplicon sequence will be retrieved.
         thermo: a [`Thermo`][prymer.Thermo] instance for performing thermodynamic calculations
-          including amplicon tm; if not provided, a default Thermo instance will be created
+            including amplicon tm; if not provided, a default Thermo instance will be created
 
     Returns:
         An iterator over all the valid primer pairs, sorted by primer pair penalty.

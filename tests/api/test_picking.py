@@ -11,12 +11,10 @@ from prymer import MinOptMax
 from prymer import Oligo
 from prymer import PrimerPair
 from prymer import Span
-from prymer import Strand
 from prymer import Thermo
 from prymer.api import picking
 from prymer.model import WeightRange
 from prymer.primer3 import AmpliconParameters
-from prymer.primer3 import DesignPrimerPairsTask
 
 
 @pytest.fixture
@@ -31,10 +29,7 @@ def amplicon_tms() -> MinOptMax[float]:
 
 @pytest.fixture
 def params() -> AmpliconParameters:
-    target = Span(refname="chr1", start=200, end=300, strand=Strand.POSITIVE)
     return AmpliconParameters(
-        target=target,
-        task=DesignPrimerPairsTask(),
         amplicon_sizes=MinOptMax(min=200, opt=250, max=300),
         amplicon_tms=MinOptMax(min=55.0, opt=60.0, max=65.0),
         primer_sizes=MinOptMax(min=18, opt=21, max=27),

@@ -43,17 +43,15 @@ parameters and target region.
 ```python
 >>> from prymer.primer3.primer3_parameters import AmpliconParameters
 >>> from prymer import MinOptMax
->>> target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
->>> design_input = AmpliconParameters( \
-    task=DesignLeftPrimersTask(), \
-    target=target, \
+>>> params = AmpliconParameters( \
     amplicon_sizes=MinOptMax(min=100, max=250, opt=200), \
     amplicon_tms=MinOptMax(min=55.0, max=100.0, opt=70.0), \
     primer_sizes=MinOptMax(min=29, max=31, opt=30), \
     primer_tms=MinOptMax(min=63.0, max=67.0, opt=65.0), \
     primer_gcs=MinOptMax(min=30.0, max=65.0, opt=45.0), \
 )
->>> left_result = designer.design(design_input=design_input)
+>>> target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
+>>> left_result = designer.design(task=DesignLeftPrimersTask(), params=params, target=target)
 
 ```
 
@@ -137,11 +135,14 @@ from prymer.model import Span
 from prymer.model import Strand
 from prymer.primer3.primer3_failure_reason import Primer3FailureReason
 from prymer.primer3.primer3_input_tag import Primer3InputTag
+from prymer.primer3.primer3_parameters import AmpliconParameters
 from prymer.primer3.primer3_parameters import Primer3Parameters
+from prymer.primer3.primer3_parameters import ProbeParameters
 from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
 from prymer.primer3.primer3_task import DesignRightPrimersTask
 from prymer.primer3.primer3_task import PickHybProbeOnly
+from prymer.primer3.primer3_task import Primer3TaskType
 
 
 @dataclass(init=True, slots=True, frozen=True)
@@ -289,12 +290,12 @@ class Primer3(AbstractContextManager):
 
     @staticmethod
     def _screen_pair_results(
-        design_input: Primer3Parameters, designed_primer_pairs: list[PrimerPair]
+        params: Primer3Parameters, designed_primer_pairs: list[PrimerPair]
     ) -> tuple[list[PrimerPair], list[Oligo]]:
         """Screens primer pair designs emitted by Primer3 for dinucleotide run length.
 
         Args:
-            design_input: the target region, design task, specifications, and scoring penalties
+            params: the parameters for the design task
             designed_primer_pairs: the unfiltered primer pair designs emitted by Primer3
 
         Returns:
@@ -306,14 +307,12 @@ class Primer3(AbstractContextManager):
         for primer_pair in designed_primer_pairs:
             valid: bool = True
             if (
-                primer_pair.left_primer.longest_dinucleotide_run_length
-                > design_input.max_dinuc_bases
+                primer_pair.left_primer.longest_dinucleotide_run_length > params.max_dinuc_bases
             ):  # if the left primer has too many dinucleotide bases, fail it
                 dinuc_pair_failures.append(primer_pair.left_primer)
                 valid = False
             if (
-                primer_pair.right_primer.longest_dinucleotide_run_length
-                > design_input.max_dinuc_bases
+                primer_pair.right_primer.longest_dinucleotide_run_length > params.max_dinuc_bases
             ):  # if the right primer has too many dinucleotide bases, fail it
                 dinuc_pair_failures.append(primer_pair.right_primer)
                 valid = False
@@ -321,12 +320,54 @@ class Primer3(AbstractContextManager):
                 valid_primer_pair_designs.append(primer_pair)
         return valid_primer_pair_designs, dinuc_pair_failures
 
-    def design(self, design_input: Primer3Parameters) -> Primer3Result:  # noqa: C901
+    def _build_design_region(
+        self, task: Primer3TaskType, params: Primer3Parameters, target: Span
+    ) -> Span:
+        """Builds the design region, which wholly contains the target, for the given design task.
+
+        Args:
+            task: the target task
+            params: the parameters for the design task
+            target: the target region
+        """
+        match task:
+            case PickHybProbeOnly():
+                if not isinstance(params, ProbeParameters):
+                    raise TypeError(
+                        f"For the {type(task).__name__} task, must supply ProbeParameters instance."
+                        f" Found: {type(params).__name__}"
+                    )
+                if target.length < params.probe_sizes.min:
+                    raise ValueError(
+                        "Target region required to be at least as large as the"
+                        " minimal probe size: "
+                        f"target length: {target.length}, "
+                        f"minimal probe size: {params.probe_sizes.min}"
+                    )
+                return target
+            case DesignRightPrimersTask() | DesignLeftPrimersTask() | DesignPrimerPairsTask():
+                if not isinstance(params, AmpliconParameters):
+                    raise TypeError(
+                        f"For the {type(task).__name__} task, must supply AmpliconParameters."
+                        f"instance.  Found: {type(params).__name__}"
+                    )
+                return self._create_design_region(
+                    target_region=target,
+                    max_amplicon_length=params.max_amplicon_length,
+                    min_primer_length=params.min_primer_length,
+                )
+            case _ as unreachable:
+                assert_never(unreachable)  # pragma: no cover
+
+    def design(
+        self, task: Primer3TaskType, params: Primer3Parameters, target: Span
+    ) -> Primer3Result:  # noqa: C901
         """Designs primers, primer pairs, and/or internal probes given a target region.
 
         Args:
-            design_input: encapsulates the target region, design task, specifications, and scoring
-                penalties
+            task: the design task to perform
+            params: the primer3-specific parameters.  The parameters must match the task.
+            target: the region to target
 
         Returns:
             Primer3Result containing both the valid and failed designs emitted by Primer3
@@ -336,27 +377,7 @@ class Primer3(AbstractContextManager):
             ValueError: if Primer3 output is malformed
             ValueError: if an unknown design task is given
         """
-        design_region: Span
-        match design_input.task:
-            case PickHybProbeOnly():
-                probe_params = design_input.as_probe_params
-                if probe_params.target.length < probe_params.probe_sizes.min:
-                    raise ValueError(
-                        "Target region required to be at least as large as the"
-                        " minimal probe size: "
-                        f"target length: {design_input.target.length}, "
-                        f"minimal probe size: {probe_params.probe_sizes.min}"
-                    )
-                design_region = design_input.target
-            case DesignRightPrimersTask() | DesignLeftPrimersTask() | DesignPrimerPairsTask():
-                amplicon_params = design_input.as_amplicon_params
-                design_region = self._create_design_region(
-                    target_region=amplicon_params.target,
-                    max_amplicon_length=amplicon_params.max_amplicon_length,
-                    min_primer_length=amplicon_params.min_primer_length,
-                )
-            case _ as unreachable:
-                assert_never(unreachable)  # pragma: no cover
+        design_region: Span = self._build_design_region(task=task, params=params, target=target)
 
         soft_masked, hard_masked = self.get_design_sequences(design_region)
         # use 1-base coords, explain primer designs, use hard-masked sequence, and compute
@@ -368,9 +389,11 @@ class Primer3(AbstractContextManager):
             Primer3InputTag.PRIMER_THERMODYNAMIC_OLIGO_ALIGNMENT: 1,
         }
 
-        assembled_primer3_tags = {
+        # build all the input tags
+        assembled_primer3_tags: dict[Primer3InputTag, Any] = {
             **global_primer3_params,
-            **design_input.to_input_tags(design_region=design_region),
+            **task.to_input_tags(design_region=design_region, target=target),
+            **params.to_input_tags(),
         }
 
         # split the tags into sequence and non-sequence tags
@@ -400,16 +423,16 @@ class Primer3(AbstractContextManager):
         if "PRIMER_ERROR" in primer3_results:
             raise ValueError("Primer3 failed: " + primer3_results["PRIMER_ERROR"])
 
-        match design_input.task:
+        match task:
             case DesignPrimerPairsTask():  # Primer pair design
                 all_pair_results: list[PrimerPair] = Primer3._build_primer_pairs(
-                    design_input=design_input,
+                    task=task,
                     design_results=primer3_results,
                     design_region=design_region,
                     unmasked_design_seq=soft_masked,
                 )
                 return Primer3._assemble_primer_pairs(
-                    design_input=design_input.as_amplicon_params,
+                    params=params,
                     design_results=primer3_results,
                     unfiltered_designs=all_pair_results,
                 )
@@ -417,14 +440,15 @@ class Primer3(AbstractContextManager):
             case DesignLeftPrimersTask() | DesignRightPrimersTask() | PickHybProbeOnly():
                 # Single primer or probe design
                 all_single_results: list[Oligo] = Primer3._build_oligos(
-                    design_input=design_input,
+                    task=task,
                     design_results=primer3_results,
                     design_region=design_region,
-                    design_task=design_input.task,
+                    design_task=task,
                     unmasked_design_seq=soft_masked,
                 )
                 return Primer3._assemble_single_designs(
-                    design_input=design_input,
+                    task=task,
+                    params=params,
                     design_results=primer3_results,
                     unfiltered_designs=all_single_results,
                 )
@@ -434,7 +458,7 @@ class Primer3(AbstractContextManager):
 
     @staticmethod
     def _build_oligos(
-        design_input: Primer3Parameters,
+        task: Primer3TaskType,
         design_results: dict[str, Any],
         design_region: Span,
         design_task: Union[DesignLeftPrimersTask, DesignRightPrimersTask, PickHybProbeOnly],
@@ -444,7 +468,7 @@ class Primer3(AbstractContextManager):
         Builds a list of single oligos from Primer3 output.
 
         Args:
-            design_input: the target region, design task, specifications, and scoring penalties
+            task: the design task
             design_results: design results emitted by Primer3 and captured by design()
             design_region: the padded design region
             design_task: the design task
@@ -456,7 +480,7 @@ class Primer3(AbstractContextManager):
         Raises:
             ValueError: if Primer3 does not return primer designs
         """
-        count: int = _check_design_results(design_input, design_results)
+        count: int = _check_design_results(task, design_results)
 
         primers: list[Oligo] = []
         for idx in range(count):
@@ -514,7 +538,8 @@ class Primer3(AbstractContextManager):
 
     @staticmethod
     def _assemble_single_designs(
-        design_input: Primer3Parameters,
+        task: Primer3TaskType,
+        params: Primer3Parameters,
         design_results: dict[str, str],
         unfiltered_designs: list[Oligo],
     ) -> Primer3Result:
@@ -524,22 +549,22 @@ class Primer3(AbstractContextManager):
         valid_designs = [
             design
             for design in unfiltered_designs
-            if design.longest_dinucleotide_run_length <= design_input.max_dinuc_bases
+            if design.longest_dinucleotide_run_length <= params.max_dinuc_bases
         ]
         dinuc_failures = [
             design
             for design in unfiltered_designs
-            if not design.longest_dinucleotide_run_length <= design_input.max_dinuc_bases
+            if not design.longest_dinucleotide_run_length <= params.max_dinuc_bases
         ]
 
-        failure_strings = [design_results[f"PRIMER_{design_input.task.task_type}_EXPLAIN"]]
+        failure_strings = [design_results[f"PRIMER_{task.task_type}_EXPLAIN"]]
         failures = Primer3._build_failures(dinuc_failures, failure_strings)
         design_candidates: Primer3Result = Primer3Result(designs=valid_designs, failures=failures)
         return design_candidates
 
     @staticmethod
     def _build_primer_pairs(
-        design_input: Primer3Parameters,
+        task: Primer3TaskType,
         design_results: dict[str, Any],
         design_region: Span,
         unmasked_design_seq: str,
@@ -548,7 +573,7 @@ class Primer3(AbstractContextManager):
         Builds a list of primer pairs from single primer designs emitted from Primer3.
 
         Args:
-            design_input: the target region, design task, specifications, and scoring penalties
+            task: the design task
             design_results: design results emitted by Primer3 and captured by design()
             design_region: the padded design region
             unmasked_design_seq: the reference sequence corresponding to the target region
@@ -560,7 +585,7 @@ class Primer3(AbstractContextManager):
             ValueError: if Primer3 does not return the same number of left and right designs
         """
         left_primers = Primer3._build_oligos(
-            design_input=design_input,
+            task=task,
             design_results=design_results,
             design_region=design_region,
             design_task=DesignLeftPrimersTask(),
@@ -568,7 +593,7 @@ class Primer3(AbstractContextManager):
         )
 
         right_primers = Primer3._build_oligos(
-            design_input=design_input,
+            task=task,
             design_results=design_results,
             design_region=design_region,
             design_task=DesignRightPrimersTask(),
@@ -602,7 +627,7 @@ class Primer3(AbstractContextManager):
 
     @staticmethod
     def _assemble_primer_pairs(
-        design_input: Primer3Parameters,
+        params: Primer3Parameters,
         design_results: dict[str, Any],
         unfiltered_designs: list[PrimerPair],
     ) -> Primer3Result:
@@ -613,8 +638,7 @@ class Primer3(AbstractContextManager):
         Primer3.
 
         Args:
-            design_input: encapsulates the target region, design task, specifications,
-             and scoring penalties
+            params: the parameters for the design task
             unfiltered_designs: list of primer pairs emitted from Primer3
              design_results: key-value pairs of results reported by Primer3
 
@@ -624,7 +648,7 @@ class Primer3(AbstractContextManager):
         valid_primer_pair_designs: list[PrimerPair]
         dinuc_pair_failures: list[Oligo]
         valid_primer_pair_designs, dinuc_pair_failures = Primer3._screen_pair_results(
-            design_input=design_input, designed_primer_pairs=unfiltered_designs
+            params=params, designed_primer_pairs=unfiltered_designs
         )
 
         failure_strings = [
@@ -717,9 +741,9 @@ class Primer3(AbstractContextManager):
         return design_region
 
 
-def _check_design_results(design_input: Primer3Parameters, design_results: dict[str, str]) -> int:
+def _check_design_results(task: Primer3TaskType, design_results: dict[str, str]) -> int:
     """Checks for any additional Primer3 errors and reports out the count of emitted designs."""
-    count_tag = design_input.task.count_tag
+    count_tag = task.count_tag
     maybe_count: Optional[str] = design_results.get(count_tag)
     if maybe_count is None:  # no count tag was found
         if "PRIMER_ERROR" in design_results:
