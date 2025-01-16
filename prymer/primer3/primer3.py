@@ -44,17 +44,14 @@ parameters and target region.
 >>> from prymer.primer3.primer3_parameters import AmpliconParameters
 >>> from prymer import MinOptMax
 >>> target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
->>> params = AmpliconParameters( \
+>>> design_input = AmpliconParameters( \
+    task=DesignLeftPrimersTask(), \
+    target=target, \
     amplicon_sizes=MinOptMax(min=100, max=250, opt=200), \
     amplicon_tms=MinOptMax(min=55.0, max=100.0, opt=70.0), \
     primer_sizes=MinOptMax(min=29, max=31, opt=30), \
     primer_tms=MinOptMax(min=63.0, max=67.0, opt=65.0), \
     primer_gcs=MinOptMax(min=30.0, max=65.0, opt=45.0), \
-)
->>> design_input = AmpliconParameters( \
-    target=target, \
-    primer_and_amplicon_params=params, \
-    task=DesignLeftPrimersTask(), \
 )
 >>> left_result = designer.design(design_input=design_input)
 
@@ -138,10 +135,9 @@ from prymer.model import Oligo
 from prymer.model import PrimerPair
 from prymer.model import Span
 from prymer.model import Strand
-from prymer.primer3 import AmpliconParameters, ProbeParameters
 from prymer.primer3.primer3_failure_reason import Primer3FailureReason
-from prymer.primer3.primer3_parameters import Primer3Parameters
 from prymer.primer3.primer3_input_tag import Primer3InputTag
+from prymer.primer3.primer3_parameters import Primer3Parameters
 from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
 from prymer.primer3.primer3_task import DesignRightPrimersTask
@@ -293,7 +289,7 @@ class Primer3(AbstractContextManager):
 
     @staticmethod
     def _screen_pair_results(
-        design_input: AmpliconParameters, designed_primer_pairs: list[PrimerPair]
+        design_input: Primer3Parameters, designed_primer_pairs: list[PrimerPair]
     ) -> tuple[list[PrimerPair], list[Oligo]]:
         """Screens primer pair designs emitted by Primer3 for dinucleotide run length.
 
@@ -311,13 +307,13 @@ class Primer3(AbstractContextManager):
             valid: bool = True
             if (
                 primer_pair.left_primer.longest_dinucleotide_run_length
-                > design_input.primer_max_dinuc_bases
+                > design_input.max_dinuc_bases
             ):  # if the left primer has too many dinucleotide bases, fail it
                 dinuc_pair_failures.append(primer_pair.left_primer)
                 valid = False
             if (
                 primer_pair.right_primer.longest_dinucleotide_run_length
-                > design_input.primer_max_dinuc_bases
+                > design_input.max_dinuc_bases
             ):  # if the right primer has too many dinucleotide bases, fail it
                 dinuc_pair_failures.append(primer_pair.right_primer)
                 valid = False
@@ -343,21 +339,21 @@ class Primer3(AbstractContextManager):
         design_region: Span
         match design_input.task:
             case PickHybProbeOnly():
-                input = typing.cast(ProbeParameters, design_input)
-                if input.target.length < input.probe_sizes.min:
+                probe_params = design_input.as_probe_params
+                if probe_params.target.length < probe_params.probe_sizes.min:
                     raise ValueError(
                         "Target region required to be at least as large as the"
                         " minimal probe size: "
-                        f"target length: {input.target.length}, "
-                        f"minimal probe size: {input.probe_sizes.min}"
+                        f"target length: {design_input.target.length}, "
+                        f"minimal probe size: {probe_params.probe_sizes.min}"
                     )
                 design_region = design_input.target
             case DesignRightPrimersTask() | DesignLeftPrimersTask() | DesignPrimerPairsTask():
-                input = typing.cast(AmpliconParameters, design_input)
+                amplicon_params = design_input.as_amplicon_params
                 design_region = self._create_design_region(
-                    target_region=input.target,
-                    max_amplicon_length=input.max_amplicon_length,
-                    min_primer_length=input.min_primer_length,
+                    target_region=amplicon_params.target,
+                    max_amplicon_length=amplicon_params.max_amplicon_length,
+                    min_primer_length=amplicon_params.min_primer_length,
                 )
             case _ as unreachable:
                 assert_never(unreachable)  # pragma: no cover
@@ -406,15 +402,14 @@ class Primer3(AbstractContextManager):
 
         match design_input.task:
             case DesignPrimerPairsTask():  # Primer pair design
-                input = typing.cast(AmpliconParameters, design_input)
                 all_pair_results: list[PrimerPair] = Primer3._build_primer_pairs(
-                    design_input=input,
+                    design_input=design_input,
                     design_results=primer3_results,
                     design_region=design_region,
                     unmasked_design_seq=soft_masked,
                 )
                 return Primer3._assemble_primer_pairs(
-                    design_input=input,
+                    design_input=design_input.as_amplicon_params,
                     design_results=primer3_results,
                     unfiltered_designs=all_pair_results,
                 )
@@ -529,12 +524,12 @@ class Primer3(AbstractContextManager):
         valid_designs = [
             design
             for design in unfiltered_designs
-            if _has_acceptable_dinuc_run(oligo_design=design, design_input=design_input)
+            if design.longest_dinucleotide_run_length <= design_input.max_dinuc_bases
         ]
         dinuc_failures = [
             design
             for design in unfiltered_designs
-            if not _has_acceptable_dinuc_run(oligo_design=design, design_input=design_input)
+            if not design.longest_dinucleotide_run_length <= design_input.max_dinuc_bases
         ]
 
         failure_strings = [design_results[f"PRIMER_{design_input.task.task_type}_EXPLAIN"]]
@@ -607,7 +602,7 @@ class Primer3(AbstractContextManager):
 
     @staticmethod
     def _assemble_primer_pairs(
-        design_input: AmpliconParameters,
+        design_input: Primer3Parameters,
         design_results: dict[str, Any],
         unfiltered_designs: list[PrimerPair],
     ) -> Primer3Result:
@@ -735,29 +730,3 @@ def _check_design_results(design_input: Primer3Parameters, design_results: dict[
     count: int = int(maybe_count)
 
     return count
-
-
-def _has_acceptable_dinuc_run(design_input: Primer3Parameters, oligo_design: Oligo) -> bool:
-    """
-    True if the design's longest dinucleotide run is no more than the stipulated maximum.
-
-    For primer designs, the maximum is recorded in the input's
-    `PrimerAndAmpliconParameters.primer_max_dinuc_bases`.
-
-    For probe designs, the maximum is recorded in the input's
-    `ProbeParameters.probe_max_dinuc_bases`.
-
-    Args:
-        design_input: the Primer3Parameters object that wraps task-specific and design-specific params
-        oligo_design: the design candidate
-
-    Returns:
-
-    """
-    max_dinuc_bases: int = -1
-    if design_input.task.requires_primer_amplicon_params:
-        max_dinuc_bases = design_input.primer_and_amplicon_params.primer_max_dinuc_bases
-    elif design_input.task.requires_probe_params:
-        max_dinuc_bases = design_input.probe_params.probe_max_dinuc_bases
-
-    return oligo_design.longest_dinucleotide_run_length <= max_dinuc_bases

@@ -27,15 +27,25 @@ specify the acceptable ranges of probe sizes, melting temperatures, and GC conte
 ## Examples
 
 ```python
+>>> from prymer.primer3 import DesignPrimerPairsTask
+>>> from prymer import Strand
 >>> params = AmpliconParameters( \
+    task=DesignPrimerPairsTask(), \
+    target=Span(refname="chr1", start=200, end=300, strand=Strand.POSITIVE), \
     amplicon_sizes=MinOptMax(min=100, max=250, opt=200), \
     amplicon_tms=MinOptMax(min=55.0, max=100.0, opt=70.0), \
     primer_sizes=MinOptMax(min=29, max=31, opt=30), \
     primer_tms=MinOptMax(min=63.0, max=67.0, opt=65.0), \
     primer_gcs=MinOptMax(min=30.0, max=65.0, opt=45.0), \
 )
->>> for tag, value in params.to_input_tags().items(): \
+>>> design_region = Span(refname="chr1", start=1, end=500, strand=Strand.POSITIVE)
+>>> for tag, value in params.to_input_tags(design_region=design_region).items(): \
     print(f"{tag.value} -> {value}")
+PRIMER_TASK -> generic
+PRIMER_PICK_LEFT_PRIMER -> 1
+PRIMER_PICK_RIGHT_PRIMER -> 1
+PRIMER_PICK_INTERNAL_OLIGO -> 0
+SEQUENCE_TARGET -> 200,101
 PRIMER_PRODUCT_OPT_SIZE -> 200
 PRIMER_PRODUCT_SIZE_RANGE -> 100-250
 PRIMER_PRODUCT_MIN_TM -> 55.0
@@ -59,17 +69,36 @@ PRIMER_NUM_RETURN -> 5
 PRIMER_MAX_SELF_ANY_TH -> 53.0
 PRIMER_MAX_SELF_END_TH -> 53.0
 PRIMER_MAX_HAIRPIN_TH -> 53.0
+PRIMER_PAIR_WT_PRODUCT_SIZE_LT -> 1.0
+PRIMER_PAIR_WT_PRODUCT_SIZE_GT -> 1.0
+PRIMER_PAIR_WT_PRODUCT_TM_LT -> 0.0
+PRIMER_PAIR_WT_PRODUCT_TM_GT -> 0.0
+PRIMER_WT_END_STABILITY -> 0.25
+PRIMER_WT_GC_PERCENT_LT -> 0.25
+PRIMER_WT_GC_PERCENT_GT -> 0.25
+PRIMER_WT_SELF_ANY -> 0.1
+PRIMER_WT_SELF_END -> 0.1
+PRIMER_WT_SIZE_LT -> 0.5
+PRIMER_WT_SIZE_GT -> 0.1
+PRIMER_WT_TM_LT -> 1.0
+PRIMER_WT_TM_GT -> 1.0
+PRIMER_WT_SELF_ANY_TH -> 0.0
+PRIMER_WT_SELF_END_TH -> 0.0
+PRIMER_WT_HAIRPIN_TH -> 0.0
 
 ```
 """
-import typing
-from abc import ABC, abstractmethod
+
+from abc import ABC
+from abc import abstractmethod
 from dataclasses import dataclass
 from dataclasses import fields
+from functools import cached_property
 from typing import Any
 from typing import Optional
 
-from prymer.model import MinOptMax, Span
+from prymer.model import MinOptMax
+from prymer.model import Span
 from prymer.primer3.primer3_input_tag import Primer3InputTag
 from prymer.primer3.primer3_task import Primer3TaskType
 
@@ -78,17 +107,25 @@ class Primer3Parameters(ABC):
     target: Span
     task: Primer3TaskType
 
+    @cached_property
     def as_amplicon_params(self) -> "AmpliconParameters":
         """Use this method when you want to treat these parameters as amplicon parameters."""
         if isinstance(self, AmpliconParameters):
-            return typing.cast(AmpliconParameters, self)
+            return self
         raise Exception("The parameters are not amplicon parameters")
 
+    @cached_property
     def as_probe_params(self) -> "ProbeParameters":
         """Use this method when you want to treat these parameters as probe parameters."""
         if isinstance(self, ProbeParameters):
-            return typing.cast(ProbeParameters, self)
-        raise Exception("The parameters are not amplicon parameters")
+            return self
+        raise Exception("The parameters are not probe parameters")
+
+    @property
+    @abstractmethod
+    def max_dinuc_bases(self) -> int:
+        """The maximum number of bases in a dinucleotide run in the primer/probe"""
+        pass
 
     @abstractmethod
     def _to_input_tags(self) -> dict[Primer3InputTag, Any]: ...
@@ -96,16 +133,16 @@ class Primer3Parameters(ABC):
     def to_input_tags(self, design_region: Span) -> dict[Primer3InputTag, Any]:
         """Assembles `Primer3InputTag` and values for input to `Primer3`
 
-             The target region must be wholly contained within design region.
+        The target region must be wholly contained within design region.
 
-             Args:
-                 task: TODO
-                 design_region: the design region, which wholly contains the target region, in which
-                         primers are to be designed.
+        Args:
+            task: TODO
+            design_region: the design region, which wholly contains the target region, in which
+                    primers are to be designed.
 
-             Returns:
-                 a mapping of `Primer3InputTag`s to associated value
-             """
+        Returns:
+            a mapping of `Primer3InputTag`s to associated value
+        """
         primer3_task_params = self.task.to_input_tags(
             design_region=design_region, target=self.target
         )
@@ -167,6 +204,7 @@ class AmpliconParameters(Primer3Parameters):
     melting temperature threshold (i.e. when provided, values should be specified independent
     of primer design.)
     """
+
     target: Span
     task: Primer3TaskType
     amplicon_sizes: MinOptMax[int]
@@ -201,6 +239,9 @@ class AmpliconParameters(Primer3Parameters):
     primer_secondary_structure_wt: float = 0.0
 
     def __post_init__(self) -> None:
+        if not self.task.is_amplicon_design_task:
+            raise ValueError(f"Task '{self.task}' must be an amplicon design task.")
+
         if self.primer_max_dinuc_bases % 2 == 1:
             raise ValueError("Primer Max Dinuc Bases must be an even number of bases")
         if not isinstance(self.amplicon_sizes.min, int) or not isinstance(
@@ -220,7 +261,11 @@ class AmpliconParameters(Primer3Parameters):
             if field.name in thermo_max_fields and getattr(self, field.name) is None:
                 object.__setattr__(self, field.name, default_thermo_max)
 
-    def to_input_tags(self) -> dict[Primer3InputTag, Any]:
+    @property
+    def max_dinuc_bases(self) -> int:
+        return self.primer_max_dinuc_bases
+
+    def _to_input_tags(self) -> dict[Primer3InputTag, Any]:
         """Converts input params to Primer3InputTag to feed directly into Primer3."""
         mapped_dict: dict[Primer3InputTag, Any] = {
             Primer3InputTag.PRIMER_PRODUCT_OPT_SIZE: self.amplicon_sizes.opt,
@@ -293,7 +338,7 @@ class ProbeParameters(Primer3Parameters):
         probe_tms: the min, optimal, and max probe melting temperatures
         probe_gcs: the min and max GC content for individual probes
         number_probes_return: the number of probes to return
-        probe_max_dinuc_bases: the max  number of bases in a dinucleotide run in a probe
+        probe_max_dinuc_bases: the max number of bases in a dinucleotide run in a probe
         probe_max_polyX: the max homopolymer length acceptable within a probe
         probe_max_Ns: the max number of ambiguous bases acceptable within a probe
         probe_max_homodimer_tm: the max melting temperature acceptable for self-complementarity
@@ -332,6 +377,7 @@ class ProbeParameters(Primer3Parameters):
     of probe design.)
 
     """
+
     target: Span
     task: Primer3TaskType
     probe_sizes: MinOptMax[int]
@@ -355,6 +401,9 @@ class ProbeParameters(Primer3Parameters):
     probe_secondary_structure_wt: float = 0.0
 
     def __post_init__(self) -> None:
+        if not self.task.is_probe_design_task:
+            raise ValueError(f"Task '{self.task}' must be an probe design task.")
+
         if not isinstance(self.probe_sizes.min, int):
             raise TypeError("Probe sizes must be integers")
         if not isinstance(self.probe_tms.min, float) or not isinstance(self.probe_gcs.min, float):
@@ -372,7 +421,11 @@ class ProbeParameters(Primer3Parameters):
             if field.name in thermo_max_fields and getattr(self, field.name) is None:
                 object.__setattr__(self, field.name, default_thermo_max)
 
-    def to_input_tags(self) -> dict[Primer3InputTag, Any]:
+    @property
+    def max_dinuc_bases(self) -> int:
+        return self.probe_max_dinuc_bases
+
+    def _to_input_tags(self) -> dict[Primer3InputTag, Any]:
         """Converts input params to Primer3InputTag to feed directly into Primer3."""
         mapped_dict: dict[Primer3InputTag, Any] = {
             Primer3InputTag.PRIMER_INTERNAL_MIN_SIZE: self.probe_sizes.min,

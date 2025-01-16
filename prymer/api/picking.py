@@ -30,7 +30,7 @@ from prymer.model import MinOptMax
 from prymer.model import Oligo
 from prymer.model import PrimerPair
 from prymer.model import Span
-from prymer.primer3 import PrimerAndAmpliconWeights
+from prymer.primer3 import AmpliconParameters
 
 
 def score(
@@ -40,7 +40,7 @@ def score(
     amplicon_tm: float,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
-    weights: PrimerAndAmpliconWeights,
+    params: AmpliconParameters,
 ) -> float:
     """Score the amplicon in a manner similar to Primer3
 
@@ -59,7 +59,7 @@ def score(
         amplicon_tm: the melting temperature of the amplicon
         amplicon_sizes: minimum, optimal, and maximum amplicon sizes (lengths)
         amplicon_tms: minimum, optimal, and maximum amplicon Tms
-        weights: the set of penalty weights
+        params: the set of primer3 parameters
 
     Returns:
         the penalty for the whole amplicon.
@@ -73,9 +73,9 @@ def score(
     if amplicon_sizes.opt == 0:
         size_penalty = 0.0
     elif amplicon.length > amplicon_sizes.opt:
-        size_penalty = (amplicon.length - amplicon_sizes.opt) * weights.product_size_gt
+        size_penalty = (amplicon.length - amplicon_sizes.opt) * params.product_size_gt
     else:
-        size_penalty = (amplicon_sizes.opt - amplicon.length) * weights.product_size_lt
+        size_penalty = (amplicon_sizes.opt - amplicon.length) * params.product_size_lt
 
     # The penalty for the amplicon melting temperature.
     # The difference in melting temperature between the calculated and optimal is weighted by the
@@ -84,9 +84,9 @@ def score(
     if amplicon_tms.opt == 0.0:
         tm_penalty = 0.0
     elif amplicon_tm > amplicon_tms.opt:
-        tm_penalty = (amplicon_tm - amplicon_tms.opt) * weights.product_tm_gt
+        tm_penalty = (amplicon_tm - amplicon_tms.opt) * params.product_tm_gt
     else:
-        tm_penalty = (amplicon_tms.opt - amplicon_tm) * weights.product_tm_lt
+        tm_penalty = (amplicon_tms.opt - amplicon_tm) * params.product_tm_lt
 
     # Put it all together
     return left_primer.penalty + right_primer.penalty + size_penalty + tm_penalty
@@ -99,7 +99,7 @@ def build_primer_pairs(  # noqa: C901
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
     max_heterodimer_tm: Optional[float],
-    weights: PrimerAndAmpliconWeights,
+    params: AmpliconParameters,
     fasta_path: Path,
     thermo: Optional[Thermo] = None,
 ) -> Iterator[PrimerPair]:
@@ -117,7 +117,7 @@ def build_primer_pairs(  # noqa: C901
         amplicon_tms: minimum, optimal, and maximum amplicon Tms
         max_heterodimer_tm: if supplied, heterodimer Tms will be calculated for primer pairs,
           and those exceeding the maximum Tm will be discarded
-        weights: the set of penalty weights
+        params: the set of penalty params
         fasta_path: the path to the FASTA file from which the amplicon sequence will be retrieved.
         thermo: a [`Thermo`][prymer.Thermo] instance for performing thermodynamic calculations
           including amplicon tm; if not provided, a default Thermo instance will be created
@@ -197,7 +197,7 @@ def build_primer_pairs(  # noqa: C901
                 amplicon_tm=amp_tm,
                 amplicon_sizes=amplicon_sizes,
                 amplicon_tms=amplicon_tms,
-                weights=weights,
+                params=params,
             )
 
             pairings.append((i, j, penalty, amp_tm))
