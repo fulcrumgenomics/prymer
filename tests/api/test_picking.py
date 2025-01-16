@@ -14,6 +14,7 @@ from prymer import Span
 from prymer import Strand
 from prymer import Thermo
 from prymer.api import picking
+from prymer.model import WeightRange
 from prymer.primer3 import AmpliconParameters
 from prymer.primer3 import DesignPrimerPairsTask
 
@@ -39,26 +40,22 @@ def params() -> AmpliconParameters:
         primer_sizes=MinOptMax(min=18, opt=21, max=27),
         primer_tms=MinOptMax(min=55.0, opt=60.0, max=65.0),
         primer_gcs=MinOptMax(min=45.0, opt=55.0, max=60.0),
-        product_size_lt=0.5,
-        product_size_gt=1.5,
-        product_tm_lt=10,
-        product_tm_gt=15,
+        amplicon_size_wt=WeightRange(0.5, 1.5),
+        amplicon_tm_wt=WeightRange(10, 15),
     )
 
 
 @pytest.fixture
 def all_zero_weights(params: AmpliconParameters) -> AmpliconParameters:
-    return replace(params,
-       product_size_gt = 0,
-        product_tm_lt = 0,
-        product_tm_gt = 0,
-        primer_end_stability = 0,
-        primer_gc_lt = 0,
-        primer_gc_gt = 0,
-        product_size_lt = 0,
-        primer_homodimer_wt = 0,
-        primer_3p_homodimer_wt = 0,
-        primer_secondary_structure_wt = 0,
+    return replace(
+        params,
+        amplicon_size_wt=WeightRange(0.0, 0.0),
+        amplicon_tm_wt=WeightRange(0, 0),
+        primer_end_stability_wt=0,
+        primer_gc_wt=WeightRange(0, 0),
+        primer_homodimer_wt=0,
+        primer_3p_homodimer_wt=0,
+        primer_secondary_structure_wt=0,
     )
 
 
@@ -175,7 +172,7 @@ def test_score_when_amplicon_longer_than_optimal(
     score = _score(pair=pair, params=params, sizes=amplicon_sizes, tms=amplicon_tms)
     assert pair.amplicon.length == amplicon_sizes.opt + 10
     assert pair.amplicon_tm == amplicon_tms.opt
-    assert score == pytest.approx(1 + 1 + (10 * params.product_size_gt))
+    assert score == pytest.approx(1 + 1 + (10 * params.amplicon_size_wt.gt))
 
 
 def test_score_when_amplicon_shorter_than_optimal(
@@ -187,7 +184,7 @@ def test_score_when_amplicon_shorter_than_optimal(
     score = _score(pair=pair, params=params, sizes=amplicon_sizes, tms=amplicon_tms)
     assert pair.amplicon.length == amplicon_sizes.opt - 20
     assert pair.amplicon_tm == amplicon_tms.opt
-    assert score == pytest.approx(1 + 1 + (20 * params.product_size_lt))
+    assert score == pytest.approx(1 + 1 + (20 * params.amplicon_size_wt.lt))
 
 
 def test_score_when_amplicon_tm_higher_than_optimal(
@@ -199,7 +196,7 @@ def test_score_when_amplicon_tm_higher_than_optimal(
     score = _score(pair=pair, params=params, sizes=amplicon_sizes, tms=amplicon_tms)
     assert pair.amplicon.length == amplicon_sizes.opt
     assert pair.amplicon_tm == amplicon_tms.opt + 2.15
-    assert score == pytest.approx(1 + 1 + (2.15 * params.product_tm_gt))
+    assert score == pytest.approx(1 + 1 + (2.15 * params.amplicon_tm_wt.gt))
 
 
 def test_score_when_amplicon_tm_lower_than_optimal(
@@ -211,7 +208,7 @@ def test_score_when_amplicon_tm_lower_than_optimal(
     score = _score(pair=pair, params=params, sizes=amplicon_sizes, tms=amplicon_tms)
     assert pair.amplicon.length == amplicon_sizes.opt
     assert pair.amplicon_tm == amplicon_tms.opt - 4.33
-    assert score == pytest.approx(1 + 1 + (4.33 * params.product_tm_lt))
+    assert score == pytest.approx(1 + 1 + (4.33 * params.amplicon_tm_wt.lt))
 
 
 def test_score_realistic(
@@ -224,7 +221,7 @@ def test_score_realistic(
     assert pair.amplicon.length == amplicon_sizes.opt + 16
     assert pair.amplicon_tm == amplicon_tms.opt - 4.33
     assert score == pytest.approx(
-        3.1 + 4.08 + (16 * params.product_size_gt) + (4.33 * params.product_tm_lt)
+        3.1 + 4.08 + (16 * params.amplicon_size_wt.gt) + (4.33 * params.amplicon_tm_wt.lt)
     )
 
 

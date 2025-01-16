@@ -73,9 +73,9 @@ def score(
     if amplicon_sizes.opt == 0:
         size_penalty = 0.0
     elif amplicon.length > amplicon_sizes.opt:
-        size_penalty = (amplicon.length - amplicon_sizes.opt) * params.product_size_gt
+        size_penalty = (amplicon.length - amplicon_sizes.opt) * params.amplicon_size_wt.gt
     else:
-        size_penalty = (amplicon_sizes.opt - amplicon.length) * params.product_size_lt
+        size_penalty = (amplicon_sizes.opt - amplicon.length) * params.amplicon_size_wt.lt
 
     # The penalty for the amplicon melting temperature.
     # The difference in melting temperature between the calculated and optimal is weighted by the
@@ -84,9 +84,9 @@ def score(
     if amplicon_tms.opt == 0.0:
         tm_penalty = 0.0
     elif amplicon_tm > amplicon_tms.opt:
-        tm_penalty = (amplicon_tm - amplicon_tms.opt) * params.product_tm_gt
+        tm_penalty = (amplicon_tm - amplicon_tms.opt) * params.amplicon_tm_wt.gt
     else:
-        tm_penalty = (amplicon_tms.opt - amplicon_tm) * params.product_tm_lt
+        tm_penalty = (amplicon_tms.opt - amplicon_tm) * params.amplicon_tm_wt.lt
 
     # Put it all together
     return left_primer.penalty + right_primer.penalty + size_penalty + tm_penalty

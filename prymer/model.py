@@ -83,6 +83,55 @@ class MinOptMax(Generic[Numeric]):
         return f"(min:{self.min}, opt:{self.opt}, max:{self.max})"
 
 
+@dataclass(slots=True, frozen=True, init=True)
+class WeightRange(Generic[Numeric]):
+    """Stores a pair of penalty weights.
+
+    Weights are used when comparing a primer or probe property (e.g. primer length) to the optimal
+    parameterized value.  If the value is less than, then the `lt` weight is used.  If the value is
+    greater than, then the `gt` weight is used.
+
+    The two values can be either int or float values but must be of the same type within one
+    Range object (for example, `lt` cannot be a float while `gt` is an int).
+
+    Examples of interacting with the `Range` class
+
+    ```python
+    >>> range = WeightRange(lt=1.0, gt=4.0)
+    >>> print(range)
+    (lt:1.0, gt:4.0)
+    >>> list(range)
+    [1.0, 4.0]
+
+    ```
+
+    Attributes:
+        lt: the minimum value (inclusive)
+        gt: the maximum value (inclusive)
+
+    Raises:
+        ValueError: if lt and gt are not the same type
+    """
+
+    lt: Numeric
+    gt: Numeric
+
+    def __post_init__(self) -> None:
+        dtype = type(self.lt)
+        if not isinstance(self.gt, dtype):
+            raise TypeError(
+                "Min and max must be the same type; " f"received min: {dtype}, max: {type(self.gt)}"
+            )
+
+    def __iter__(self) -> Iterator[float]:
+        """Returns an iterator of min and max"""
+        return iter([self.lt, self.gt])
+
+    def __str__(self) -> str:
+        """Returns a string representation of min and max"""
+        return f"(lt:{self.lt}, gt:{self.gt})"
+
+
 @unique
 class Strand(StrEnum):
     """Represents the strand of a span to the genome."""

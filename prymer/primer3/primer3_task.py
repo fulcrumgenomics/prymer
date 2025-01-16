@@ -110,7 +110,6 @@ Primer3TaskType: TypeAlias = Union[
 """Type alias for all `Primer3Task`s, to enable exhaustiveness checking."""
 
 
-
 @unique
 class TaskType(UppercaseStrEnum):
     """Represents the type of design task: design primer pairs, individual primers
@@ -182,10 +181,9 @@ class Primer3Task(ABC):
         """Aligns the set of input parameters specific to primer pair or single primer design"""
 
     @classmethod
-    def __init_subclass__(cls,
-                          task_type: TaskType,
-                          is_amplicon_design_task: bool,
-                          **kwargs: Any) -> None:
+    def __init_subclass__(
+        cls, task_type: TaskType, is_amplicon_design_task: bool, **kwargs: Any
+    ) -> None:
         # See: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
         super().__init_subclass__(**kwargs)
 
