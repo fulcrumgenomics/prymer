@@ -106,6 +106,9 @@ fix-and-check-all.sequence = [
 [tool.mypy]
 files                       = ["prymer", "tests"]
 strict_optional             = false
+# TODO: activate the following checks!
+# strict_optional             = true
+# strict_equality             = true
 check_untyped_defs          = true
 disallow_incomplete_defs    = true
 disallow_untyped_calls      = true
@@ -119,6 +122,11 @@ warn_unreachable            = true
 warn_unused_configs         = true
 warn_unused_ignores         = true
 exclude = ["site/", "docs/"]
+# TODO: activate the following checks!
+# enable_error_code = [
+#     "ignore-without-code",
+#     "possibly-undefined",
+# ]
 
 [[tool.mypy.overrides]]
 module = ["primer3"]
@@ -148,7 +156,7 @@ testpaths = [
 [tool.ruff]
 include = ["prymer/**/*.py", "tests/**/*.py"]
 line-length    = 100
-target-version = "py312"
+target-version = "py311"
 output-format  = "full"
 
 [tool.ruff.lint]

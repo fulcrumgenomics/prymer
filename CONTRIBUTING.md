@@ -124,7 +124,7 @@ Use `mkdocs` to build and serve the documentation.
 poetry run mkdocs build && poetry run mkdocs serve
 ```
 
-## Creating a Release on PyPi
+## Creating a Release on PyPI
 
 1. Clone the repository recursively and ensure you are on the `main` (un-dirty) branch
 2. Checkout a new branch to prepare the library for release
@@ -147,7 +147,7 @@ GitHub Actions will take care of the remainder of the deployment and release pro
 1. Unit tests will be run for safety-sake
 2. A source distribution will be built
 3. Multi-arch multi-Python binary distributions will be built
-4. Assets will be deployed to PyPi with the new SemVer
+4. Assets will be deployed to PyPI with the new SemVer
 5. A [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0/)-aware changelog will be drafted
 6. A GitHub release will be created with the new SemVer and the drafted changelog
 
