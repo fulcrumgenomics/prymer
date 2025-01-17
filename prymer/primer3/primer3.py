@@ -30,7 +30,7 @@ polymorphic sites found in the `VariantLookup` provided in the constructor.
 >>> design_region = Span(refname="chr2", start=9095, end=9120)
 >>> soft_masked, hard_masked = designer.get_design_sequences(region=design_region)
 >>> soft_masked
-'AGTTACATTACAAAAGGCAGATTTCA'
+'AGTTAcatTACAAAAGGCAGATTTCA'
 >>> hard_masked
 'AGTTANNNTACAAAAGGCAGATTTCA'
 

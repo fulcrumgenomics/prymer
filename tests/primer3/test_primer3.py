@@ -350,16 +350,16 @@ def test_fasta_close_valid(genome_ref: Path, single_primer_params: PrimerParamet
         (
             Span(refname="chr2", start=9000, end=9110),
             # 9000      9010      9020      9030      9040      9050      9060      9070      9080      9090      9100      9110 # noqa
-            "AATATTCTTGNTGCTTATGCNGCTGACATTGTTGCCCTCCCTAAAGCAACNAAGTAGCCTNTATTTCCCANAGTGAAAGANNACGCTGGCNNNTCAGTTANNNTACAAAAG",
-            "AATATTCTTGCTGCTTATGCAGCTGACATTGTTGCCCTCCCTAAAGCAACCAAGTAGCCTTTATTTCCCACAGTGAAAGAAAACGCTGGCCTATCAGTTACATTACAAAAG",
+            "AATATTCTTGNTGCTTATGCNGCTGACATTGTTGCCCTCCCTAAAGCAACNAAGTAGCCTNTATTTCCCANAGTGAAAGANNACGCTGGCCNNTCAGTTANNNTACAAAAG",
+            "AATATTCTTGcTGCTTATGCaGCTGACATTGTTGCCCTCCCTAAAGCAACcAAGTAGCCTtTATTTCCCAcAGTGAAAGAaaACGCTGGCCtaTCAGTTAcatTACAAAAG",
         ),  # expected masked positions: 9010, 9020, 9050, 9060, 9070,
-        # 9080 (2bp insertion: 3 bases), 9090 (2bp deletion: 2 bases), 9100 (mixed: 3 bases)
+        # 9080 (2bp insertion: 2 bases), 9090 (2bp deletion: 2 bases), 9100 (mixed: 3 bases)
         # do not expect positions 9000 (MAF = 0.001), 9030 (MAF = 0.001), or 9040 (MAF = 0.0004814)
         # to be masked  (MAF below the provided min_maf)
         (
             Span(refname="chr2", start=9095, end=9120),
             "AGTTANNNTACAAAAGGCAGATTTCA",
-            "AGTTACATTACAAAAGGCAGATTTCA",
+            "AGTTAcatTACAAAAGGCAGATTTCA",
         ),
         # 9100 (common-mixed -- alt1: CA->GG, and alt2: CA->CACACA).  The first alt masks the
         # positions [9100,9101], and the second alt masks the positions [9100,9102] (an extra
@@ -387,8 +387,8 @@ def test_variant_lookup(
     # with no variant lookup should all be soft-masked
     with Primer3(genome_fasta=genome_ref, variant_lookup=None) as designer:
         actual_soft_masked, actual_hard_masked = designer.get_design_sequences(region=region)
-    assert actual_hard_masked == expected_soft_masked
-    assert actual_soft_masked == expected_soft_masked
+    assert actual_hard_masked.upper() == expected_soft_masked.upper()
+    assert actual_soft_masked.upper() == expected_soft_masked.upper()
 
 
 def test_screen_pair_results(
