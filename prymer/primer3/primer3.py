@@ -14,10 +14,10 @@ hard-mask the design and target regions as to avoid design primers over polymorp
 
 ```python
 >>> from pathlib import Path
->>> from prymer.api.variant_lookup import VariantLookup, VariantOverlapDetector
+>>> from prymer import VariantLookup
 >>> genome_fasta = Path("./tests/primer3/data/miniref.fa")
 >>> genome_vcf = Path("./tests/primer3/data/miniref.variants.vcf.gz")
->>> variant_lookup: VariantLookup = VariantOverlapDetector(vcf_paths=[genome_vcf], min_maf=0.01, include_missing_mafs=False)
+>>> variant_lookup: VariantLookup = VariantLookup(vcf_paths=[genome_vcf], min_maf=0.01)
 >>> designer = Primer3(genome_fasta=genome_fasta, variant_lookup=variant_lookup)
 
 ```
@@ -127,8 +127,6 @@ from fgpyo.sam import reader
 from fgpyo.sequence import reverse_complement
 from fgpyo.util.metric import Metric
 
-from prymer.api.variant_lookup import SimpleVariant
-from prymer.api.variant_lookup import VariantLookup
 from prymer.model import Oligo
 from prymer.model import PrimerPair
 from prymer.model import Span
@@ -142,6 +140,7 @@ from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
 from prymer.primer3.primer3_task import DesignRightPrimersTask
 from prymer.primer3.primer3_task import PickHybProbeOnly
+from prymer.variant import VariantLookup
 from prymer.primer3.primer3_task import Primer3TaskType
 
 
@@ -262,31 +261,14 @@ class Primer3(AbstractContextManager):
 
         """
         # pysam.fetch: 0-based, half-open intervals
-        soft_masked = self._fasta.fetch(
+        bases = self._fasta.fetch(
             reference=region.refname, start=region.start - 1, end=region.end
-        )
+        ).upper()
 
         if self.variant_lookup is None:
-            hard_masked = soft_masked
-            return soft_masked, hard_masked
-
-        overlapping_variants: list[SimpleVariant] = self.variant_lookup.query(
-            refname=region.refname, start=region.start, end=region.end
-        )
-        positions: list[int] = []
-        for variant in overlapping_variants:
-            # FIXME
-            positions.extend(range(variant.pos, variant.end + 1))
-
-        filtered_positions = [pos for pos in positions if region.start <= pos <= region.end]
-        soft_masked_list = list(soft_masked)
-        for pos in filtered_positions:
-            soft_masked_list[region.get_offset(pos)] = (
-                "N"  # get relative coord of filtered position and mask to N
-            )
-        # convert list back to string
-        hard_masked = "".join(soft_masked_list)
-        return soft_masked, hard_masked
+            return bases, bases
+        else:
+            return self.variant_lookup.mask(bases, region)
 
     @staticmethod
     def _screen_pair_results(

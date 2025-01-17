@@ -11,7 +11,6 @@ from prymer import Oligo
 from prymer import PrimerPair
 from prymer import Span
 from prymer import Strand
-from prymer.api.variant_lookup import cached
 from prymer.primer3.primer3 import Primer3
 from prymer.primer3.primer3 import Primer3Failure
 from prymer.primer3.primer3 import Primer3Result
@@ -21,6 +20,7 @@ from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
 from prymer.primer3.primer3_task import DesignRightPrimersTask
 from prymer.primer3.primer3_task import PickHybProbeOnly
+from prymer.variant import VariantLookup
 
 
 @pytest.fixture(scope="session")
@@ -378,7 +378,7 @@ def test_variant_lookup(
 ) -> None:
     """Test that MAF filtering and masking are working as expected."""
     with Primer3(
-        genome_fasta=genome_ref, variant_lookup=cached([vcf_path], min_maf=0.01)
+        genome_fasta=genome_ref, variant_lookup=VariantLookup([vcf_path], min_maf=0.01)
     ) as designer:
         actual_soft_masked, actual_hard_masked = designer.get_design_sequences(region=region)
     assert actual_hard_masked == expected_hard_masked
