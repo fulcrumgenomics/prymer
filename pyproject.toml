@@ -31,6 +31,9 @@ classifiers = [
 ]
 include = ["LICENSE"]
 
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/fulcrumgenomics/prymer/issues"
+
 [tool.poetry.dependencies]
 python = "^3.12"
 pyproject_hooks= "^1.0.0,!=1.1.0"
@@ -43,13 +46,12 @@ primer3-py = "^2.0.3"
 
 [tool.poetry.group.dev.dependencies]
 poetry      = "^1.8.2"
-mypy        = "^1.5.1"
+mypy        = "^1.14.1"
 pytest      = "^7.4.4"
 pytest-cov  = "^4.1.0"
-pytest-mypy = "^0.10.3"
-pytest-ruff = "^0.3.1"
-ruff        = "0.3.3"
+ruff        = "0.9.2"
 # dependencies for building docs
+markdown-callouts = { version = ">=0.4.0" }
 mkdocs-autorefs = { version = ">=0.5.0,<1.1.0" }
 mkdocs-include-markdown-plugin = { version = ">=6.0.1" }
 mkdocs-material = { version = ">=9.2.8" }
@@ -63,12 +65,145 @@ mkdocstrings = { version = ">=0.23.0" }
 black = "^24.4.2"
 pytest-doctestplus = "^1.2.1"
 
-[tool.poetry.urls]
-"Bug Tracker" = "https://github.com/fulcrumgenomics/prymer/issues"
-
 [build-system]
 requires      = ["poetry-core>=1.6"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poe]
+poetry_command = "task"
+
+[tool.poe.tasks]
+fix-format = "ruff format"
+fix-lint = "ruff check --fix"
+
+fix-all.ignore_fail = true
+fix-all.sequence = [
+    "fix-format",
+    "fix-lint"
+]
+
+check-lock = "poetry check --lock"
+check-format = "ruff format --check --diff"
+check-lint = "ruff check"
+check-tests = "pytest"
+check-typing = "mypy"
+
+check-all.ignore_fail = true
+check-all.sequence = [
+    "check-lock",
+    "check-format",
+    "check-lint",
+    "check-tests",
+    "check-typing"
+]
+
+fix-and-check-all.ignore_fail = true
+fix-and-check-all.sequence = [
+    "fix-all",
+    "check-all"
+]
+
+[tool.mypy]
+files                       = ["prymer", "tests"]
+strict_optional             = false
+check_untyped_defs          = true
+disallow_incomplete_defs    = true
+disallow_untyped_calls      = true
+disallow_untyped_decorators = true
+disallow_untyped_defs       = true
+no_implicit_optional        = true
+warn_no_return              = true
+warn_redundant_casts        = true
+warn_return_any             = true
+warn_unreachable            = true
+warn_unused_configs         = true
+warn_unused_ignores         = true
+exclude = ["site/", "docs/"]
+
+[[tool.mypy.overrides]]
+module = ["primer3"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.4"
+addopts    = [
+    "--import-mode=importlib",
+    "--ignore=docs/scripts",
+    "--color=yes",
+    "--cov",
+    "--cov-report=xml",
+    "--cov-branch",
+    "--mypy",
+    "--ruff",
+    "--doctest-plus",
+    "--doctest-modules",
+    "-v"
+]
+doctest_optionflags = "NORMALIZE_WHITESPACE ELLIPSIS"
+doctest_plus = "enabled"
+testpaths = [
+    "prymer", "tests"
+]
+
+[tool.ruff]
+include = ["prymer/**/*.py", "tests/**/*.py"]
+line-length    = 100
+target-version = "py312"
+output-format  = "full"
+
+[tool.ruff.lint]
+select    = [
+    "ARG",    # Unused arguments
+    "C901",   # McCabe complexity
+    "B",      # bugbear
+    "D",      # pydocstyle (docstrings. We have the "google" convention enabled)
+    "D204",   # Blank line between class docstring and first (__init__) method
+    "D213",   # Summary line should be located on the line after opening quotes
+    "E",      # pycodestyle errors
+    "LOG",    # flake8-logging
+    "LOG015", # (preview rule) Prohibit calls to the root logger
+    "F",      # pyflakes
+    "I",      # isort
+    "N",      # PEP8 naming
+    "W",      # pycodestyle warnings
+    "Q",      # flake8-quotes
+]
+ignore    = [
+    "E203",
+    "E701",
+    "D212",  # summary line should be located on the same line as opening quotes
+    "D100",  # missing docstring in public module
+    "D104",  # missing docstring in public package
+    # TODO: fixup the documentation so we can remove the following lints from the ignore list:
+    "ARG001", # unused function argument
+    "ARG003", # unused class method argument
+    "D102",  # missing docstring in public method
+    "D103",  # missing docstring in public function
+    "D105",  # missing docstring in magic method
+    "D107",  # missing docstring in __init__
+    "D214",  # section is over-indented
+    "D200",  # one-line docstring should fit on one line
+    "D202",  # no blank lines allowed after function docstring
+    "D205",  # 1 blank line required between summary line and description
+    "D209",  # multi-line docstring closing quotes should be on a separate line
+    "D213",  # multi-line docstring summary should start at the second line
+    "D412",  # no blank lines allowed between a section header and its content ("Example")
+    "D414",  # section has no content
+    "D415",  # first line should end with a period, question mark, or exclamation point
+    "D417",  # missing argument description in the docstring
+    "F841",  # local variable `x` is assigned to but never used
+    "N815",  # variable `x` in class scope should not be mixedCase
+]
+unfixable = ["B"]
+# NB: only preview rules explicitly selected above (e.g. LOG015) will be enforced
+preview = true
+explicit-preview-rules = true
+
+[tool.ruff.lint.isort]
+force-single-line = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.git-cliff.changelog]
 header = ""
@@ -98,59 +233,3 @@ commit_parsers = [
     { body = ".*security", group = "Security"}
 ]
 filter_commits = false
-
-[tool.mypy]
-files                       = ["prymer", "tests"]
-python_version              = "3.12"
-strict_optional             = false
-check_untyped_defs          = true
-disallow_incomplete_defs    = true
-disallow_untyped_calls      = true
-disallow_untyped_decorators = true
-disallow_untyped_defs       = true
-no_implicit_optional        = true
-warn_no_return              = true
-warn_redundant_casts        = true
-warn_return_any             = true
-warn_unreachable            = true
-warn_unused_configs         = true
-warn_unused_ignores         = true
-exclude = ["site/", "docs/"]
-
-[[tool.mypy.overrides]]
-module = ["defopt", "primer3"]
-ignore_missing_imports = true
-
-[tool.pytest.ini_options]
-minversion = "7.4"
-addopts    = [
-    "--ignore=docs/scripts",
-    "--color=yes",
-    "--cov",
-    "--cov-report=xml",
-    "--cov-branch",
-    "--mypy",
-    "--ruff",
-    "--doctest-plus",
-    "--doctest-modules",
-    "-v"
-]
-doctest_optionflags = "NORMALIZE_WHITESPACE ELLIPSIS"
-doctest_plus = "enabled"
-testpaths = [
-    "prymer", "tests"
-]
-
-[tool.ruff]
-include = ["prymer/**/*.py", "tests/**/*.py"]
-line-length    = 100
-target-version = "py311"
-output-format  = "full"
-
-[tool.ruff.lint]
-select    = ["C901", "B", "E", "F", "I", "W", "Q"]
-ignore    = ["E203", "E701"]
-unfixable = ["B"]
-
-[tool.ruff.lint.isort]
-force-single-line = true
