@@ -46,11 +46,15 @@ jobs:
 
       - name: Install the project's dependencies
         shell: bash -el {0}
-        run: poetry install
+        run: poetry install -v
 
-      - name: Test the codebase
+      - name: Install the task runner poethepoet
         shell: bash -el {0}
-        run: poetry run pytest
+        run: poetry self add 'poethepoet[poetry_plugin]'
+
+      - name: Test the library
+        shell: bash -el {0}
+        run: poetry task check-all
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4.5.0

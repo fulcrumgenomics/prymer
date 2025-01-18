@@ -4,5 +4,4 @@ channels:
   - conda-forge
 dependencies:
   - bioconda::bwa-aln-interactive=0.7.18
-  - bioconda::primer3=2.6.1
   - conda-forge::python>=3.11.*

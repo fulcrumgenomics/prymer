@@ -781,14 +781,19 @@ dev = ["flake8", "markdown", "twine", "wheel"]
 [[package]]
 name = "griffe"
 <<<<<<< HEAD
+<<<<<<< HEAD
 version = "1.6.0"
 =======
 version = "1.5.4"
 >>>>>>> d5e0869 (feat: use primer3-py for primer3 instead of the executable (#101))
+=======
+version = "1.5.5"
+>>>>>>> d251ecb (chore: update CI with decoupled way of running pytest (#114))
 description = "Signatures for entire Python programs. Extract the structure, the frame, the skeleton of your project, to generate API documentation or find breaking changes in your API."
 optional = false
 python-versions = ">=3.9"
 files = [
+<<<<<<< HEAD
 <<<<<<< HEAD
     {file = "griffe-1.6.0-py3-none-any.whl", hash = "sha256:9f1dfe035d4715a244ed2050dfbceb05b1f470809ed4f6bb10ece5a7302f8dd1"},
     {file = "griffe-1.6.0.tar.gz", hash = "sha256:eb5758088b9c73ad61c7ac014f3cdfb4c57b5c2fcbfca69996584b702aefa354"},
@@ -796,6 +801,10 @@ files = [
     {file = "griffe-1.5.4-py3-none-any.whl", hash = "sha256:ed33af890586a5bebc842fcb919fc694b3dc1bc55b7d9e0228de41ce566b4a1d"},
     {file = "griffe-1.5.4.tar.gz", hash = "sha256:073e78ad3e10c8378c2f798bd4ef87b92d8411e9916e157fd366a17cc4fd4e52"},
 >>>>>>> d5e0869 (feat: use primer3-py for primer3 instead of the executable (#101))
+=======
+    {file = "griffe-1.5.5-py3-none-any.whl", hash = "sha256:2761b1e8876c6f1f9ab1af274df93ea6bbadd65090de5f38f4cb5cc84897c7dd"},
+    {file = "griffe-1.5.5.tar.gz", hash = "sha256:35ee5b38b93d6a839098aad0f92207e6ad6b70c3e8866c08ca669275b8cba585"},
+>>>>>>> d251ecb (chore: update CI with decoupled way of running pytest (#114))
 ]
 
 [package.dependencies]
@@ -958,6 +967,20 @@ files = [
 [package.extras]
 docs = ["mdx-gh-links (>=0.2)", "mkdocs (>=1.5)", "mkdocs-gen-files", "mkdocs-literate-nav", "mkdocs-nature (>=0.6)", "mkdocs-section-index", "mkdocstrings[python]"]
 testing = ["coverage", "pyyaml"]
+
+[[package]]
+name = "markdown-callouts"
+version = "0.4.0"
+description = "Markdown extension: a classier syntax for admonitions"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "markdown_callouts-0.4.0-py3-none-any.whl", hash = "sha256:ed0da38f29158d93116a0d0c6ecaf9df90b37e0d989b5337d678ee6e6d6550b7"},
+    {file = "markdown_callouts-0.4.0.tar.gz", hash = "sha256:7ed2c90486967058a73a547781121983839522d67041ae52c4979616f1b2b746"},
+]
+
+[package.dependencies]
+markdown = ">=3.3.3"
 
 [[package]]
 name = "markupsafe"
@@ -1830,19 +1853,7 @@ description = "Python classes for interfacing with bed intervals"
 optional = false
 python-versions = "<4.0.0,>=3.8.0"
 files = [
-    {file = "pybedlite-1.0.0-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:4958bc67bf79e4e3089cc0f40f2a67749c4c45c841336031c9a9465f0cbed338"},
-    {file = "pybedlite-1.0.0-cp310-cp310-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cbf1f5a4175f40a8d5e2ef8f41859d5d5913de283efe36e4029ea807c691b49a"},
-    {file = "pybedlite-1.0.0-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:9eb4f0f4745a5c2acd5c184bd8463c39561fda27c38afd5ac0206bc51ff05776"},
-    {file = "pybedlite-1.0.0-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:16c55edd5c91369e442c7212935f1ae399f75dba7a518b1e92bf520906551fb8"},
-    {file = "pybedlite-1.0.0-cp311-cp311-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fe9a40f7646bafed735be064c348de2c0b14b7226701893e28c1d20638d6c46a"},
-    {file = "pybedlite-1.0.0-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:6d8d0c90c85ea5bff36dd7ceea04ca077a9851b0e0a5c67831b2136a3810263c"},
     {file = "pybedlite-1.0.0-cp312-cp312-macosx_14_0_x86_64.whl", hash = "sha256:f75a313c1a30435e18cb4f1c905ff742b90e41dd99013bcebcc0e6923ccd6177"},
-    {file = "pybedlite-1.0.0-cp38-cp38-macosx_14_0_arm64.whl", hash = "sha256:3fc6cd834032baf9170e934e26239a6d564b9e655d852de24376d41653555fdf"},
-    {file = "pybedlite-1.0.0-cp38-cp38-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9ecf6b9b83139340dcd7d26adff61c0cf14ca9486e00d53e7cad3b0af3b73825"},
-    {file = "pybedlite-1.0.0-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:a62c14acbff745df48f891e1450064be3073964610eb71eebc7d2a0c780374b9"},
-    {file = "pybedlite-1.0.0-cp39-cp39-macosx_14_0_arm64.whl", hash = "sha256:6979db1847d3f67900286e02d515e19d4ae19951d90858acce0fe3e6d0751a88"},
-    {file = "pybedlite-1.0.0-cp39-cp39-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl", hash = "sha256:830cce21c6bef4d6dfbd123a14840030e6508a92a94588651ae7314caa22b0d8"},
-    {file = "pybedlite-1.0.0-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:9600308910321a780b0802f298166d813e9d309f6d5e9ee570df92ce3663c648"},
     {file = "pybedlite-1.0.0.tar.gz", hash = "sha256:c87a246a673f69b929103176b744b6ad6978b63fae45f1ca6becc315a72d671c"},
 ]
 
@@ -2010,38 +2021,6 @@ pytest = ">=4.6"
 
 [package.extras]
 test = ["numpy", "pytest-remotedata (>=0.3.2)", "setuptools (>=30.3.0)", "sphinx"]
-
-[[package]]
-name = "pytest-mypy"
-version = "0.10.3"
-description = "Mypy static type checker plugin for Pytest"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "pytest-mypy-0.10.3.tar.gz", hash = "sha256:f8458f642323f13a2ca3e2e61509f7767966b527b4d8adccd5032c3e7b4fd3db"},
-    {file = "pytest_mypy-0.10.3-py3-none-any.whl", hash = "sha256:7638d0d3906848fc1810cb2f5cc7fceb4cc5c98524aafcac58f28620e3102053"},
-]
-
-[package.dependencies]
-attrs = ">=19.0"
-filelock = ">=3.0"
-mypy = {version = ">=0.900", markers = "python_version >= \"3.11\""}
-pytest = {version = ">=6.2", markers = "python_version >= \"3.10\""}
-
-[[package]]
-name = "pytest-ruff"
-version = "0.3.2"
-description = "pytest plugin to check ruff requirements."
-optional = false
-python-versions = "<4.0,>=3.8"
-files = [
-    {file = "pytest_ruff-0.3.2-py3-none-any.whl", hash = "sha256:5096578df2240b2a99f7376747bc433ce25e590c7d570d5c2b47f725497f2c10"},
-    {file = "pytest_ruff-0.3.2.tar.gz", hash = "sha256:8d82882969e52b664a7cef4465cba63e45173f38d907dffeca41d9672f59b6c6"},
-]
-
-[package.dependencies]
-pytest = ">=5"
-ruff = ">=0.0.242"
 
 [[package]]
 name = "python-dateutil"
@@ -2393,28 +2372,29 @@ requests = ">=2.0.1,<3.0.0"
 
 [[package]]
 name = "ruff"
-version = "0.3.3"
+version = "0.9.2"
 description = "An extremely fast Python linter and code formatter, written in Rust."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "ruff-0.3.3-py3-none-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:973a0e388b7bc2e9148c7f9be8b8c6ae7471b9be37e1cc732f8f44a6f6d7720d"},
-    {file = "ruff-0.3.3-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:cfa60d23269d6e2031129b053fdb4e5a7b0637fc6c9c0586737b962b2f834493"},
-    {file = "ruff-0.3.3-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1eca7ff7a47043cf6ce5c7f45f603b09121a7cc047447744b029d1b719278eb5"},
-    {file = "ruff-0.3.3-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:e7d3f6762217c1da954de24b4a1a70515630d29f71e268ec5000afe81377642d"},
-    {file = "ruff-0.3.3-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:b24c19e8598916d9c6f5a5437671f55ee93c212a2c4c569605dc3842b6820386"},
-    {file = "ruff-0.3.3-py3-none-manylinux_2_17_ppc64.manylinux2014_ppc64.whl", hash = "sha256:5a6cbf216b69c7090f0fe4669501a27326c34e119068c1494f35aaf4cc683778"},
-    {file = "ruff-0.3.3-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:352e95ead6964974b234e16ba8a66dad102ec7bf8ac064a23f95371d8b198aab"},
-    {file = "ruff-0.3.3-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:8d6ab88c81c4040a817aa432484e838aaddf8bfd7ca70e4e615482757acb64f8"},
-    {file = "ruff-0.3.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:79bca3a03a759cc773fca69e0bdeac8abd1c13c31b798d5bb3c9da4a03144a9f"},
-    {file = "ruff-0.3.3-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:2700a804d5336bcffe063fd789ca2c7b02b552d2e323a336700abb8ae9e6a3f8"},
-    {file = "ruff-0.3.3-py3-none-musllinux_1_2_armv7l.whl", hash = "sha256:fd66469f1a18fdb9d32e22b79f486223052ddf057dc56dea0caaf1a47bdfaf4e"},
-    {file = "ruff-0.3.3-py3-none-musllinux_1_2_i686.whl", hash = "sha256:45817af234605525cdf6317005923bf532514e1ea3d9270acf61ca2440691376"},
-    {file = "ruff-0.3.3-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:0da458989ce0159555ef224d5b7c24d3d2e4bf4c300b85467b08c3261c6bc6a8"},
-    {file = "ruff-0.3.3-py3-none-win32.whl", hash = "sha256:f2831ec6a580a97f1ea82ea1eda0401c3cdf512cf2045fa3c85e8ef109e87de0"},
-    {file = "ruff-0.3.3-py3-none-win_amd64.whl", hash = "sha256:be90bcae57c24d9f9d023b12d627e958eb55f595428bafcb7fec0791ad25ddfc"},
-    {file = "ruff-0.3.3-py3-none-win_arm64.whl", hash = "sha256:0171aab5fecdc54383993389710a3d1227f2da124d76a2784a7098e818f92d61"},
-    {file = "ruff-0.3.3.tar.gz", hash = "sha256:38671be06f57a2f8aba957d9f701ea889aa5736be806f18c0cd03d6ff0cbca8d"},
+    {file = "ruff-0.9.2-py3-none-linux_armv6l.whl", hash = "sha256:80605a039ba1454d002b32139e4970becf84b5fee3a3c3bf1c2af6f61a784347"},
+    {file = "ruff-0.9.2-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:b9aab82bb20afd5f596527045c01e6ae25a718ff1784cb92947bff1f83068b00"},
+    {file = "ruff-0.9.2-py3-none-macosx_11_0_arm64.whl", hash = "sha256:fbd337bac1cfa96be615f6efcd4bc4d077edbc127ef30e2b8ba2a27e18c054d4"},
+    {file = "ruff-0.9.2-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:82b35259b0cbf8daa22a498018e300b9bb0174c2bbb7bcba593935158a78054d"},
+    {file = "ruff-0.9.2-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:8b6a9701d1e371bf41dca22015c3f89769da7576884d2add7317ec1ec8cb9c3c"},
+    {file = "ruff-0.9.2-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:9cc53e68b3c5ae41e8faf83a3b89f4a5d7b2cb666dff4b366bb86ed2a85b481f"},
+    {file = "ruff-0.9.2-py3-none-manylinux_2_17_ppc64.manylinux2014_ppc64.whl", hash = "sha256:8efd9da7a1ee314b910da155ca7e8953094a7c10d0c0a39bfde3fcfd2a015684"},
+    {file = "ruff-0.9.2-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:3292c5a22ea9a5f9a185e2d131dc7f98f8534a32fb6d2ee7b9944569239c648d"},
+    {file = "ruff-0.9.2-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:1a605fdcf6e8b2d39f9436d343d1f0ff70c365a1e681546de0104bef81ce88df"},
+    {file = "ruff-0.9.2-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c547f7f256aa366834829a08375c297fa63386cbe5f1459efaf174086b564247"},
+    {file = "ruff-0.9.2-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:d18bba3d3353ed916e882521bc3e0af403949dbada344c20c16ea78f47af965e"},
+    {file = "ruff-0.9.2-py3-none-musllinux_1_2_armv7l.whl", hash = "sha256:b338edc4610142355ccf6b87bd356729b62bf1bc152a2fad5b0c7dc04af77bfe"},
+    {file = "ruff-0.9.2-py3-none-musllinux_1_2_i686.whl", hash = "sha256:492a5e44ad9b22a0ea98cf72e40305cbdaf27fac0d927f8bc9e1df316dcc96eb"},
+    {file = "ruff-0.9.2-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:af1e9e9fe7b1f767264d26b1075ac4ad831c7db976911fa362d09b2d0356426a"},
+    {file = "ruff-0.9.2-py3-none-win32.whl", hash = "sha256:71cbe22e178c5da20e1514e1e01029c73dc09288a8028a5d3446e6bba87a5145"},
+    {file = "ruff-0.9.2-py3-none-win_amd64.whl", hash = "sha256:c5e1d6abc798419cf46eed03f54f2e0c3adb1ad4b801119dedf23fcaf69b55b5"},
+    {file = "ruff-0.9.2-py3-none-win_arm64.whl", hash = "sha256:a1b63fa24149918f8b37cef2ee6fff81f24f0d74b6f0bdc37bc3e1f2143e41c6"},
+    {file = "ruff-0.9.2.tar.gz", hash = "sha256:b5eceb334d55fae5f316f783437392642ae18e16dcf4f1858d55d3c2a0f8f5d0"},
 ]
 
 [[package]]
@@ -2498,14 +2478,19 @@ files = [
 [[package]]
 name = "trove-classifiers"
 <<<<<<< HEAD
+<<<<<<< HEAD
 version = "2025.3.3.18"
 =======
 version = "2025.1.10.15"
 >>>>>>> d5e0869 (feat: use primer3-py for primer3 instead of the executable (#101))
+=======
+version = "2025.1.15.22"
+>>>>>>> d251ecb (chore: update CI with decoupled way of running pytest (#114))
 description = "Canonical source for classifiers on PyPI (pypi.org)."
 optional = false
 python-versions = "*"
 files = [
+<<<<<<< HEAD
 <<<<<<< HEAD
     {file = "trove_classifiers-2025.3.3.18-py3-none-any.whl", hash = "sha256:215630da61cf8757c373f81b602fc1283ec5a691cf12c5f9f96f11d6ad5fc7f2"},
     {file = "trove_classifiers-2025.3.3.18.tar.gz", hash = "sha256:3ffcfa90a428adfde1a5d90e3aa1b87fe474c5dbdbf5ccbca74ed69ba83c5ca7"},
@@ -2513,6 +2498,10 @@ files = [
     {file = "trove_classifiers-2025.1.10.15-py3-none-any.whl", hash = "sha256:9824eb16f7df1b1cc1c217c52ce56c76869d6263da2067f8eadc45122a731cfc"},
     {file = "trove_classifiers-2025.1.10.15.tar.gz", hash = "sha256:be2c7d25e46cd39d5c7151acd389584df3919f61890f5f163c8ee2090ff71e7f"},
 >>>>>>> d5e0869 (feat: use primer3-py for primer3 instead of the executable (#101))
+=======
+    {file = "trove_classifiers-2025.1.15.22-py3-none-any.whl", hash = "sha256:5f19c789d4f17f501d36c94dbbf969fb3e8c2784d008e6f5164dd2c3d6a2b07c"},
+    {file = "trove_classifiers-2025.1.15.22.tar.gz", hash = "sha256:90af74358d3a01b3532bc7b3c88d8c6a094c2fd50a563d13d9576179326d7ed9"},
+>>>>>>> d251ecb (chore: update CI with decoupled way of running pytest (#114))
 ]
 
 [[package]]
@@ -2557,14 +2546,19 @@ zstd = ["zstandard (>=0.18.0)"]
 [[package]]
 name = "virtualenv"
 <<<<<<< HEAD
+<<<<<<< HEAD
 version = "20.29.3"
 =======
 version = "20.28.1"
 >>>>>>> d5e0869 (feat: use primer3-py for primer3 instead of the executable (#101))
+=======
+version = "20.29.1"
+>>>>>>> d251ecb (chore: update CI with decoupled way of running pytest (#114))
 description = "Virtual Python Environment builder"
 optional = false
 python-versions = ">=3.8"
 files = [
+<<<<<<< HEAD
 <<<<<<< HEAD
     {file = "virtualenv-20.29.3-py3-none-any.whl", hash = "sha256:3e3d00f5807e83b234dfb6122bf37cfadf4be216c53a49ac059d02414f819170"},
     {file = "virtualenv-20.29.3.tar.gz", hash = "sha256:95e39403fcf3940ac45bc717597dba16110b74506131845d9b687d5e73d947ac"},
@@ -2572,6 +2566,10 @@ files = [
     {file = "virtualenv-20.28.1-py3-none-any.whl", hash = "sha256:412773c85d4dab0409b83ec36f7a6499e72eaf08c80e81e9576bca61831c71cb"},
     {file = "virtualenv-20.28.1.tar.gz", hash = "sha256:5d34ab240fdb5d21549b76f9e8ff3af28252f5499fb6d6f031adac4e5a8c5329"},
 >>>>>>> d5e0869 (feat: use primer3-py for primer3 instead of the executable (#101))
+=======
+    {file = "virtualenv-20.29.1-py3-none-any.whl", hash = "sha256:4e4cb403c0b0da39e13b46b1b2476e505cb0046b25f242bee80f62bf990b2779"},
+    {file = "virtualenv-20.29.1.tar.gz", hash = "sha256:b8b8970138d32fb606192cb97f6cd4bb644fa486be9308fb9b63f81091b5dc35"},
+>>>>>>> d251ecb (chore: update CI with decoupled way of running pytest (#114))
 ]
 
 [package.dependencies]
@@ -2735,5 +2733,9 @@ content-hash = "1bb5c5158bcc6044747d5fa751ebe05a160d00215d869aa60322ef984cffb2bc
 >>>>>>> d5e0869 (feat: use primer3-py for primer3 instead of the executable (#101))
 =======
 python-versions = "^3.12"
+<<<<<<< HEAD
 content-hash = "dbca83d5a5f879b64bb925732962d1d5352f995784f7dc70f7950e046ad5510b"
 >>>>>>> 11390a5 (Remove OligoLike (#107))
+=======
+content-hash = "c401a1d5773fb02e2c3603ff3aa18d7509bd4da6b31e5a67386feaf12607f1db"
+>>>>>>> d251ecb (chore: update CI with decoupled way of running pytest (#114))
