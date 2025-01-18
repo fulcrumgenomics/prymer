@@ -38,6 +38,7 @@ plugins:
             show_submodules: true
   - table-reader
 markdown_extensions:
+  - callouts
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
