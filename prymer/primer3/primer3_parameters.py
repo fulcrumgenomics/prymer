@@ -94,6 +94,8 @@ from prymer.primer3.primer3_input_tag import Primer3InputTag
 
 
 class Primer3Parameters(ABC):
+    """Abstract base class for primer/amplicon parameters and probe parameters."""
+
     @property
     @abstractmethod
     def max_dinuc_bases(self) -> int:

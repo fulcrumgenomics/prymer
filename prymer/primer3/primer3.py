@@ -140,8 +140,8 @@ from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
 from prymer.primer3.primer3_task import DesignRightPrimersTask
 from prymer.primer3.primer3_task import PickHybProbeOnly
-from prymer.variant import VariantLookup
 from prymer.primer3.primer3_task import Primer3TaskType
+from prymer.variant import VariantLookup
 
 
 @dataclass(init=True, slots=True, frozen=True)

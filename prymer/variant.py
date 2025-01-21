@@ -98,7 +98,7 @@ class SimpleVariant:
 
             id = variant.id or f"{variant.chrom}:{start}"
             if len(variant.alts) > 1:
-                id = f"{id}-{i+1}/{len(variant.alts)}"
+                id = f"{id}-{i + 1}/{len(variant.alts)}"
 
             simple_variant = SimpleVariant(
                 id=id,
