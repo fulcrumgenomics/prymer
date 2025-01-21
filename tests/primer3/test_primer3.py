@@ -15,9 +15,7 @@ from prymer.api.variant_lookup import cached
 from prymer.primer3.primer3 import Primer3
 from prymer.primer3.primer3 import Primer3Failure
 from prymer.primer3.primer3 import Primer3Result
-from prymer.primer3.primer3 import _has_acceptable_dinuc_run
-from prymer.primer3.primer3_input import Primer3Input
-from prymer.primer3.primer3_parameters import PrimerAndAmpliconParameters
+from prymer.primer3.primer3_parameters import PrimerParameters
 from prymer.primer3.primer3_parameters import ProbeParameters
 from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
@@ -36,8 +34,13 @@ def vcf_path() -> Path:
 
 
 @pytest.fixture
-def single_primer_params() -> PrimerAndAmpliconParameters:
-    return PrimerAndAmpliconParameters(
+def target() -> Span:
+    return Span(refname="chr1", start=200, end=300, strand=Strand.POSITIVE)
+
+
+@pytest.fixture
+def single_primer_params() -> PrimerParameters:
+    return PrimerParameters(
         amplicon_sizes=MinOptMax(min=100, max=250, opt=200),
         amplicon_tms=MinOptMax(min=55.0, max=100.0, opt=70.0),
         primer_sizes=MinOptMax(min=29, max=31, opt=30),
@@ -49,8 +52,8 @@ def single_primer_params() -> PrimerAndAmpliconParameters:
 
 
 @pytest.fixture
-def pair_primer_params() -> PrimerAndAmpliconParameters:
-    return PrimerAndAmpliconParameters(
+def pair_primer_params() -> PrimerParameters:
+    return PrimerParameters(
         amplicon_sizes=MinOptMax(min=100, max=200, opt=150),
         amplicon_tms=MinOptMax(min=55.0, max=100.0, opt=72.5),
         primer_sizes=MinOptMax(min=20, max=30, opt=25),
@@ -62,8 +65,8 @@ def pair_primer_params() -> PrimerAndAmpliconParameters:
 
 
 @pytest.fixture
-def design_fail_gen_primer3_params() -> PrimerAndAmpliconParameters:
-    return PrimerAndAmpliconParameters(
+def design_fail_gen_primer3_params() -> PrimerParameters:
+    return PrimerParameters(
         amplicon_sizes=MinOptMax(min=200, max=300, opt=250),
         amplicon_tms=MinOptMax(min=65.0, max=75.0, opt=74.0),
         primer_sizes=MinOptMax(min=24, max=27, opt=26),
@@ -144,45 +147,37 @@ def valid_primer_pairs(
 
 def test_design_raises(
     genome_ref: Path,
-    single_primer_params: PrimerAndAmpliconParameters,
+    single_primer_params: PrimerParameters,
 ) -> None:
     """Test that design() raises when given an invalid argument."""
-
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
-
-    illegal_primer3_params = replace(
+    invalid_params = replace(
         single_primer_params,
         number_primers_return="invalid",  # type: ignore
     )
-    invalid_design_input = Primer3Input(
-        target=target,
-        primer_and_amplicon_params=illegal_primer3_params,
-        task=DesignLeftPrimersTask(),
-    )
     with pytest.raises(ValueError, match="Illegal PRIMER_NUM_RETURN value: invalid"):
-        Primer3(genome_fasta=genome_ref).design(design_input=invalid_design_input)
+        Primer3(genome_fasta=genome_ref).design(
+            task=DesignLeftPrimersTask(), params=invalid_params, target=target
+        )
     # TODO: add other Value Errors
 
 
 def test_left_primer_valid_designs(
     genome_ref: Path,
-    single_primer_params: PrimerAndAmpliconParameters,
+    single_primer_params: PrimerParameters,
 ) -> None:
     """Test that left primer designs are within the specified design specifications."""
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
-    design_input = Primer3Input(
-        target=target,
-        primer_and_amplicon_params=single_primer_params,
-        task=DesignLeftPrimersTask(),
-    )
     expected_thermo_max = single_primer_params.primer_tms.min - 10
-    assert design_input.primer_and_amplicon_params.primer_max_homodimer_tm == expected_thermo_max
-    assert design_input.primer_and_amplicon_params.primer_max_3p_homodimer_tm == expected_thermo_max
-    assert design_input.primer_and_amplicon_params.primer_max_hairpin_tm == expected_thermo_max
+    assert single_primer_params.primer_max_homodimer_tm == expected_thermo_max
+    assert single_primer_params.primer_max_3p_homodimer_tm == expected_thermo_max
+    assert single_primer_params.primer_max_hairpin_tm == expected_thermo_max
 
     with Primer3(genome_fasta=genome_ref) as designer:
         for _ in range(10):  # run many times to ensure we can re-use primer3
-            left_result = designer.design(design_input=design_input)
+            left_result = designer.design(
+                task=DesignLeftPrimersTask(), params=single_primer_params, target=target
+            )
             designed_lefts: list[Oligo] = left_result.primers()
             assert all(isinstance(design, Oligo) for design in designed_lefts)
             for actual_design in designed_lefts:
@@ -217,18 +212,15 @@ def test_left_primer_valid_designs(
 
 def test_right_primer_valid_designs(
     genome_ref: Path,
-    single_primer_params: PrimerAndAmpliconParameters,
+    single_primer_params: PrimerParameters,
 ) -> None:
     """Test that right primer designs are within the specified design specifications."""
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
-    design_input = Primer3Input(
-        target=target,
-        primer_and_amplicon_params=single_primer_params,
-        task=DesignRightPrimersTask(),
-    )
     with Primer3(genome_fasta=genome_ref) as designer:
         for _ in range(10):  # run many times to ensure we can re-use primer3
-            right_result: Primer3Result = designer.design(design_input=design_input)
+            right_result: Primer3Result = designer.design(
+                task=DesignRightPrimersTask(), params=single_primer_params, target=target
+            )
             designed_rights: list[Oligo] = right_result.primers()
             assert all(isinstance(design, Oligo) for design in designed_rights)
 
@@ -263,19 +255,14 @@ def test_right_primer_valid_designs(
                 assert actual_design.bases == reverse_complement(underlying_ref_seq)
 
 
-def test_primer_pair_design(
-    genome_ref: Path, pair_primer_params: PrimerAndAmpliconParameters
-) -> None:
+def test_primer_pair_design(genome_ref: Path, pair_primer_params: PrimerParameters) -> None:
     """Test that paired primer design produces left and right primers within design constraints.
     Additionally, assert that `PrimerPair.amplicon_sequence()` matches reference sequence."""
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
-    design_input = Primer3Input(
-        target=target,
-        primer_and_amplicon_params=pair_primer_params,
-        task=DesignPrimerPairsTask(),
-    )
     with Primer3(genome_fasta=genome_ref) as designer:
-        pair_result: Primer3Result = designer.design(design_input=design_input)
+        pair_result: Primer3Result = designer.design(
+            task=DesignPrimerPairsTask(), params=pair_primer_params, target=target
+        )
         designed_pairs: list[PrimerPair] = pair_result.primer_pairs()
         assert all(isinstance(design, PrimerPair) for design in designed_pairs)
         lefts = [primer_pair.left_primer for primer_pair in designed_pairs]
@@ -346,23 +333,15 @@ def test_primer_pair_design(
             assert pair_design.right_primer.bases.upper() == right_from_ref.upper()
 
 
-def test_fasta_close_valid(
-    genome_ref: Path, single_primer_params: PrimerAndAmpliconParameters
-) -> None:
+def test_fasta_close_valid(genome_ref: Path, single_primer_params: PrimerParameters) -> None:
     """Test that fasta file is closed when underlying subprocess is terminated."""
     designer = Primer3(genome_fasta=genome_ref)
     assert designer._fasta.is_open()
     designer.close()
     assert designer._fasta.closed
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
-    design_input = Primer3Input(
-        target=target,
-        primer_and_amplicon_params=single_primer_params,
-        task=DesignLeftPrimersTask(),
-    )
-
     with pytest.raises(ValueError, match="I/O operation on closed file"):
-        designer.design(design_input=design_input)
+        designer.design(task=DesignLeftPrimersTask(), params=single_primer_params, target=target)
 
 
 @pytest.mark.parametrize(
@@ -415,7 +394,7 @@ def test_variant_lookup(
 def test_screen_pair_results(
     valid_primer_pairs: list[PrimerPair],
     genome_ref: Path,
-    pair_primer_params: PrimerAndAmpliconParameters,
+    pair_primer_params: PrimerParameters,
 ) -> None:
     """Test that `_has_acceptable_dinuc_run()` and `_screen_pair_results()` use
     `Primer3Parameters.primer_max_dinuc_bases` to disqualify primers when applicable.
@@ -423,51 +402,34 @@ def test_screen_pair_results(
     run in a primer (high_threshold = 6, low_threshold = 2).
     If one primer of a primer pair should have a dinucleotide run above the set threshold,
     then the pair is considered invalid."""
-    target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
-    design_input = Primer3Input(
-        target=target,
-        primer_and_amplicon_params=pair_primer_params,
-        task=DesignPrimerPairsTask(),
-    )
-
-    lower_dinuc_thresh = replace(pair_primer_params, primer_max_dinuc_bases=2)  # lower from 6 to 2
-    altered_design_input = Primer3Input(
-        target=target,
-        primer_and_amplicon_params=lower_dinuc_thresh,
-        task=DesignPrimerPairsTask(),
+    altered_params = replace(
+        pair_primer_params,
+        primer_max_dinuc_bases=2,  # lower from 6 to 2
     )
     with Primer3(genome_fasta=genome_ref) as designer:
         # all PrimerPairs have acceptable dinucleotide run lengths (threshold = 6)
         base_primer_pair_designs, base_dinuc_pair_failures = designer._screen_pair_results(
-            design_input=design_input, designed_primer_pairs=valid_primer_pairs
+            params=pair_primer_params, designed_primer_pairs=valid_primer_pairs
         )
         assert len(base_dinuc_pair_failures) == 0
-        assert design_input.primer_and_amplicon_params is not None
         for primer_pair in base_primer_pair_designs:
             assert (
                 primer_pair.left_primer.longest_dinucleotide_run_length
-                <= design_input.primer_and_amplicon_params.primer_max_dinuc_bases
+                <= pair_primer_params.max_dinuc_bases
             )
             assert (
                 primer_pair.right_primer.longest_dinucleotide_run_length
-                <= design_input.primer_and_amplicon_params.primer_max_dinuc_bases
-            )
-            assert _has_acceptable_dinuc_run(
-                design_input=design_input, oligo_design=primer_pair.left_primer
-            )
-            assert _has_acceptable_dinuc_run(
-                design_input=design_input, oligo_design=primer_pair.right_primer
+                <= pair_primer_params.max_dinuc_bases
             )
 
         # 1 primer from every pair will fail lowered dinuc threshold of 2
         # As a result, no valid primer pairs will be emitted
         altered_designs, altered_dinuc_failures = designer._screen_pair_results(
-            design_input=altered_design_input, designed_primer_pairs=valid_primer_pairs
+            params=altered_params, designed_primer_pairs=valid_primer_pairs
         )
-        assert altered_design_input.primer_and_amplicon_params is not None
+        assert altered_params is not None
         assert [
-            design.longest_dinucleotide_run_length
-            > altered_design_input.primer_and_amplicon_params.primer_max_dinuc_bases
+            design.longest_dinucleotide_run_length > altered_params.primer_max_dinuc_bases
             for design in altered_dinuc_failures
         ]
         assert len(altered_designs) == 0
@@ -476,21 +438,17 @@ def test_screen_pair_results(
 def test_build_failures(
     valid_primer_pairs: list[PrimerPair],
     genome_ref: Path,
-    pair_primer_params: PrimerAndAmpliconParameters,
+    pair_primer_params: PrimerParameters,
 ) -> None:
     """Test that `build_failures()` parses Primer3 `failure_strings` correctly and includes failures
     related to long dinucleotide runs."""
-    target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
-
-    low_dinuc_thresh = replace(pair_primer_params, primer_max_dinuc_bases=2)  # lower from 6 to 2
-    altered_design_input = Primer3Input(
-        target=target,
-        primer_and_amplicon_params=low_dinuc_thresh,
-        task=DesignPrimerPairsTask(),
+    altered_params = replace(
+        pair_primer_params,
+        primer_max_dinuc_bases=2,  # lower from 6 to 2
     )
     designer = Primer3(genome_fasta=genome_ref)
     primer_pair_designs, dinuc_pair_failures = designer._screen_pair_results(
-        design_input=altered_design_input, designed_primer_pairs=valid_primer_pairs
+        params=altered_params, designed_primer_pairs=valid_primer_pairs
     )
     # 3 primers fail for dinucleotide runs that are longer than `primer_max_dinuc_bases`
     assert len(dinuc_pair_failures) == 3
@@ -515,21 +473,14 @@ def test_build_failures(
 def test_build_failures_debugs(
     valid_primer_pairs: list[PrimerPair],
     genome_ref: Path,
-    pair_primer_params: PrimerAndAmpliconParameters,
+    pair_primer_params: PrimerParameters,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that we log a debug message in the event of an unknown Primer3Failure reason."""
     caplog.set_level(logging.DEBUG)
-    target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
-
-    design_input = Primer3Input(
-        target=target,
-        primer_and_amplicon_params=pair_primer_params,
-        task=DesignPrimerPairsTask(),
-    )
     designer = Primer3(genome_fasta=genome_ref)
     primer_pair_designs, dinuc_pair_failures = designer._screen_pair_results(
-        design_input=design_input, designed_primer_pairs=valid_primer_pairs
+        params=pair_primer_params, designed_primer_pairs=valid_primer_pairs
     )
     test_failure_strings = ["fabricated fail reason 1"]
     designer._build_failures(dinuc_pair_failures, test_failure_strings)
@@ -631,13 +582,8 @@ def test_create_design_region_raises_when_primers_would_not_fit_in_design_region
 def test_probe_design_raises(genome_ref: Path, valid_probe_params: ProbeParameters) -> None:
     """Test that we raise an error when the target region is smaller than the minimal probe size."""
     target = Span(refname="chr1", start=201, end=217, strand=Strand.POSITIVE)
-    design_input = Primer3Input(
-        target=target,
-        probe_params=valid_probe_params,
-        task=PickHybProbeOnly(),
-    )
     with Primer3(genome_fasta=genome_ref) as designer:
         with pytest.raises(
             ValueError, match="Target region required to be at least as large as the"
         ):
-            designer.design(design_input=design_input)
+            designer.design(task=PickHybProbeOnly(), params=valid_probe_params, target=target)

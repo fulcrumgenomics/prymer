@@ -3,14 +3,26 @@ from dataclasses import replace
 import pytest
 
 from prymer import MinOptMax
+from prymer import Span
+from prymer import Strand
+from prymer.model import Weights
+from prymer.primer3 import DesignLeftPrimersTask
+from prymer.primer3 import DesignPrimerPairsTask
+from prymer.primer3 import DesignRightPrimersTask
 from prymer.primer3.primer3_input_tag import Primer3InputTag
-from prymer.primer3.primer3_parameters import PrimerAndAmpliconParameters
+from prymer.primer3.primer3_parameters import PrimerParameters
 from prymer.primer3.primer3_parameters import ProbeParameters
+from prymer.primer3.primer3_task import Primer3TaskType
 
 
 @pytest.fixture
-def valid_primer_amplicon_params() -> PrimerAndAmpliconParameters:
-    return PrimerAndAmpliconParameters(
+def target() -> Span:
+    return Span(refname="chr1", start=200, end=300, strand=Strand.POSITIVE)
+
+
+@pytest.fixture
+def valid_primer_amplicon_params() -> PrimerParameters:
+    return PrimerParameters(
         amplicon_sizes=MinOptMax(min=200, opt=250, max=300),
         amplicon_tms=MinOptMax(min=55.0, opt=60.0, max=65.0),
         primer_sizes=MinOptMax(min=18, opt=21, max=27),
@@ -28,8 +40,32 @@ def valid_probe_params() -> ProbeParameters:
     )
 
 
+@pytest.mark.parametrize(
+    "task_type",
+    [
+        DesignRightPrimersTask(),
+        DesignLeftPrimersTask(),
+        DesignPrimerPairsTask(),
+    ],
+)
+def test_primer_design_only_valid(
+    valid_primer_amplicon_params: PrimerParameters,
+    task_type: Primer3TaskType,
+) -> None:
+    mapped_dict = valid_primer_amplicon_params.to_input_tags()
+    assert len(mapped_dict.keys()) == 39
+
+
+def test_probe_design_only_valid(
+    valid_probe_params: ProbeParameters,
+) -> None:
+    mapped_dict = valid_probe_params.to_input_tags()
+    assert Primer3InputTag.PRIMER_NUM_RETURN in mapped_dict
+    assert len(mapped_dict.keys()) == 24
+
+
 def test_primer_amplicon_param_construction_valid(
-    valid_primer_amplicon_params: PrimerAndAmpliconParameters,
+    valid_primer_amplicon_params: PrimerParameters,
 ) -> None:
     """Test PrimerAndAmpliconParameters class instantiation with valid input"""
     assert valid_primer_amplicon_params.amplicon_sizes.min == 200
@@ -61,7 +97,7 @@ def test_probe_param_construction_valid(
 
 
 def test_primer_amplicon_param_construction_raises(
-    valid_primer_amplicon_params: PrimerAndAmpliconParameters,
+    valid_primer_amplicon_params: PrimerParameters,
 ) -> None:
     """Test that PrimerAndAmpliconParameters post_init raises with invalid input."""
     # overriding mypy here to test a case that normally would be caught by mypy
@@ -96,7 +132,7 @@ def test_primer_probe_param_construction_raises(
 
 
 def test_primer_amplicon_params_to_input_tags(
-    valid_primer_amplicon_params: PrimerAndAmpliconParameters,
+    valid_primer_amplicon_params: PrimerParameters,
 ) -> None:
     """Test that to_input_tags() works as expected"""
     test_dict = valid_primer_amplicon_params.to_input_tags()
@@ -125,7 +161,7 @@ def test_primer_amplicon_params_to_input_tags(
     assert ambiguous_dict[Primer3InputTag.PRIMER_LOWERCASE_MASKING] == 0
 
 
-def test_max_ampl_length(valid_primer_amplicon_params: PrimerAndAmpliconParameters) -> None:
+def test_max_ampl_length(valid_primer_amplicon_params: PrimerParameters) -> None:
     """Test that max_amplicon_length() returns expected int"""
     assert valid_primer_amplicon_params.max_amplicon_length == 300
     change_max_length = replace(
@@ -134,10 +170,55 @@ def test_max_ampl_length(valid_primer_amplicon_params: PrimerAndAmpliconParamete
     assert change_max_length.max_amplicon_length == 1000
 
 
-def test_max_primer_length(valid_primer_amplicon_params: PrimerAndAmpliconParameters) -> None:
+def test_max_primer_length(valid_primer_amplicon_params: PrimerParameters) -> None:
     """Test that max_primer_length() returns expected int"""
     assert valid_primer_amplicon_params.max_primer_length == 27
     change_max_length = replace(
         valid_primer_amplicon_params, primer_sizes=MinOptMax(min=18, opt=35, max=50)
     )
     assert change_max_length.max_primer_length == 50
+
+
+def test_primer_weights_valid(
+    valid_primer_amplicon_params: PrimerParameters,
+) -> None:
+    """Test instantiation of `AmpliconParameters` object with valid input"""
+    test_dict = valid_primer_amplicon_params.to_input_tags()
+    assert test_dict[Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_SIZE_LT] == 1
+    assert test_dict[Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_SIZE_GT] == 1
+    assert test_dict[Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_TM_LT] == 0.0
+    assert test_dict[Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_TM_GT] == 0.0
+    assert test_dict[Primer3InputTag.PRIMER_WT_END_STABILITY] == 0.25
+    assert test_dict[Primer3InputTag.PRIMER_WT_GC_PERCENT_LT] == 0.25
+    assert test_dict[Primer3InputTag.PRIMER_WT_GC_PERCENT_GT] == 0.25
+    assert test_dict[Primer3InputTag.PRIMER_WT_SELF_ANY] == 0.1
+    assert test_dict[Primer3InputTag.PRIMER_WT_SELF_END] == 0.1
+    assert test_dict[Primer3InputTag.PRIMER_WT_SIZE_LT] == 0.5
+    assert test_dict[Primer3InputTag.PRIMER_WT_SIZE_GT] == 0.1
+    assert test_dict[Primer3InputTag.PRIMER_WT_TM_LT] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_WT_TM_GT] == 1.0
+    assert len((test_dict.values())) == 39
+
+
+def test_probe_weights_valid(valid_probe_params: ProbeParameters) -> None:
+    test_dict = valid_probe_params.to_input_tags()
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SIZE_LT] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SIZE_GT] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_TM_LT] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_TM_GT] == 1.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_LT] == 0.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_GC_PERCENT_GT] == 0.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SELF_ANY_TH] == 0.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_SELF_END_TH] == 0.0
+    assert test_dict[Primer3InputTag.PRIMER_INTERNAL_WT_HAIRPIN_TH] == 0.0
+    assert len(test_dict) == 24
+
+
+def test_primer_weights_to_input_tags(valid_primer_amplicon_params: PrimerParameters) -> None:
+    """Test results from to_input_tags() with and without default values"""
+    default_map = valid_primer_amplicon_params.to_input_tags()
+    assert default_map[Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_SIZE_LT] == 1
+    customized_map = replace(
+        valid_primer_amplicon_params, amplicon_size_wt=Weights(5.0, 1.0)
+    ).to_input_tags()
+    assert customized_map[Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_SIZE_LT] == 5

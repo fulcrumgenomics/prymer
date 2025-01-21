@@ -1,4 +1,4 @@
-import dataclasses
+from dataclasses import replace
 from math import floor
 from pathlib import Path
 from typing import Optional
@@ -13,7 +13,8 @@ from prymer import PrimerPair
 from prymer import Span
 from prymer import Thermo
 from prymer.api import picking
-from prymer.primer3 import PrimerAndAmpliconWeights
+from prymer.model import Weights
+from prymer.primer3 import PrimerParameters
 
 
 @pytest.fixture
@@ -27,21 +28,30 @@ def amplicon_tms() -> MinOptMax[float]:
 
 
 @pytest.fixture
-def weights() -> PrimerAndAmpliconWeights:
-    return PrimerAndAmpliconWeights(
-        product_size_lt=0.5,
-        product_size_gt=1.5,
-        product_tm_lt=10,
-        product_tm_gt=15,
+def params() -> PrimerParameters:
+    return PrimerParameters(
+        amplicon_sizes=MinOptMax(min=200, opt=250, max=300),
+        amplicon_tms=MinOptMax(min=55.0, opt=60.0, max=65.0),
+        primer_sizes=MinOptMax(min=18, opt=21, max=27),
+        primer_tms=MinOptMax(min=55.0, opt=60.0, max=65.0),
+        primer_gcs=MinOptMax(min=45.0, opt=55.0, max=60.0),
+        amplicon_size_wt=Weights(0.5, 1.5),
+        amplicon_tm_wt=Weights(10, 15),
     )
 
 
 @pytest.fixture
-def all_zero_weights() -> PrimerAndAmpliconWeights:
-    d = dataclasses.asdict(PrimerAndAmpliconWeights())
-    for key in d:
-        d[key] = 0.0
-    return PrimerAndAmpliconWeights(**d)
+def all_zero_weights(params: PrimerParameters) -> PrimerParameters:
+    return replace(
+        params,
+        amplicon_size_wt=Weights(0.0, 0.0),
+        amplicon_tm_wt=Weights(0, 0),
+        primer_end_stability_wt=0,
+        primer_gc_wt=Weights(0, 0),
+        primer_homodimer_wt=0,
+        primer_3p_homodimer_wt=0,
+        primer_secondary_structure_wt=0,
+    )
 
 
 # 1000 bases with 100 bases per line
@@ -105,7 +115,7 @@ def pp(lp: Oligo, rp: Oligo, bases: Optional[str] = None, tm: Optional[float] = 
 
 def _score(
     pair: PrimerPair,
-    weights: PrimerAndAmpliconWeights,
+    params: PrimerParameters,
     sizes: MinOptMax[int],
     tms: MinOptMax[float],
 ) -> float:
@@ -117,7 +127,7 @@ def _score(
         amplicon_tm=pair.amplicon_tm,
         amplicon_sizes=sizes,
         amplicon_tms=tms,
-        weights=weights,
+        params=params,
     )
 
 
@@ -127,86 +137,86 @@ def _score(
 
 
 def test_score_returns_sum_of_primer_penalties_when_all_weights_zero(
-    all_zero_weights: PrimerAndAmpliconWeights,
+    all_zero_weights: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
     pair = pp(p("ACGACTCATG", 60.1, 100, 1.7), p("GTGCATACTAG", 59.8, 200, 3.1))
-    score = _score(pair=pair, weights=all_zero_weights, sizes=amplicon_sizes, tms=amplicon_tms)
+    score = _score(pair=pair, params=all_zero_weights, sizes=amplicon_sizes, tms=amplicon_tms)
     assert score == 1.7 + 3.1
 
 
 def test_score_returns_sum_of_primer_penalties_when_amplicon_optimal(
-    weights: PrimerAndAmpliconWeights,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
     pair = pp(p("ACGACTCATG", 60.1, 101, 1.7), p("GTGCATACTAG", 59.8, 240, 3.1), tm=80)
-    score = _score(pair=pair, weights=weights, sizes=amplicon_sizes, tms=amplicon_tms)
+    score = _score(pair=pair, params=params, sizes=amplicon_sizes, tms=amplicon_tms)
     assert pair.amplicon.length == amplicon_sizes.opt
     assert pair.amplicon_tm == amplicon_tms.opt
     assert score == 1.7 + 3.1
 
 
 def test_score_when_amplicon_longer_than_optimal(
-    weights: PrimerAndAmpliconWeights,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
     pair = pp(p("ACGACTCATG", 60.1, 101, 1.0), p("GTGCATACTAG", 59.8, 250, 1.0), tm=80)
-    score = _score(pair=pair, weights=weights, sizes=amplicon_sizes, tms=amplicon_tms)
+    score = _score(pair=pair, params=params, sizes=amplicon_sizes, tms=amplicon_tms)
     assert pair.amplicon.length == amplicon_sizes.opt + 10
     assert pair.amplicon_tm == amplicon_tms.opt
-    assert score == pytest.approx(1 + 1 + (10 * weights.product_size_gt))
+    assert score == pytest.approx(1 + 1 + (10 * params.amplicon_size_wt.gt))
 
 
 def test_score_when_amplicon_shorter_than_optimal(
-    weights: PrimerAndAmpliconWeights,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
     pair = pp(p("ACGACTCATG", 60.1, 101, 1.0), p("GTGCATACTAG", 59.8, 220, 1.0), tm=80)
-    score = _score(pair=pair, weights=weights, sizes=amplicon_sizes, tms=amplicon_tms)
+    score = _score(pair=pair, params=params, sizes=amplicon_sizes, tms=amplicon_tms)
     assert pair.amplicon.length == amplicon_sizes.opt - 20
     assert pair.amplicon_tm == amplicon_tms.opt
-    assert score == pytest.approx(1 + 1 + (20 * weights.product_size_lt))
+    assert score == pytest.approx(1 + 1 + (20 * params.amplicon_size_wt.lt))
 
 
 def test_score_when_amplicon_tm_higher_than_optimal(
-    weights: PrimerAndAmpliconWeights,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
     pair = pp(p("ACGACTCATG", 60.1, 101, 1.0), p("GTGCATACTAG", 59.8, 240, 1.0), tm=82.15)
-    score = _score(pair=pair, weights=weights, sizes=amplicon_sizes, tms=amplicon_tms)
+    score = _score(pair=pair, params=params, sizes=amplicon_sizes, tms=amplicon_tms)
     assert pair.amplicon.length == amplicon_sizes.opt
     assert pair.amplicon_tm == amplicon_tms.opt + 2.15
-    assert score == pytest.approx(1 + 1 + (2.15 * weights.product_tm_gt))
+    assert score == pytest.approx(1 + 1 + (2.15 * params.amplicon_tm_wt.gt))
 
 
 def test_score_when_amplicon_tm_lower_than_optimal(
-    weights: PrimerAndAmpliconWeights,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
     pair = pp(p("ACGACTCATG", 60.1, 101, 1.0), p("GTGCATACTAG", 59.8, 240, 1.0), tm=75.67)
-    score = _score(pair=pair, weights=weights, sizes=amplicon_sizes, tms=amplicon_tms)
+    score = _score(pair=pair, params=params, sizes=amplicon_sizes, tms=amplicon_tms)
     assert pair.amplicon.length == amplicon_sizes.opt
     assert pair.amplicon_tm == amplicon_tms.opt - 4.33
-    assert score == pytest.approx(1 + 1 + (4.33 * weights.product_tm_lt))
+    assert score == pytest.approx(1 + 1 + (4.33 * params.amplicon_tm_wt.lt))
 
 
 def test_score_realistic(
-    weights: PrimerAndAmpliconWeights,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
     pair = pp(p("ACGACTCATG", 60.1, 101, 3.1), p("GTGCATACTAG", 59.8, 256, 4.08), tm=75.67)
-    score = _score(pair=pair, weights=weights, sizes=amplicon_sizes, tms=amplicon_tms)
+    score = _score(pair=pair, params=params, sizes=amplicon_sizes, tms=amplicon_tms)
     assert pair.amplicon.length == amplicon_sizes.opt + 16
     assert pair.amplicon_tm == amplicon_tms.opt - 4.33
     assert score == pytest.approx(
-        3.1 + 4.08 + (16 * weights.product_size_gt) + (4.33 * weights.product_tm_lt)
+        3.1 + 4.08 + (16 * params.amplicon_size_wt.gt) + (4.33 * params.amplicon_tm_wt.lt)
     )
 
 
@@ -217,7 +227,7 @@ def test_score_realistic(
 
 def test_build_primer_pairs_no_primers(
     fasta: Path,
-    weights: PrimerAndAmpliconWeights,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
@@ -229,7 +239,7 @@ def test_build_primer_pairs_no_primers(
             amplicon_sizes=amplicon_sizes,
             amplicon_tms=amplicon_tms,
             max_heterodimer_tm=None,
-            weights=weights,
+            params=params,
             fasta_path=fasta,
         )
     )
@@ -238,7 +248,7 @@ def test_build_primer_pairs_no_primers(
 
 def test_build_primer_pairs_single_pair(
     fasta: Path,
-    weights: PrimerAndAmpliconWeights,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
@@ -250,7 +260,7 @@ def test_build_primer_pairs_single_pair(
             amplicon_sizes=amplicon_sizes,
             amplicon_tms=amplicon_tms,
             max_heterodimer_tm=None,
-            weights=weights,
+            params=params,
             fasta_path=fasta,
         )
     )
@@ -269,7 +279,7 @@ def test_build_primer_pairs_single_pair(
 
 def test_build_primers_amplicon_size_filtering(
     fasta: Path,
-    weights: PrimerAndAmpliconWeights,
+    params: PrimerParameters,
 ) -> None:
     pairs = list(
         picking.build_primer_pairs(
@@ -279,7 +289,7 @@ def test_build_primers_amplicon_size_filtering(
             amplicon_sizes=MinOptMax(100, 150, 200),
             amplicon_tms=MinOptMax(0.0, 0.0, 100.0),
             max_heterodimer_tm=None,
-            weights=weights,
+            params=params,
             fasta_path=fasta,
         )
     )
@@ -297,7 +307,7 @@ def test_build_primers_amplicon_size_filtering(
 
 def test_build_primers_heterodimer_filtering(
     fasta: Path,
-    weights: PrimerAndAmpliconWeights,
+    params: PrimerParameters,
 ) -> None:
     pairs = list(
         picking.build_primer_pairs(
@@ -313,7 +323,7 @@ def test_build_primers_heterodimer_filtering(
             amplicon_sizes=MinOptMax(10, 150, 200),
             amplicon_tms=MinOptMax(0.0, 0.0, 100.0),
             max_heterodimer_tm=50,
-            weights=weights,
+            params=params,
             fasta_path=fasta,
         )
     )
@@ -335,7 +345,7 @@ def test_build_primers_heterodimer_filtering(
 
 def test_build_primer_pairs_amplicon_tm_filtering(
     fasta: Path,
-    weights: PrimerAndAmpliconWeights,
+    params: PrimerParameters,
 ) -> None:
     amp_bases = REF_BASES[200:300]
     amp_tm = Thermo().tm(amp_bases)
@@ -352,7 +362,7 @@ def test_build_primer_pairs_amplicon_tm_filtering(
                 amplicon_sizes=MinOptMax(0, 0, 500),
                 amplicon_tms=MinOptMax(0, 75, max_tm),
                 max_heterodimer_tm=None,
-                weights=weights,
+                params=params,
                 fasta_path=fasta,
             )
         )
@@ -362,7 +372,7 @@ def test_build_primer_pairs_amplicon_tm_filtering(
 
 def test_build_primer_pairs_fails_when_primers_on_wrong_reference(
     fasta: Path,
-    weights: PrimerAndAmpliconWeights,
+    params: PrimerParameters,
 ) -> None:
     target = Span("chr1", 240, 260)
     valid_lefts = [p(REF_BASES[200:220], tm=60, pos=201, pen=1)]
@@ -377,7 +387,7 @@ def test_build_primer_pairs_fails_when_primers_on_wrong_reference(
         amplicon_sizes=MinOptMax(0, 100, 500),
         amplicon_tms=MinOptMax(0, 80, 150),
         max_heterodimer_tm=None,
-        weights=weights,
+        params=params,
         fasta_path=fasta,
     )
 
@@ -392,7 +402,7 @@ def test_build_primer_pairs_fails_when_primers_on_wrong_reference(
                 amplicon_sizes=MinOptMax(0, 100, 500),
                 amplicon_tms=MinOptMax(0, 80, 150),
                 max_heterodimer_tm=None,
-                weights=weights,
+                params=params,
                 fasta_path=fasta,
             )
         )
@@ -406,7 +416,7 @@ def test_build_primer_pairs_fails_when_primers_on_wrong_reference(
                 amplicon_sizes=MinOptMax(0, 100, 500),
                 amplicon_tms=MinOptMax(0, 80, 150),
                 max_heterodimer_tm=None,
-                weights=weights,
+                params=params,
                 fasta_path=fasta,
             )
         )
