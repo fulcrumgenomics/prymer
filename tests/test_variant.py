@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import pysam
 import pytest
 from fgpyo.vcf.builder import VariantBuilder
 from fgpyo.vcf.builder import VcfFieldNumber
@@ -123,7 +122,6 @@ def test_variant_lookup_filtering(tmp_path: Path, builder: VariantBuilder) -> No
     builder.add("chr1", pos=1020, ref="A", alts="C")
     vcf = tmp_path / "test.vcf.gz"
     builder.to_path(vcf)
-    pysam.tabix_index(str(vcf), preset="vcf")
 
     lookup = VariantLookup([vcf], min_maf=0.1, include_missing_mafs=False)
     variants = lookup.query("chr1", 1000, 1020)
@@ -150,7 +148,6 @@ def test_variant_lookup_masking(tmp_path: Path, builder: VariantBuilder) -> None
     builder.add("chr1", pos=1030, ref="AA", alts="CG", info={"AF": 0.1})
     vcf = tmp_path / "test.vcf.gz"
     builder.to_path(vcf)
-    pysam.tabix_index(str(vcf), preset="vcf")
 
     lookup = VariantLookup([vcf], min_maf=0.1, include_missing_mafs=False)
     #              0         1         2         3         4         5
