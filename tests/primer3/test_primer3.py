@@ -11,7 +11,6 @@ from prymer import Oligo
 from prymer import PrimerPair
 from prymer import Span
 from prymer import Strand
-from prymer.api.variant_lookup import cached
 from prymer.primer3.primer3 import Primer3
 from prymer.primer3.primer3 import Primer3Failure
 from prymer.primer3.primer3 import Primer3Result
@@ -21,6 +20,7 @@ from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
 from prymer.primer3.primer3_task import DesignRightPrimersTask
 from prymer.primer3.primer3_task import PickHybProbeOnly
+from prymer.variant import VariantLookup
 
 
 @pytest.fixture(scope="session")
@@ -350,16 +350,16 @@ def test_fasta_close_valid(genome_ref: Path, single_primer_params: PrimerParamet
         (
             Span(refname="chr2", start=9000, end=9110),
             # 9000      9010      9020      9030      9040      9050      9060      9070      9080      9090      9100      9110 # noqa
-            "AATATTCTTGNTGCTTATGCNGCTGACATTGTTGCCCTCCCTAAAGCAACNAAGTAGCCTNTATTTCCCANAGTGAAAGANNACGCTGGCNNNTCAGTTANNNTACAAAAG",
-            "AATATTCTTGCTGCTTATGCAGCTGACATTGTTGCCCTCCCTAAAGCAACCAAGTAGCCTTTATTTCCCACAGTGAAAGAAAACGCTGGCCTATCAGTTACATTACAAAAG",
+            "AATATTCTTGNTGCTTATGCNGCTGACATTGTTGCCCTCCCTAAAGCAACNAAGTAGCCTNTATTTCCCANAGTGAAAGANNACGCTGGCCNNTCAGTTANNNTACAAAAG",
+            "AATATTCTTGcTGCTTATGCaGCTGACATTGTTGCCCTCCCTAAAGCAACcAAGTAGCCTtTATTTCCCAcAGTGAAAGAaaACGCTGGCCtaTCAGTTAcatTACAAAAG",
         ),  # expected masked positions: 9010, 9020, 9050, 9060, 9070,
-        # 9080 (2bp insertion: 3 bases), 9090 (2bp deletion: 2 bases), 9100 (mixed: 3 bases)
+        # 9080 (2bp insertion: 2 bases), 9090 (2bp deletion: 2 bases), 9100 (mixed: 3 bases)
         # do not expect positions 9000 (MAF = 0.001), 9030 (MAF = 0.001), or 9040 (MAF = 0.0004814)
         # to be masked  (MAF below the provided min_maf)
         (
             Span(refname="chr2", start=9095, end=9120),
             "AGTTANNNTACAAAAGGCAGATTTCA",
-            "AGTTACATTACAAAAGGCAGATTTCA",
+            "AGTTAcatTACAAAAGGCAGATTTCA",
         ),
         # 9100 (common-mixed -- alt1: CA->GG, and alt2: CA->CACACA).  The first alt masks the
         # positions [9100,9101], and the second alt masks the positions [9100,9102] (an extra
@@ -378,7 +378,7 @@ def test_variant_lookup(
 ) -> None:
     """Test that MAF filtering and masking are working as expected."""
     with Primer3(
-        genome_fasta=genome_ref, variant_lookup=cached([vcf_path], min_maf=0.01)
+        genome_fasta=genome_ref, variant_lookup=VariantLookup([vcf_path], min_maf=0.01)
     ) as designer:
         actual_soft_masked, actual_hard_masked = designer.get_design_sequences(region=region)
     assert actual_hard_masked == expected_hard_masked
@@ -387,8 +387,8 @@ def test_variant_lookup(
     # with no variant lookup should all be soft-masked
     with Primer3(genome_fasta=genome_ref, variant_lookup=None) as designer:
         actual_soft_masked, actual_hard_masked = designer.get_design_sequences(region=region)
-    assert actual_hard_masked == expected_soft_masked
-    assert actual_soft_masked == expected_soft_masked
+    assert actual_hard_masked.upper() == expected_soft_masked.upper()
+    assert actual_soft_masked.upper() == expected_soft_masked.upper()
 
 
 def test_screen_pair_results(

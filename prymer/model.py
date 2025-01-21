@@ -212,7 +212,7 @@ class Span(Metric["Span"]):
                 strand = Strand(strand_symbol[0])
             except ValueError as e:
                 raise ValueError(
-                    "Did not find valid strand information; " f"received {strand_symbol}"
+                    f"Did not find valid strand information; received {strand_symbol}"
                 ) from e
         elif len(parts) == 2:
             refname, range_ = parts

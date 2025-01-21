@@ -404,7 +404,7 @@ class BwaAlnInteractive(ExecutableRunner):
         """
         if query.id != rec.query_name:
             raise ValueError(
-                "Query and Results are out of order" f"Query=${query.id}, Result=${rec.query_name}"
+                f"Query and Results are out of orderQuery=${query.id}, Result=${rec.query_name}"
             )
 
         num_hits: int = int(rec.get_tag("HN")) if rec.has_tag("HN") else 0
