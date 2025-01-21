@@ -30,7 +30,7 @@ from prymer.model import MinOptMax
 from prymer.model import Oligo
 from prymer.model import PrimerPair
 from prymer.model import Span
-from prymer.primer3 import AmpliconParameters
+from prymer.primer3 import PrimerParameters
 
 
 def score(
@@ -40,7 +40,7 @@ def score(
     amplicon_tm: float,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
-    params: AmpliconParameters,
+    params: PrimerParameters,
 ) -> float:
     """Score the amplicon in a manner similar to Primer3
 
@@ -99,7 +99,7 @@ def build_primer_pairs(  # noqa: C901
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
     max_heterodimer_tm: Optional[float],
-    params: AmpliconParameters,
+    params: PrimerParameters,
     fasta_path: Path,
     thermo: Optional[Thermo] = None,
 ) -> Iterator[PrimerPair]:

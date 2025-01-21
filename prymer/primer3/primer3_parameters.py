@@ -29,7 +29,7 @@ specify the acceptable ranges of probe sizes, melting temperatures, and GC conte
 ```python
 >>> from prymer.primer3 import DesignPrimerPairsTask
 >>> from prymer import Strand
->>> params = AmpliconParameters( \
+>>> params = PrimerParameters( \
     amplicon_sizes=MinOptMax(min=100, max=250, opt=200), \
     amplicon_tms=MinOptMax(min=55.0, max=100.0, opt=70.0), \
     primer_sizes=MinOptMax(min=29, max=31, opt=30), \
@@ -105,7 +105,7 @@ class Primer3Parameters(ABC):
 
 
 @dataclass(frozen=True, init=True, slots=True)
-class AmpliconParameters(Primer3Parameters):
+class PrimerParameters(Primer3Parameters):
     """Holds common primer and amplicon design options that Primer3 uses to inform primer design.
 
     Attributes:

@@ -41,9 +41,9 @@ The `design()` method on `Primer3` is used to design the primers given a
 parameters and target region.
 
 ```python
->>> from prymer.primer3.primer3_parameters import AmpliconParameters
+>>> from prymer.primer3.primer3_parameters import PrimerParameters
 >>> from prymer import MinOptMax
->>> params = AmpliconParameters( \
+>>> params = PrimerParameters( \
     amplicon_sizes=MinOptMax(min=100, max=250, opt=200), \
     amplicon_tms=MinOptMax(min=55.0, max=100.0, opt=70.0), \
     primer_sizes=MinOptMax(min=29, max=31, opt=30), \
@@ -135,8 +135,8 @@ from prymer.model import Span
 from prymer.model import Strand
 from prymer.primer3.primer3_failure_reason import Primer3FailureReason
 from prymer.primer3.primer3_input_tag import Primer3InputTag
-from prymer.primer3.primer3_parameters import AmpliconParameters
 from prymer.primer3.primer3_parameters import Primer3Parameters
+from prymer.primer3.primer3_parameters import PrimerParameters
 from prymer.primer3.primer3_parameters import ProbeParameters
 from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
@@ -346,7 +346,7 @@ class Primer3(AbstractContextManager):
                     )
                 return target
             case DesignRightPrimersTask() | DesignLeftPrimersTask() | DesignPrimerPairsTask():
-                if not isinstance(params, AmpliconParameters):
+                if not isinstance(params, PrimerParameters):
                     raise TypeError(
                         f"For the {type(task).__name__} task, must supply AmpliconParameters."
                         f"instance.  Found: {type(params).__name__}"

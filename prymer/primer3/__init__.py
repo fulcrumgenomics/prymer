@@ -3,8 +3,8 @@ from prymer.primer3.primer3 import Primer3Failure
 from prymer.primer3.primer3 import Primer3Result
 from prymer.primer3.primer3_failure_reason import Primer3FailureReason
 from prymer.primer3.primer3_input_tag import Primer3InputTag
-from prymer.primer3.primer3_parameters import AmpliconParameters
 from prymer.primer3.primer3_parameters import Primer3Parameters
+from prymer.primer3.primer3_parameters import PrimerParameters
 from prymer.primer3.primer3_parameters import ProbeParameters
 from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
@@ -22,6 +22,6 @@ __all__ = [
     "DesignRightPrimersTask",
     "PickHybProbeOnly",
     "Primer3Parameters",
-    "AmpliconParameters",
+    "PrimerParameters",
     "ProbeParameters",
 ]

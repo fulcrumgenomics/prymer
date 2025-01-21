@@ -14,7 +14,7 @@ from prymer import Span
 from prymer import Thermo
 from prymer.api import picking
 from prymer.model import WeightRange
-from prymer.primer3 import AmpliconParameters
+from prymer.primer3 import PrimerParameters
 
 
 @pytest.fixture
@@ -28,8 +28,8 @@ def amplicon_tms() -> MinOptMax[float]:
 
 
 @pytest.fixture
-def params() -> AmpliconParameters:
-    return AmpliconParameters(
+def params() -> PrimerParameters:
+    return PrimerParameters(
         amplicon_sizes=MinOptMax(min=200, opt=250, max=300),
         amplicon_tms=MinOptMax(min=55.0, opt=60.0, max=65.0),
         primer_sizes=MinOptMax(min=18, opt=21, max=27),
@@ -41,7 +41,7 @@ def params() -> AmpliconParameters:
 
 
 @pytest.fixture
-def all_zero_weights(params: AmpliconParameters) -> AmpliconParameters:
+def all_zero_weights(params: PrimerParameters) -> PrimerParameters:
     return replace(
         params,
         amplicon_size_wt=WeightRange(0.0, 0.0),
@@ -115,7 +115,7 @@ def pp(lp: Oligo, rp: Oligo, bases: Optional[str] = None, tm: Optional[float] = 
 
 def _score(
     pair: PrimerPair,
-    params: AmpliconParameters,
+    params: PrimerParameters,
     sizes: MinOptMax[int],
     tms: MinOptMax[float],
 ) -> float:
@@ -137,7 +137,7 @@ def _score(
 
 
 def test_score_returns_sum_of_primer_penalties_when_all_weights_zero(
-    all_zero_weights: AmpliconParameters,
+    all_zero_weights: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
@@ -147,7 +147,7 @@ def test_score_returns_sum_of_primer_penalties_when_all_weights_zero(
 
 
 def test_score_returns_sum_of_primer_penalties_when_amplicon_optimal(
-    params: AmpliconParameters,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
@@ -159,7 +159,7 @@ def test_score_returns_sum_of_primer_penalties_when_amplicon_optimal(
 
 
 def test_score_when_amplicon_longer_than_optimal(
-    params: AmpliconParameters,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
@@ -171,7 +171,7 @@ def test_score_when_amplicon_longer_than_optimal(
 
 
 def test_score_when_amplicon_shorter_than_optimal(
-    params: AmpliconParameters,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
@@ -183,7 +183,7 @@ def test_score_when_amplicon_shorter_than_optimal(
 
 
 def test_score_when_amplicon_tm_higher_than_optimal(
-    params: AmpliconParameters,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
@@ -195,7 +195,7 @@ def test_score_when_amplicon_tm_higher_than_optimal(
 
 
 def test_score_when_amplicon_tm_lower_than_optimal(
-    params: AmpliconParameters,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
@@ -207,7 +207,7 @@ def test_score_when_amplicon_tm_lower_than_optimal(
 
 
 def test_score_realistic(
-    params: AmpliconParameters,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
@@ -227,7 +227,7 @@ def test_score_realistic(
 
 def test_build_primer_pairs_no_primers(
     fasta: Path,
-    params: AmpliconParameters,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
@@ -248,7 +248,7 @@ def test_build_primer_pairs_no_primers(
 
 def test_build_primer_pairs_single_pair(
     fasta: Path,
-    params: AmpliconParameters,
+    params: PrimerParameters,
     amplicon_sizes: MinOptMax[int],
     amplicon_tms: MinOptMax[float],
 ) -> None:
@@ -279,7 +279,7 @@ def test_build_primer_pairs_single_pair(
 
 def test_build_primers_amplicon_size_filtering(
     fasta: Path,
-    params: AmpliconParameters,
+    params: PrimerParameters,
 ) -> None:
     pairs = list(
         picking.build_primer_pairs(
@@ -307,7 +307,7 @@ def test_build_primers_amplicon_size_filtering(
 
 def test_build_primers_heterodimer_filtering(
     fasta: Path,
-    params: AmpliconParameters,
+    params: PrimerParameters,
 ) -> None:
     pairs = list(
         picking.build_primer_pairs(
@@ -345,7 +345,7 @@ def test_build_primers_heterodimer_filtering(
 
 def test_build_primer_pairs_amplicon_tm_filtering(
     fasta: Path,
-    params: AmpliconParameters,
+    params: PrimerParameters,
 ) -> None:
     amp_bases = REF_BASES[200:300]
     amp_tm = Thermo().tm(amp_bases)
@@ -372,7 +372,7 @@ def test_build_primer_pairs_amplicon_tm_filtering(
 
 def test_build_primer_pairs_fails_when_primers_on_wrong_reference(
     fasta: Path,
-    params: AmpliconParameters,
+    params: PrimerParameters,
 ) -> None:
     target = Span("chr1", 240, 260)
     valid_lefts = [p(REF_BASES[200:220], tm=60, pos=201, pen=1)]

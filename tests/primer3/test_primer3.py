@@ -15,7 +15,7 @@ from prymer.api.variant_lookup import cached
 from prymer.primer3.primer3 import Primer3
 from prymer.primer3.primer3 import Primer3Failure
 from prymer.primer3.primer3 import Primer3Result
-from prymer.primer3.primer3_parameters import AmpliconParameters
+from prymer.primer3.primer3_parameters import PrimerParameters
 from prymer.primer3.primer3_parameters import ProbeParameters
 from prymer.primer3.primer3_task import DesignLeftPrimersTask
 from prymer.primer3.primer3_task import DesignPrimerPairsTask
@@ -39,8 +39,8 @@ def target() -> Span:
 
 
 @pytest.fixture
-def single_primer_params() -> AmpliconParameters:
-    return AmpliconParameters(
+def single_primer_params() -> PrimerParameters:
+    return PrimerParameters(
         amplicon_sizes=MinOptMax(min=100, max=250, opt=200),
         amplicon_tms=MinOptMax(min=55.0, max=100.0, opt=70.0),
         primer_sizes=MinOptMax(min=29, max=31, opt=30),
@@ -52,8 +52,8 @@ def single_primer_params() -> AmpliconParameters:
 
 
 @pytest.fixture
-def pair_primer_params() -> AmpliconParameters:
-    return AmpliconParameters(
+def pair_primer_params() -> PrimerParameters:
+    return PrimerParameters(
         amplicon_sizes=MinOptMax(min=100, max=200, opt=150),
         amplicon_tms=MinOptMax(min=55.0, max=100.0, opt=72.5),
         primer_sizes=MinOptMax(min=20, max=30, opt=25),
@@ -65,8 +65,8 @@ def pair_primer_params() -> AmpliconParameters:
 
 
 @pytest.fixture
-def design_fail_gen_primer3_params() -> AmpliconParameters:
-    return AmpliconParameters(
+def design_fail_gen_primer3_params() -> PrimerParameters:
+    return PrimerParameters(
         amplicon_sizes=MinOptMax(min=200, max=300, opt=250),
         amplicon_tms=MinOptMax(min=65.0, max=75.0, opt=74.0),
         primer_sizes=MinOptMax(min=24, max=27, opt=26),
@@ -147,7 +147,7 @@ def valid_primer_pairs(
 
 def test_design_raises(
     genome_ref: Path,
-    single_primer_params: AmpliconParameters,
+    single_primer_params: PrimerParameters,
 ) -> None:
     """Test that design() raises when given an invalid argument."""
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
@@ -164,7 +164,7 @@ def test_design_raises(
 
 def test_left_primer_valid_designs(
     genome_ref: Path,
-    single_primer_params: AmpliconParameters,
+    single_primer_params: PrimerParameters,
 ) -> None:
     """Test that left primer designs are within the specified design specifications."""
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
@@ -212,7 +212,7 @@ def test_left_primer_valid_designs(
 
 def test_right_primer_valid_designs(
     genome_ref: Path,
-    single_primer_params: AmpliconParameters,
+    single_primer_params: PrimerParameters,
 ) -> None:
     """Test that right primer designs are within the specified design specifications."""
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
@@ -255,7 +255,7 @@ def test_right_primer_valid_designs(
                 assert actual_design.bases == reverse_complement(underlying_ref_seq)
 
 
-def test_primer_pair_design(genome_ref: Path, pair_primer_params: AmpliconParameters) -> None:
+def test_primer_pair_design(genome_ref: Path, pair_primer_params: PrimerParameters) -> None:
     """Test that paired primer design produces left and right primers within design constraints.
     Additionally, assert that `PrimerPair.amplicon_sequence()` matches reference sequence."""
     target = Span(refname="chr1", start=201, end=250, strand=Strand.POSITIVE)
@@ -333,7 +333,7 @@ def test_primer_pair_design(genome_ref: Path, pair_primer_params: AmpliconParame
             assert pair_design.right_primer.bases.upper() == right_from_ref.upper()
 
 
-def test_fasta_close_valid(genome_ref: Path, single_primer_params: AmpliconParameters) -> None:
+def test_fasta_close_valid(genome_ref: Path, single_primer_params: PrimerParameters) -> None:
     """Test that fasta file is closed when underlying subprocess is terminated."""
     designer = Primer3(genome_fasta=genome_ref)
     assert designer._fasta.is_open()
@@ -394,7 +394,7 @@ def test_variant_lookup(
 def test_screen_pair_results(
     valid_primer_pairs: list[PrimerPair],
     genome_ref: Path,
-    pair_primer_params: AmpliconParameters,
+    pair_primer_params: PrimerParameters,
 ) -> None:
     """Test that `_has_acceptable_dinuc_run()` and `_screen_pair_results()` use
     `Primer3Parameters.primer_max_dinuc_bases` to disqualify primers when applicable.
@@ -438,7 +438,7 @@ def test_screen_pair_results(
 def test_build_failures(
     valid_primer_pairs: list[PrimerPair],
     genome_ref: Path,
-    pair_primer_params: AmpliconParameters,
+    pair_primer_params: PrimerParameters,
 ) -> None:
     """Test that `build_failures()` parses Primer3 `failure_strings` correctly and includes failures
     related to long dinucleotide runs."""
@@ -473,7 +473,7 @@ def test_build_failures(
 def test_build_failures_debugs(
     valid_primer_pairs: list[PrimerPair],
     genome_ref: Path,
-    pair_primer_params: AmpliconParameters,
+    pair_primer_params: PrimerParameters,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that we log a debug message in the event of an unknown Primer3Failure reason."""
