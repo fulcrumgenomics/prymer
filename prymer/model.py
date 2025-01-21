@@ -84,7 +84,7 @@ class MinOptMax(Generic[Numeric]):
 
 
 @dataclass(slots=True, frozen=True, init=True)
-class WeightRange(Generic[Numeric]):
+class Weights:
     """Stores a pair of penalty weights.
 
     Weights are used when comparing a primer or probe property (e.g. primer length) to the optimal
@@ -97,7 +97,7 @@ class WeightRange(Generic[Numeric]):
     Examples of interacting with the `Range` class
 
     ```python
-    >>> range = WeightRange(lt=1.0, gt=4.0)
+    >>> range = Weights(lt=1.0, gt=4.0)
     >>> print(range)
     (lt:1.0, gt:4.0)
     >>> list(range)
@@ -113,15 +113,8 @@ class WeightRange(Generic[Numeric]):
         ValueError: if lt and gt are not the same type
     """
 
-    lt: Numeric
-    gt: Numeric
-
-    def __post_init__(self) -> None:
-        dtype = type(self.lt)
-        if not isinstance(self.gt, dtype):
-            raise TypeError(
-                "Min and max must be the same type; " f"received min: {dtype}, max: {type(self.gt)}"
-            )
+    lt: float
+    gt: float
 
     def __iter__(self) -> Iterator[float]:
         """Returns an iterator of min and max"""

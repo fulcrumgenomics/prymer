@@ -89,7 +89,7 @@ from typing import Any
 from typing import Optional
 
 from prymer.model import MinOptMax
-from prymer.model import WeightRange
+from prymer.model import Weights
 from prymer.primer3.primer3_input_tag import Primer3InputTag
 
 
@@ -169,14 +169,14 @@ class PrimerParameters(Primer3Parameters):
     primer_max_homodimer_tm: Optional[float] = None
     primer_max_3p_homodimer_tm: Optional[float] = None
     primer_max_hairpin_tm: Optional[float] = None
-    amplicon_size_wt: WeightRange[float] = WeightRange(1.0, 1.0)
-    amplicon_tm_wt: WeightRange[float] = WeightRange(0.0, 0.0)
+    amplicon_size_wt: Weights = Weights(1.0, 1.0)
+    amplicon_tm_wt: Weights = Weights(0.0, 0.0)
     primer_end_stability_wt: float = 0.25
-    primer_gc_wt: WeightRange[float] = WeightRange(0.25, 0.25)
+    primer_gc_wt: Weights = Weights(0.25, 0.25)
     primer_self_any_wt: float = 0.1
     primer_self_end_wt: float = 0.1
-    primer_size_wt: WeightRange[float] = WeightRange(0.5, 0.1)
-    primer_tm_wt: WeightRange[float] = WeightRange(1.0, 1.0)
+    primer_size_wt: Weights = Weights(0.5, 0.1)
+    primer_tm_wt: Weights = Weights(1.0, 1.0)
     primer_homodimer_wt: float = 0.0
     primer_3p_homodimer_wt: float = 0.0
     primer_secondary_structure_wt: float = 0.0
@@ -329,9 +329,9 @@ class ProbeParameters(Primer3Parameters):
     probe_max_homodimer_tm: Optional[float] = None
     probe_max_3p_homodimer_tm: Optional[float] = None
     probe_max_hairpin_tm: Optional[float] = None
-    probe_size_wt: WeightRange[float] = WeightRange(1.0, 1.0)
-    probe_tm_wt: WeightRange[float] = WeightRange(1.0, 1.0)
-    probe_gc_wt: WeightRange[float] = WeightRange(0.0, 0.0)
+    probe_size_wt: Weights = Weights(1.0, 1.0)
+    probe_tm_wt: Weights = Weights(1.0, 1.0)
+    probe_gc_wt: Weights = Weights(0.0, 0.0)
     probe_homodimer_wt: float = 0.0
     probe_3p_homodimer_wt: float = 0.0
     probe_secondary_structure_wt: float = 0.0

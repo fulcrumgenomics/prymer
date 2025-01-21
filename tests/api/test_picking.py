@@ -13,7 +13,7 @@ from prymer import PrimerPair
 from prymer import Span
 from prymer import Thermo
 from prymer.api import picking
-from prymer.model import WeightRange
+from prymer.model import Weights
 from prymer.primer3 import PrimerParameters
 
 
@@ -35,8 +35,8 @@ def params() -> PrimerParameters:
         primer_sizes=MinOptMax(min=18, opt=21, max=27),
         primer_tms=MinOptMax(min=55.0, opt=60.0, max=65.0),
         primer_gcs=MinOptMax(min=45.0, opt=55.0, max=60.0),
-        amplicon_size_wt=WeightRange(0.5, 1.5),
-        amplicon_tm_wt=WeightRange(10, 15),
+        amplicon_size_wt=Weights(0.5, 1.5),
+        amplicon_tm_wt=Weights(10, 15),
     )
 
 
@@ -44,10 +44,10 @@ def params() -> PrimerParameters:
 def all_zero_weights(params: PrimerParameters) -> PrimerParameters:
     return replace(
         params,
-        amplicon_size_wt=WeightRange(0.0, 0.0),
-        amplicon_tm_wt=WeightRange(0, 0),
+        amplicon_size_wt=Weights(0.0, 0.0),
+        amplicon_tm_wt=Weights(0, 0),
         primer_end_stability_wt=0,
-        primer_gc_wt=WeightRange(0, 0),
+        primer_gc_wt=Weights(0, 0),
         primer_homodimer_wt=0,
         primer_3p_homodimer_wt=0,
         primer_secondary_structure_wt=0,

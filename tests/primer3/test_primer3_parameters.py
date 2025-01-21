@@ -5,7 +5,7 @@ import pytest
 from prymer import MinOptMax
 from prymer import Span
 from prymer import Strand
-from prymer.model import WeightRange
+from prymer.model import Weights
 from prymer.primer3 import DesignLeftPrimersTask
 from prymer.primer3 import DesignPrimerPairsTask
 from prymer.primer3 import DesignRightPrimersTask
@@ -219,6 +219,6 @@ def test_primer_weights_to_input_tags(valid_primer_amplicon_params: PrimerParame
     default_map = valid_primer_amplicon_params.to_input_tags()
     assert default_map[Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_SIZE_LT] == 1
     customized_map = replace(
-        valid_primer_amplicon_params, amplicon_size_wt=WeightRange(5.0, 1.0)
+        valid_primer_amplicon_params, amplicon_size_wt=Weights(5.0, 1.0)
     ).to_input_tags()
     assert customized_map[Primer3InputTag.PRIMER_PAIR_WT_PRODUCT_SIZE_LT] == 5
