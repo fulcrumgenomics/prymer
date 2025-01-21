@@ -24,7 +24,7 @@ class SimpleVariant:
 
     - SNPs and MNPS will have start/end set to the first and last substituted bases
     - Deletions will have start/end set to the first and last _deleted_ base
-    - Insertions will have start/end set to the bases between which the insertion occurs
+    - Insertions will have start/end set to the bases immediately before and after the insertion
 
     Attributes:
         id: the variant identifier
@@ -244,12 +244,11 @@ class VariantLookup(ContextManager):
             soft = list(bases)
             hard = list(bases)
 
-            for variant in variants:
-                for pos in range(variant.start, variant.end + 1):
-                    if region.start <= pos <= region.end:
-                        idx = pos - region.start
-                        soft[idx] = soft[idx].lower()
-                        hard[idx] = "N"
+            for v in variants:
+                for pos in range(max(v.start, region.start), min(v.end, region.end) + 1):
+                    idx = pos - region.start
+                    soft[idx] = soft[idx].lower()
+                    hard[idx] = "N"
 
             return "".join(soft), "".join(hard)
 
