@@ -9,7 +9,6 @@ from prymer import Oligo
 from prymer import PrimerPair
 from prymer import Span
 from prymer import Strand
-from prymer.offtarget.bwa import BWA_EXECUTABLE_NAME
 from prymer.offtarget.bwa import BwaHit
 from prymer.offtarget.bwa import BwaResult
 from prymer.offtarget.bwa import Query
@@ -39,7 +38,6 @@ def _build_detector(
         cache_results=cache_results,
         keep_spans=True,
         keep_primer_spans=True,
-        executable=BWA_EXECUTABLE_NAME,
     )
 
 

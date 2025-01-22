@@ -18,11 +18,9 @@ to the genome.
 >>> detector = OffTargetDetector(ref=ref_fasta, max_primer_hits=204, max_primer_pair_hits=1, three_prime_region_length=20, max_mismatches_in_three_prime_region=0, max_mismatches=0, max_amplicon_size=250)
 >>> len(detector.filter(primers=[left_primer, right_primer]))  # keep all
 2
->>> detector.close()
 >>> detector = OffTargetDetector(ref=ref_fasta, max_primer_hits=203, max_primer_pair_hits=1, three_prime_region_length=20, max_mismatches_in_three_prime_region=0, max_mismatches=0, max_amplicon_size=250)
 >>> len(detector.filter(primers=[left_primer, right_primer]))  # keep  none
 0
->>> detector.close()
 
 ```
 
@@ -93,8 +91,7 @@ from prymer.model import Oligo
 from prymer.model import PrimerPair
 from prymer.model import Span
 from prymer.model import Strand
-from prymer.offtarget.bwa import BWA_EXECUTABLE_NAME
-from prymer.offtarget.bwa import BwaAlnInteractive
+from prymer.offtarget.bwa import Bwa
 from prymer.offtarget.bwa import BwaHit
 from prymer.offtarget.bwa import BwaResult
 from prymer.offtarget.bwa import Query
@@ -176,7 +173,6 @@ class OffTargetDetector(AbstractContextManager):
         threads: Optional[int] = None,
         keep_spans: bool = True,
         keep_primer_spans: bool = True,
-        executable: str | Path = BWA_EXECUTABLE_NAME,
     ) -> None:
         """
         Initialize an [[OffTargetDetector]].
@@ -231,7 +227,6 @@ class OffTargetDetector(AbstractContextManager):
                 populated, otherwise not
             keep_primer_spans: if True, [[OffTargetResult]] objects will be reported with left and
                 right primer spans
-            executable: string or Path representation of the `bwa` executable path
 
         Raises:
             ValueError: If `max_amplicon_size` is not greater than 0.
@@ -294,8 +289,7 @@ class OffTargetDetector(AbstractContextManager):
 
         self._primer_cache: dict[str, BwaResult] = {}
         self._primer_pair_cache: dict[PrimerPair, OffTargetResult] = {}
-        self._bwa = BwaAlnInteractive(
-            executable=executable,
+        self._bwa = Bwa(
             ref=ref,
             reverse_complement=True,
             threads=threads,
@@ -636,9 +630,6 @@ class OffTargetDetector(AbstractContextManager):
         """Converts a Bwa Hit object to a Span."""
         return Span(refname=hit.refname, start=hit.start, end=hit.end)
 
-    def close(self) -> None:
-        self._bwa.close()
-
     def __enter__(self) -> Self:
         return self
 
@@ -650,4 +641,3 @@ class OffTargetDetector(AbstractContextManager):
     ) -> None:
         """Gracefully terminates any running subprocesses."""
         super().__exit__(exc_type, exc_value, traceback)
-        self.close()
