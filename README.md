@@ -59,9 +59,7 @@
 
 ## Recommended Installation
 
-The package `prymer` requires installation of [interactive `bwa`](https://github.com/fulcrumgenomics/bwa-aln-interactive).
-
-To satisfy these requirements, it is recommended to install using [bioconda](https://bioconda.github.io/):
+It is recommended to install using [bioconda](https://bioconda.github.io/):
 
 ```console
 mamba install -c bioconda prymer
