@@ -201,6 +201,23 @@ BWA_AUX_EXTENSIONS: list[str] = [".amb", ".ann", ".bwt", ".pac", ".sa"]
 """The file extensions for BWA index files"""
 
 
+def _available_cores() -> int:
+    """Determine the number of available cores."""
+    cores: int = 1
+    try:
+        from os import sched_getaffinity
+
+        cores = len(sched_getaffinity(0))
+    except ImportError:
+        import multiprocessing
+
+        cores = multiprocessing.cpu_count()
+    except NotImplementedError:
+        cores = os.cpu_count() or cores
+
+    return cores
+
+
 class Bwa:
     """Wrapper around `bwa aln` via `pybwa`.
 
@@ -262,7 +279,7 @@ class Bwa:
             with AlignmentFile(fh) as reader:
                 self.header: AlignmentHeader = reader.header
 
-        threads = os.cpu_count() if threads is None else threads
+        threads = _available_cores() if threads is None else threads
         self.opt = BwaAlnOptions(
             max_hits=max_hits,
             max_mismatches=max_mismatches,
@@ -312,7 +329,7 @@ class Bwa:
                 else q.bases,
             )
             for q in queries
-        ]  #
+        ]
         records = self.bwa.align(queries=fastxs, opt=self.opt)
         results: list[BwaResult] = [
             self._to_result(query=query, rec=record)
