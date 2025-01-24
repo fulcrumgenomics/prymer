@@ -43,7 +43,7 @@ fgpyo = {git ="https://github.com/fulcrumgenomics/fgpyo" , rev= "c5eb469a4fbe4f2
 pysam = "^0.22.1"
 ordered-set = "^4.1.0"
 primer3-py = "^2.0.3"
-pybwa = "1.3.3"
+pybwa = "1.4.3"
 
 [tool.poetry.group.dev.dependencies]
 poetry      = "^1.8.2"
