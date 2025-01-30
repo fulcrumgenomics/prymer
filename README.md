@@ -45,6 +45,15 @@
 [code-coverage-badge]:  https://codecov.io/gh/fulcrumgenomics/prymer/branch/main/graph/badge.svg
 [code-coverage-link]:   https://codecov.io/gh/fulcrumgenomics/prymer
 
+<p>
+<a href float="left"="https://fulcrumgenomics.com"><img src=".github/logos/fulcrumgenomics.svg" alt="Fulcrum Genomics" height="100"/></a>
+</p>
+
+[Visit us at Fulcrum Genomics](www.fulcrumgenomics.com) to learn more about how we can power your Bioinformatics with prymer and beyond.
+
+<a href="mailto:contact@fulcrumgenomics.com?subject=[GitHub inquiry]"><img src="https://img.shields.io/badge/Email_us-brightgreen.svg?&style=for-the-badge&logo=gmail&logoColor=white"/></a>
+<a href="https://www.fulcrumgenomics.com"><img src="https://img.shields.io/badge/Visit_Us-blue.svg?&style=for-the-badge&logo=wordpress&logoColor=white"/></a>
+
 ## Recommended Installation
 
 The package `prymer` requires installation of [Primer3](https://github.com/primer3-org/primer3) and [interactive `bwa`](https://github.com/fulcrumgenomics/bwa-aln-interactive).
