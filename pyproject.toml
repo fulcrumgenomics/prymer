@@ -39,7 +39,7 @@ python = "^3.12"
 pyproject_hooks= "^1.0.0,!=1.1.0"
 pybedlite = "^1.0.0"
 strenum = "^0.4.15"
-fgpyo = {git ="https://github.com/fulcrumgenomics/fgpyo" , rev= "c5eb469a4fbe4f2e600e17f929cc89379c661e7a" }
+fgpyo = "^1.0.0"
 pysam = "^0.22.1"
 ordered-set = "^4.1.0"
 primer3-py = "^2.0.3"
