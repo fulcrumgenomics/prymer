@@ -13,6 +13,13 @@ jobs:
     outputs:
       on_main: ${{ steps.contains_tag.outputs.retval }}
     steps:
+      # TODO: remove this and the `git branch -a` when the following PR
+      # is merged and released:
+      #   https://github.com/rickstaa/action-contains-tag/pull/18
+      - name: git config --global remote.origin.followRemoteHEAD never
+        shell: bash
+        run: git config --global remote.origin.followRemoteHEAD never
+        
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
