@@ -1,6 +1,6 @@
 [tool.poetry]
 name         = "prymer"
-version      = "3.0.1"
+version      = "3.0.2"
 description  = "Python primer design library"
 readme       = "README.md"
 authors      = [
