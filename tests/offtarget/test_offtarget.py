@@ -24,7 +24,9 @@ def _build_detector(
     three_prime_region_length: int = 20,
     max_mismatches_in_three_prime_region: int = 0,
     max_mismatches: int = 0,
+    min_amplicon_size: int = 1,
     max_amplicon_size: int = 250,
+    allow_overlapping_hits: bool = False,
     cache_results: bool = True,
 ) -> OffTargetDetector:
     """Builds an `OffTargetDetector` with strict defaults"""
@@ -35,7 +37,9 @@ def _build_detector(
         three_prime_region_length=three_prime_region_length,
         max_mismatches_in_three_prime_region=max_mismatches_in_three_prime_region,
         max_mismatches=max_mismatches,
+        min_amplicon_size=min_amplicon_size,
         max_amplicon_size=max_amplicon_size,
+        allow_overlapping_hits=allow_overlapping_hits,
         cache_results=cache_results,
         keep_spans=True,
         keep_primer_spans=True,
@@ -281,7 +285,75 @@ def test_to_amplicons(
 ) -> None:
     with _build_detector(ref_fasta=ref_fasta, cache_results=cache_results) as detector:
         actual = detector._to_amplicons(
-            positive_hits=[positive], negative_hits=[negative], max_len=250, strand=strand
+            positive_hits=[positive],
+            negative_hits=[negative],
+            min_len=200,
+            max_len=250,
+            strand=strand,
+        )
+        assert actual == expected, test_id
+
+
+# Test that using the cache (or not) does not affect the results
+# NB: BwaHit and Span coordinates are 1-based end-inclusive
+#
+# One mapping - Overlapping primers (1bp overlap)
+# >>>>>>>>>>
+#          <<<<<<<<<<
+# 19bp amplicon [1,19]
+#
+# One mapping - Overlapping primers (1bp amplicon)
+#          >>>>>>>>>>
+# <<<<<<<<<<
+# 1bp amplicon [10,10]
+#
+# No mappings - amplicon length would be 0.
+#           >>>>>>>>>>
+# <<<<<<<<<<
+@pytest.mark.parametrize("cache_results", [True, False])
+@pytest.mark.parametrize(
+    "test_id, positive, negative, strand, expected",
+    [
+        (
+            "One mapping - Overlapping primers (1bp overlap)",
+            BwaHit.build("chr1", 1, False, "10M", 0),
+            BwaHit.build("chr1", 10, True, "10M", 0),
+            Strand.POSITIVE,
+            [Span(refname="chr1", start=1, end=19, strand=Strand.POSITIVE)],
+        ),
+        (
+            "One mapping - Overlapping primers (1bp amplicon)",
+            BwaHit.build("chr1", 10, False, "10M", 0),
+            BwaHit.build("chr1", 1, True, "10M", 0),
+            Strand.POSITIVE,
+            [Span(refname="chr1", start=10, end=10, strand=Strand.POSITIVE)],
+        ),
+        (
+            "No mappings",
+            BwaHit.build("chr1", 11, False, "10M", 0),
+            BwaHit.build("chr1", 1, True, "10M", 0),
+            Strand.POSITIVE,
+            [],
+        ),
+    ],
+)
+def test_to_amplicons_overlapping(
+    ref_fasta: Path,
+    test_id: str,
+    positive: BwaHit,
+    negative: BwaHit,
+    strand: Strand,
+    expected: list[Span],
+    cache_results: bool,
+) -> None:
+    with _build_detector(ref_fasta=ref_fasta, cache_results=cache_results) as detector:
+        actual = detector._to_amplicons(
+            positive_hits=[positive],
+            negative_hits=[negative],
+            min_len=1,
+            max_len=250,
+            allow_overlapping_hits=True,
+            strand=strand,
         )
         assert actual == expected, test_id
 
@@ -322,7 +394,11 @@ def test_to_amplicons_value_error(
         pytest.raises(ValueError, match=expected_error),
     ):
         detector._to_amplicons(
-            positive_hits=[positive], negative_hits=[negative], max_len=250, strand=Strand.POSITIVE
+            positive_hits=[positive],
+            negative_hits=[negative],
+            min_len=200,
+            max_len=250,
+            strand=Strand.POSITIVE,
         )
 
 
@@ -356,20 +432,22 @@ def test_generic_filter(ref_fasta: Path) -> None:
 @pytest.mark.parametrize(
     (
         "max_primer_hits,max_primer_pair_hits,min_primer_pair_hits,three_prime_region_length,"
-        "max_mismatches_in_three_prime_region,max_mismatches,max_amplicon_size,"
+        "max_mismatches_in_three_prime_region,max_mismatches,max_amplicon_size,min_amplicon_size,"
         "max_gap_opens,max_gap_extends,expected_error"
     ),
     [
-        (-1, 1, 1, 20, 0, 0, 1, 0, 0, "'max_primer_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
-        (1, -1, 1, 20, 0, 0, 1, 0, 0, "'max_primer_pair_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
-        (1, 1, -1, 20, 0, 0, 1, 0, 0, "'min_primer_pair_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
-        (1, 1, 1, 5, 0, 0, 1, 0, 0, "'three_prime_region_length' must be greater than or equal to 8. Saw 5"),  # noqa: E501
-        (1, 1, 1, 20, -1, 0, 1, 0, 0, "'max_mismatches_in_three_prime_region' must be between 0 and 'three_prime_region_length'=20 inclusive. Saw -1"),  # noqa: E501
-        (1, 1, 1, 20, 21, 0, 1, 0, 0, "'max_mismatches_in_three_prime_region' must be between 0 and 'three_prime_region_length'=20 inclusive. Saw 21"),  # noqa: E501
-        (1, 1, 1, 20, 0, -1, 1, 0, 0, "'max_mismatches' must be greater than or equal to 0. Saw -1"),  # noqa: E501
-        (1, 1, 1, 20, 0, 0, 0, 0, 0, "'max_amplicon_size' must be greater than 0. Saw 0"),
-        (1, 1, 1, 20, 0, 0, 1, -1, 0, "'max_gap_opens' must be greater than or equal to 0. Saw -1"),
-        (1, 1, 1, 20, 0, 5, 1, 0, -2, re.escape("'max_gap_extends' must be -1 (for unlimited extensions up to 'max_mismatches'=5) or greater than or equal to 0. Saw -2")), #noqa: E501
+        (-1, 1, 1, 20, 0, 0, 1, 1, 0, 0, "'max_primer_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
+        (1, -1, 1, 20, 0, 0, 1, 1, 0, 0, "'max_primer_pair_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
+        (1, 1, -1, 20, 0, 0, 1, 1, 0, 0, "'min_primer_pair_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
+        (1, 1, 1, 5, 0, 0, 1, 1, 0, 0, "'three_prime_region_length' must be greater than or equal to 8. Saw 5"),  # noqa: E501
+        (1, 1, 1, 20, -1, 0, 1, 1, 0, 0, "'max_mismatches_in_three_prime_region' must be between 0 and 'three_prime_region_length'=20 inclusive. Saw -1"),  # noqa: E501
+        (1, 1, 1, 20, 21, 0, 1, 1, 0, 0, "'max_mismatches_in_three_prime_region' must be between 0 and 'three_prime_region_length'=20 inclusive. Saw 21"),  # noqa: E501
+        (1, 1, 1, 20, 0, -1, 1, 1, 0, 0, "'max_mismatches' must be greater than or equal to 0. Saw -1"),  # noqa: E501
+        (1, 1, 1, 20, 0, 0, 0, 1, 0, 0, "'max_amplicon_size' must be greater than 0. Saw 0"),
+        (1, 1, 1, 20, 0, 0, 1, 1, -1, 0, "'max_gap_opens' must be greater than or equal to 0. Saw -1"), # noqa: E501
+        (1, 1, 1, 20, 0, 5, 1, 1, 0, -2, re.escape("'max_gap_extends' must be -1 (for unlimited extensions up to 'max_mismatches'=5) or greater than or equal to 0. Saw -2")), #noqa: E501
+        (1, 1, 1, 20, 0, 0, 10, 0, 0, 0, "'min_amplicon_size' must be between 1 and 'max_amplicon_size'=10 inclusive. Saw 0"),  # noqa: E501
+        (1, 1, 1, 20, 0, 0, 10, 11, 0, 0, "'min_amplicon_size' must be between 1 and 'max_amplicon_size'=10 inclusive. Saw 11"),  # noqa: E501
     ],
 )
 # fmt: on
@@ -382,6 +460,7 @@ def test_init(
     max_mismatches_in_three_prime_region: int,
     max_mismatches: int,
     max_amplicon_size: int,
+    min_amplicon_size: int,
     max_gap_opens: int,
     max_gap_extends: int,
     expected_error: str,
@@ -396,6 +475,7 @@ def test_init(
             max_mismatches_in_three_prime_region=max_mismatches_in_three_prime_region,
             max_mismatches=max_mismatches,
             max_amplicon_size=max_amplicon_size,
+            min_amplicon_size=min_amplicon_size,
             max_gap_opens=max_gap_opens,
             max_gap_extends=max_gap_extends,
         )
