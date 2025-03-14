@@ -37,6 +37,7 @@
 [![tests][python-tests-badge]][python-tests-link]
 [![publish prymer][publish-prymer-badge]][publish-prymer-link]
 [![Code Coverage][code-coverage-badge]][code-coverage-link]
+[![DOI][zenodo-badge]][zenodo-link]
 
 [publish-prymer-badge]: https://github.com/fulcrumgenomics/prymer/actions/workflows/publish_prymer.yml/badge.svg
 [publish-prymer-link]:  https://github.com/fulcrumgenomics/prymer/actions/workflows/publish_prymer.yml
@@ -44,6 +45,8 @@
 [python-tests-link]:    https://github.com/fulcrumgenomics/prymer/actions/workflows/tests.yml
 [code-coverage-badge]:  https://codecov.io/gh/fulcrumgenomics/prymer/branch/main/graph/badge.svg
 [code-coverage-link]:   https://codecov.io/gh/fulcrumgenomics/prymer
+[zenodo-badge]:         https://zenodo.org/badge/845645240.svg
+[zenodo-link]:          https://doi.org/10.5281/zenodo.15029066
 
 <p>
 <a href float="left"="https://fulcrumgenomics.com"><img src=".github/logos/fulcrumgenomics.svg" alt="Fulcrum Genomics" height="100"/></a>
