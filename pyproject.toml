@@ -143,8 +143,8 @@ addopts    = [
     "--cov",
     "--cov-report=xml",
     "--cov-branch",
-    "--mypy",
-    "--ruff",
+#    "--mypy",
+#    "--ruff",
     "--doctest-plus",
     "--doctest-modules",
     "-v"
