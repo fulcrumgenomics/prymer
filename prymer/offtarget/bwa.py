@@ -205,7 +205,7 @@ def _available_cores() -> int:
     """Determine the number of available cores."""
     cores: int = 1
     try:
-        from os import sched_getaffinity  # type: ignore[attr-defined]
+        from os import sched_getaffinity
 
         cores = len(sched_getaffinity(0))
     except ImportError:
