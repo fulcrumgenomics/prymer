@@ -2,10 +2,7 @@ name: publish prymer
 
 on:
   push:
-    tags: '\d+.\d+.\d+'
-
-env:
-  POETRY_VERSION: 1.8.2
+    tags: '[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
   on-main-branch-check:
@@ -19,7 +16,7 @@ jobs:
       - name: git config --global remote.origin.followRemoteHEAD never
         shell: bash
         run: git config --global remote.origin.followRemoteHEAD never
-        
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -55,23 +52,11 @@ jobs:
         with:
           python-version: 3.12
 
-      - name: Install poetry
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install poetry==${{env.POETRY_VERSION}}
-
-      - name: Configure poetry
-        shell: bash
-        run: poetry config virtualenvs.in-project true
-
-      - name: Install dependencies
-        run: poetry install --no-interaction --no-root --without=dev
-
-      - name: Install project
-        run: poetry install --no-interaction --without=dev
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
       - name: Build package
-        run: poetry build --format=sdist
+        run: uv build --sdist -out-dir dist
 
       - uses: actions/upload-artifact@v4
         with:

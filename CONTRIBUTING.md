@@ -2,133 +2,73 @@
 
 ## Installation for Local Development
 
-1. Install the environment manager [`mamba`](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html)
-2. Install the Python build tool [`poetry`](https://python-poetry.org/docs/#installing-with-the-official-installer)
-3. Create an environment with Python and [interactive `bwa`](https://github.com/fulcrumgenomics/bwa-aln-interactive):
+[`uv`][uv-link] is used to manage the python development environment; [installation instructions for `uv` are here][uv-install-link].
 
-    ```console
-    mamba env create -y -f prymer.yml
-    ```
+A simple way to create an environment with the desired version of `python` and `uv` is to use a virtual environment.  E.g.:
 
-4. Activate the environment:
+```console
+uv venv --python 3.12 --seed
+source .venv/bin/activate
+# `--group docs` is required to install `mkdocs` and associated dependencies
+# `--group dev` is required to install test and build dependencies
+uv pip install --group dev --group docs
+```
 
-    ```console
-    mamba activate prymer
-    ```
-
-5. Install `prymer` and development dependencies into the activated virtual environment:
-
-    ```console
-    poetry install
-    ```
+[uv-link]:         https://docs.astral.sh/uv/
+[uv-install-link]: https://docs.astral.sh/uv/getting-started/installation/
 
 ## Primary Development Commands
 
 To check and resolve linting issues in the codebase, run:
 
 ```console
-poetry run ruff check --fix
+uv run ruff check --fix prymer tests
 ```
 
 To check and resolve formatting issues in the codebase, run:
 
 ```console
-poetry run ruff format
+uv run ruff format prymer tests
 ```
 
 To check the unit tests in the codebase, run:
 
 ```console
-poetry run pytest
+uv run pytest --cov=prymer --cov-report=html --cov-branch
 ```
 
 To check the typing in the codebase, run:
 
 ```console
-poetry run mypy
+uv run mypy prymer tests --config=pyproject.toml
 ```
 
-To generate a code coverage report after testing locally, run:
+To re-generate a code coverage report after testing locally, run:
 
 ```console
-poetry run coverage html
+uv run coverage html
 ```
 
-To check the lock file is up to date:
+To check the lock file is up-to-date:
 
 ```console
-poetry check --lock
+uv lock --check
 ```
-
-## Shortcut Task Commands
-
-To be able to run shortcut task commands, first install the Poetry plugin [`poethepoet`](https://poethepoet.natn.io/index.html):
-
-```console
-poetry self add 'poethepoet[poetry_plugin]'
-```
-
-> NOTE:
-> Upon the release of Poetry [v2.0.0](https://github.com/orgs/python-poetry/discussions/9793#discussioncomment-11043205), Poetry will automatically support bootstrap installation of [project-specific plugins](https://github.com/python-poetry/poetry/pull/9547) and installation of the task runner will become automatic for this project.
-> The `pyproject.toml` syntax will be:
-> 
-> ```toml
-> [tool.poetry]
-> requires-poetry = ">=2.0"
-> 
-> [tool.poetry.requires-plugins]
-> poethepoet = ">=0.29"
-> ```
-
-###### For Running Individual Checks
-
-```console
-poetry task check-lock
-poetry task check-format
-poetry task check-lint
-poetry task check-tests
-poetry task check-typing
-```
-
-###### For Running All Checks
-
-```console
-poetry task check-all
-```
-
-###### For Running Individual Fixes
-
-```console
-poetry task fix-format
-poetry task fix-lint
-```
-
-###### For Running All Fixes
-
-```console
-poetry task fix-all
-```
-
-###### For Running All Fixes and Checks
-
-```console
-poetry task fix-and-check-all
-```
-
 
 ## Building the Documentation
 
 Use `mkdocs` to build and serve the documentation.
 
 ```console
-poetry run mkdocs build && poetry run mkdocs serve
+uv run mkdocs build --strict
+uv run mkdocs serve --watch docs
 ```
 
 ## Creating a Release on PyPI
 
 1. Clone the repository recursively and ensure you are on the `main` (un-dirty) branch
 2. Checkout a new branch to prepare the library for release
-3. Bump the version of the library to the desired SemVer with `poetry version #.#.#`
+3. Bump the version of the library to the desired SemVer (in the `pyproject.toml`)
 4. Commit the version bump changes with a Git commit message like `chore(release): bump to #.#.#`
 5. Push the commit to the upstream remote, open a PR, ensure tests pass, and seek reviews
 6. Squash merge the PR

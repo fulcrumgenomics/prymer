@@ -24,8 +24,11 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
       - name: Build wheels
-        run: pip wheel --no-deps -w wheelhouse .
+        run: uv build --wheel -o wheelhouse
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
