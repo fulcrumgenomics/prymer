@@ -24,6 +24,17 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
+      - name: Install Linux build prerequisites
+        if:   runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -q --no-install-recommends --no-install-suggests libbz2-dev libcurl4-openssl-dev liblzma-dev libssl-dev libdeflate-dev
+
+      - name: Update macOS build prerequisites
+        if:   runner.os == 'macOS'
+        run: |
+          brew unlink xz || true  # Remove brewed liblzma as it is not multiarch
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
