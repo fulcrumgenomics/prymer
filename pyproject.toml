@@ -1,75 +1,83 @@
-[tool.poetry]
-name         = "prymer"
-version      = "3.0.2"
-description  = "Python primer design library"
-readme       = "README.md"
-authors      = [
-    "Yossi Farjoun <yossi@fulcrumgenomics.com>",
-    "Jeff Gentry <jeff@fulcrumgenomics.com>",
-	"Tim Fennell <tim@fulcrumgenomics.com>",
-    "Nils Homer <nils@fulcrumgenomics.com>",
-    "Erin McAuley <erin@fulcrumgenomics.com>",
-    "Matt Stone <matt@fulcrumgenomics.com>",
+[project]
+name = "prymer"
+version = "3.0.2"
+description = "Python primer design library"
+authors = [
+    { name = "Yossi Farjoun", email = "yossi@fulcrumgenomics.com" },
+    { name = "Jeff Gentry", email = "jeff@fulcrumgenomics.com" },
+    { name = "Tim Fennell", email = "tim@fulcrumgenomics.com" },
+    { name = "Nils Homer", email = "nils@fulcrumgenomics.com" },
+    { name = "Erin McAuley", email = "erin@fulcrumgenomics.com" },
+    { name = "Matt Stone", email = "matt@fulcrumgenomics.com" },
 ]
+requires-python = "~=3.12"
+readme = "README.md"
 license = "MIT"
-homepage = "https://github.com/fulcrumgenomics/prymer"
-repository = "https://github.com/fulcrumgenomics/prymer"
-documentation = "https://github.com/fulcrumgenomics/prymer"
-keywords = ["bioinformatics", "genomics", "dna"]
-classifiers = [
-	"Development Status :: 3 - Alpha",
-	"Programming Language :: Python :: 3.12",
-	"Programming Language :: Python :: 3.13",
-	"Environment :: Console",
-	"Intended Audience :: Developers",
-	"Intended Audience :: Science/Research",
-	"License :: OSI Approved :: MIT License",
-	"Operating System :: OS Independent",
-	"Programming Language :: Python :: 3",
-	"Topic :: Scientific/Engineering :: Bio-Informatics",
-	"Topic :: Software Development :: Documentation",
-	"Topic :: Software Development :: Libraries :: Python Modules",
+keywords = [
+    "bioinformatics",
+    "genomics",
+    "dna",
 ]
-include = ["LICENSE"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+	"Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+	"Typing :: Typed",
+]
+dependencies = [
+    "pyproject_hooks>=1.0.0,<2",
+    "pybedlite>=1.0.0,<2",
+    "strenum>=0.4.15,<0.5",
+    "fgpyo>=1.1.0,<2",
+    "pysam>=0.23.0,<0.24",
+    "ordered-set>=4.1.0,<5",
+    "primer3-py>=2.0.3,<3",
+    "pybwa>=2,<3",
+]
 
-[tool.poetry.urls]
+[project.urls]
+Homepage = "https://github.com/fulcrumgenomics/prymer"
+Repository = "https://github.com/fulcrumgenomics/prymer"
+Documentation = "https://github.com/fulcrumgenomics/prymer"
 "Bug Tracker" = "https://github.com/fulcrumgenomics/prymer/issues"
 
-[tool.poetry.dependencies]
-python = "^3.12"
-pyproject_hooks= "^1.0.0,!=1.1.0"
-pybedlite = "^1.0.0"
-strenum = "^0.4.15"
-fgpyo = "^1.0.0"
-pysam = "^0.23.0"
-ordered-set = "^4.1.0"
-primer3-py = "^2.0.3"
-pybwa = "^1.4.4"
-
-[tool.poetry.group.dev.dependencies]
-poetry      = "^1.8.2"
-mypy        = "^1.14.1"
-pytest      = "^7.4.4"
-pytest-cov  = "^4.1.0"
-ruff        = "0.9.2"
-# dependencies for building docs
-markdown-callouts = { version = ">=0.4.0" }
-mkdocs-autorefs = { version = ">=0.5.0,<1.1.0" }
-mkdocs-include-markdown-plugin = { version = ">=6.0.1" }
-mkdocs-material = { version = ">=9.2.8" }
-mkdocs-table-reader-plugin = { version = ">=2.0.1" }
-mkdocs = { version = ">=1.5.2" }
-mkdocs-gen-files = { version = ">=0.5.0" }
-mkdocs-literate-nav = { version = ">=0.6.1" }
-mkdocs-section-index = { version = ">=0.3.9" }
-mkdocstrings-python = { version = ">=1.6.2" }
-mkdocstrings = { version = ">=0.23.0" }
-black = "^24.4.2"
-pytest-doctestplus = "^1.2.1"
+[dependency-groups]
+dev = [
+    "black>=24.4.2,<25",
+    "mypy>=1.14.1,<2",
+    "pytest>=7.4.4,<8",
+    "pytest-cov>=4.1.0,<5",
+    "ruff==0.9.2",
+    "pytest-doctestplus>=1.2.1,<2",
+]
+docs = [
+    "markdown-callouts>=0.4.0",
+    "mkdocs-autorefs>=0.5.0,<1.1.0",
+    "mkdocs-include-markdown-plugin>=6.0.1",
+    "mkdocs-material>=9.2.8",
+    "mkdocs-table-reader-plugin>=2.0.1",
+    "mkdocs>=1.5.2",
+    "mkdocs-gen-files>=0.5.0",
+    "mkdocs-literate-nav>=0.6.1",
+    "mkdocs-section-index>=0.3.9",
+    "mkdocstrings-python>=1.6.2",
+    "mkdocstrings>=0.23.0",
+]
 
 [build-system]
-requires      = ["poetry-core>=1.6"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.poe]
 poetry_command = "task"
@@ -84,7 +92,7 @@ fix-all.sequence = [
     "fix-lint"
 ]
 
-check-lock = "poetry check --lock"
+check-lock = "uv lock --check"
 check-format = "ruff format --check --diff"
 check-lint = "ruff check"
 check-tests = "pytest"
@@ -124,14 +132,13 @@ warn_unreachable            = true
 warn_unused_configs         = true
 warn_unused_ignores         = true
 exclude = ["site/", "docs/"]
-# TODO: activate the following checks!
-# enable_error_code = [
-#     "ignore-without-code",
-#     "possibly-undefined",
-# ]
 
 [[tool.mypy.overrides]]
-module = ["primer3"]
+module = "os"
+disable_error_code = "attr-defined"
+
+[[tool.mypy.overrides]]
+module = "primer3"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

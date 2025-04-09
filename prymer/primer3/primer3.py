@@ -230,7 +230,7 @@ class Primer3(AbstractContextManager):
         # TODO: This is a placeholder while waiting for #160  to be resolved
         # https://github.com/fulcrumgenomics/fgpyo/pull/160
         with reader(dict_path, file_type=sam.SamFileType.SAM) as fh:
-            self._dict: SequenceDictionary = SequenceDictionary.from_sam(header=fh.header)
+            self._dict: SequenceDictionary = SequenceDictionary.from_sam(data=fh.header)
 
     def __enter__(self) -> Self:
         return self

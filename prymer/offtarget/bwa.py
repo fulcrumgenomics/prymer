@@ -188,7 +188,7 @@ MAX_MISMATCHES_IN_SEED: int = 3
 MAX_GAP_OPENS: int = 0
 """The default maximum number of gap opens allowed in the full query sequence"""
 
-MAX_GAP_EXTENSIONS: int | None = None
+MAX_GAP_EXTENSIONS: int = 6
 """The default maximum number of gap extensions allowed in the full query sequence"""
 
 MIN_INDEL_TO_END_DISTANCE: int = 3
@@ -235,7 +235,7 @@ class Bwa:
         max_mismatches: int = MAX_MISMATCHES,
         max_mismatches_in_seed: int = MAX_MISMATCHES_IN_SEED,
         max_gap_opens: int = MAX_GAP_OPENS,
-        max_gap_extensions: int | None = MAX_GAP_EXTENSIONS,
+        max_gap_extensions: int = MAX_GAP_EXTENSIONS,
         min_indel_to_end_distance: int = MIN_INDEL_TO_END_DISTANCE,
         seed_length: int = SEED_LENGTH,
         reverse_complement: bool = False,

@@ -3,7 +3,7 @@
 [![Python Versions][language-badge]][language-link]
 [![License][license-badge]][license-link]
 [![MyPy Checked][type-checking-badge]][type-checking-link]
-[![Poetry][poetry-badge]][poetry-link]
+[![uv][uv-badge]][uv-link]
 [![Ruff][ruff-badge]][ruff-link]
 
 [language-badge]:       https://img.shields.io/badge/python-3.11_|_3.12_|_3.13-blue
@@ -12,8 +12,9 @@
 [license-link]:         https://github.com/fulcrumgenomics/prymer/blob/main/LICENSE
 [type-checking-badge]:  http://www.mypy-lang.org/static/mypy_badge.svg
 [type-checking-link]:   http://mypy-lang.org/
-[poetry-badge]:         https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json
-[poetry-link]:          https://python-poetry.org/
+[uv-badge]:             https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json
+[uv-link]:              https://github.com/astral-sh/uv
+
 [ruff-badge]:           https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
 [ruff-link]:            https://docs.astral.sh/ruff/
 

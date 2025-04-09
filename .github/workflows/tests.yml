@@ -8,9 +8,6 @@ on:
       - "!**"
   workflow_call:
 
-env:
-  POETRY_VERSION: 1.8.2
-
 jobs:
   Tests:
     runs-on: ubuntu-24.04
@@ -26,11 +23,19 @@ jobs:
         with:
           python-version: ${{ matrix.PYTHON_VERSION }}
 
-      - name: Install and configure Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: ${{env.POETRY_VERSION}}
-          installer-parallel: true
+      - name: Install Linux build prerequisites
+        if:   runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -q --no-install-recommends --no-install-suggests libbz2-dev libcurl4-openssl-dev liblzma-dev libssl-dev libdeflate-dev
+
+      - name: Update macOS build prerequisites
+        if:   runner.os == 'macOS'
+        run: |
+          brew unlink xz || true  # Remove brewed liblzma as it is not multiarch
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
       - name: Set up miniconda
         uses: conda-incubator/setup-miniconda@v3
@@ -44,24 +49,35 @@ jobs:
           auto-activate-base: false
           python-version: ${{ matrix.PYTHON_VERSION }}
 
-      - name: Install the project's dependencies
-        shell: bash -el {0}
-        run: poetry install -v
+      - name: Check that the lock file is up to date
+        run: uv lock --check
 
-      - name: Install the task runner poethepoet
-        shell: bash -el {0}
-        run: poetry self add 'poethepoet[poetry_plugin]'
+      - name: Install dependencies
+        run: uv sync  --no-install-project
 
-      - name: Test the library
-        shell: bash -el {0}
-        run: poetry task check-all
+      - name: Install project
+        run: uv pip install --group dev --group docs
+
+      - name: Style checking
+        run: uv run ruff format --check prymer tests
+
+      - name: Run lint
+        run: uv run ruff check prymer tests
+
+      - name: Run mypy
+        run: uv run mypy prymer tests --config=pyproject.toml
+
+      - name: Run pytest
+        run: uv run pytest --cov=prymer --cov-report=xml --cov-branch 
+
+# Disabling build of docs on dev until we're done with refactoring
+#      - name: Run docs
+#        shell: bash -el {0}
+#        run: |
+#          set -euo pipefail
+#          uv run mkdocs build --strict
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4.5.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-
-# Disabling build of docs on dev until we're done with refactoring
-#      - name: Test building the documentation
-#        shell: bash -el {0}
-#        run: poetry run mkdocs build --strict
