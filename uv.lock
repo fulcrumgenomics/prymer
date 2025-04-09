@@ -700,7 +700,7 @@ docs = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fgpyo", specifier = ">=1.0.0,<2" },
+    { name = "fgpyo", specifier = ">=1.1.0,<2" },
     { name = "ordered-set", specifier = ">=4.1.0,<5" },
     { name = "primer3-py", specifier = ">=2.0.3,<3" },
     { name = "pybedlite", specifier = ">=1.0.0,<2" },
