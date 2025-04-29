@@ -45,7 +45,7 @@ jobs:
 
       - name: Install the project's dependencies
         shell: bash -el {0}
-        run: poetry install
+        run: poetry install -v || poetry install -vv
 
       - name: Test the codebase
         shell: bash -el {0}
