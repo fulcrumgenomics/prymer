@@ -411,15 +411,23 @@ class Primer3(ExecutableRunner):
 
         def primer3_error(message: str) -> None:
             """Formats the Primer3 error and raises a ValueError."""
-            error_message = f"{message}: "
+            error_parts = [message]
+
             # add in any reported PRIMER_ERROR
             if "PRIMER_ERROR" in primer3_results:
-                error_message += primer3_results["PRIMER_ERROR"]
+                error_parts.append(f"PRIMER_ERROR: {primer3_results['PRIMER_ERROR']}")
+
             # add in any error lines
             if len(error_lines) > 0:
-                error_message += "\n".join(f"\t\t{e}" for e in error_lines)
+                error_parts.append("Error output:")
+                error_parts.extend(f"  {e}" for e in error_lines)
+
+            # add design input context for debugging
+            error_parts.append(f"Target: {design_input.target}")
+            error_parts.append(f"Task: {design_input.task}")
+
             # raise the exception now
-            raise ValueError(error_message)
+            raise ValueError("\n".join(error_parts))
 
         while True:
             # Get the next line.  Since we want to distinguish between empty lines, which we ignore,
