@@ -71,7 +71,7 @@ class MinOptMax(Generic[Numeric]):
                 f"received min: {self.min}, opt: {self.opt}, max: {self.max}"
             )
 
-    def __iter__(self) -> Iterator[float]:
+    def __iter__(self) -> Iterator[Numeric]:
         """Returns an iterator of min, opt, and max"""
         return iter([self.min, self.opt, self.max])
 
