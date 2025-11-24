@@ -75,7 +75,6 @@ BwaHit(refname='chr1', start=61, negative=True, cigar=Cigar(elements=(CigarEleme
 """  # noqa: E501
 
 import itertools
-from collections import defaultdict
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from dataclasses import field
@@ -84,7 +83,6 @@ from pathlib import Path
 from types import TracebackType
 from typing import Optional
 from typing import Self
-from typing import TypeAlias
 from typing import TypeVar
 
 from ordered_set import OrderedSet
@@ -92,7 +90,6 @@ from ordered_set import OrderedSet
 from prymer.api.oligo import Oligo
 from prymer.api.primer_pair import PrimerPair
 from prymer.api.span import Span
-from prymer.api.span import Strand
 from prymer.offtarget.bwa import BWA_EXECUTABLE_NAME
 from prymer.offtarget.bwa import BwaAlnInteractive
 from prymer.offtarget.bwa import BwaHit
@@ -100,12 +97,6 @@ from prymer.offtarget.bwa import BwaResult
 from prymer.offtarget.bwa import Query
 
 PrimerType = TypeVar("PrimerType", bound=Oligo)
-
-ReferenceName: TypeAlias = str
-"""Alias for a reference sequence name."""
-
-MINIMUM_THREE_PRIME_REGION_LENGTH: int = 8
-"""Minimum allowable seed length for the 3' region."""
 
 
 @dataclass(init=True, frozen=True)
@@ -160,7 +151,7 @@ class OffTargetDetector(AbstractContextManager):
     alignments does not exceed the specified maximum number of primer pair hits.
     """
 
-    def __init__(  # noqa: C901
+    def __init__(
         self,
         ref: Path,
         max_primer_hits: int,
@@ -192,39 +183,33 @@ class OffTargetDetector(AbstractContextManager):
         3. Checking of primer pairs: `max_primer_hits`, `min_primer_pair_hits`,
            `max_primer_pair_hits`, and `max_amplicon_size`.
 
-        The `three_prime_region_length` parameter is used as the seed length for `bwa aln`.
-
         Args:
             ref: the reference genome fasta file (must be indexed with BWA)
             max_primer_hits: the maximum number of hits an individual primer can have in the genome
                 before it is considered an invalid primer, and all primer pairs containing the
-                primer failed. Must be greater than or equal to 0.
+                primer failed.
             max_primer_pair_hits: the maximum number of amplicons a primer pair can make and be
-                considered passing. Must be greater than or equal to 0.
+                considered passing
             min_primer_pair_hits: The minimum number of amplicons a primer pair can make and be
                 considered passing. (In most cases, this is the number of amplicons a primer pair is
                 expected to generate.) The default is 1, which is appropriate when the primer pair
                 is being evaluated for off-target hits against the same reference genome from which
                 the primers were generated. If the primer pair was generated from a different
-                reference sequence, it may be appropriate to set this value to 0. Must be greater
-                    than or equal to 0.
+                reference sequence, it may be appropriate to set this value to 0.
             three_prime_region_length: the number of bases at the 3' end of the primer in which the
-                parameter `max_mismatches_in_three_prime_region` is evaluated. This value is used as
-                the seed length (`bwa aln -l`). Must be a minimum of 8.
+                parameter max_mismatches_in_three_prime_region is evaluated
             max_mismatches_in_three_prime_region: the maximum number of mismatches that are
                 tolerated in the three prime region of each primer defined by
-                `three_prime_region_length`. Must be between 0 and `three_prime_region_length`,
-                inclusive.
+                three_prime_region_length
             max_mismatches: the maximum number of mismatches allowed in the full length primer
-                (including any in the three prime region). Must be greater than or equal to 0.
+                (including any in the three prime region)
             max_gap_opens: the maximum number of gaps (insertions or deletions) allowable in an
-                alignment of a oligo to the reference. Must be greater than or equal to 0.
+                alignment of a oligo to the reference
             max_gap_extends: the maximum number of gap extensions allowed; extending a gap
                 beyond a single base costs 1 gap extension.  Can be set to -1 to allow
                 unlimited extensions up to max diffs (aka max mismatches), while disallowing
-                "long gaps". Must be greater than or equal to -1.
-            max_amplicon_size: the maximum amplicon size to consider amplifiable. Must be greater
-                than 0.
+                "long gaps".
+            max_amplicon_size: the maximum amplicon size to consider amplifiable
             cache_results: if True, cache results for faster re-querying
             threads: the number of threads to use when invoking bwa
             keep_spans: if True, [[OffTargetResult]] objects will be reported with amplicon spans
@@ -232,66 +217,7 @@ class OffTargetDetector(AbstractContextManager):
             keep_primer_spans: if True, [[OffTargetResult]] objects will be reported with left and
                 right primer spans
             executable: string or Path representation of the `bwa` executable path
-
-        Raises:
-            ValueError: If `max_amplicon_size` is not greater than 0.
-            ValueError: If any of `max_primer_hits`, `max_primer_pair_hits`, or
-                `min_primer_pair_hits` are not greater than or equal to 0.
-            ValueError: If `three_prime_region_length` is not greater than or equal to 8.
-            ValueError: If `max_mismatches_in_three_prime_region` is outside the range 0 to
-                `three_prime_region_length`, inclusive.
-            ValueError: If `max_mismatches` is not greater than or equal to 0.
-            ValueError: If `max_gap_opens` is not greater than or equal to 0.
-            ValueError: If `max_gap_extends` is not -1 or greater than or equal to 0.
         """
-        errors: list[str] = []
-        if max_amplicon_size < 1:
-            errors.append(f"'max_amplicon_size' must be greater than 0. Saw {max_amplicon_size}")
-        if max_primer_hits < 0:
-            errors.append(
-                f"'max_primer_hits' must be greater than or equal to 0. Saw {max_primer_hits}"
-            )
-        if max_primer_pair_hits < 0:
-            errors.append(
-                "'max_primer_pair_hits' must be greater than or equal to 0. "
-                f"Saw {max_primer_pair_hits}"
-            )
-        if min_primer_pair_hits < 0:
-            errors.append(
-                "'min_primer_pair_hits' must be greater than or equal to 0. "
-                f"Saw {min_primer_pair_hits}"
-            )
-        if three_prime_region_length < MINIMUM_THREE_PRIME_REGION_LENGTH:
-            errors.append(
-                "'three_prime_region_length' must be greater than or equal to "
-                f"{MINIMUM_THREE_PRIME_REGION_LENGTH}. Saw {three_prime_region_length}"
-            )
-        if (
-            max_mismatches_in_three_prime_region < 0
-            or max_mismatches_in_three_prime_region > three_prime_region_length
-        ):
-            errors.append(
-                "'max_mismatches_in_three_prime_region' must be between 0 and "
-                f"'three_prime_region_length'={three_prime_region_length} inclusive. "
-                f"Saw {max_mismatches_in_three_prime_region}"
-            )
-        if max_mismatches < 0:
-            errors.append(
-                f"'max_mismatches' must be greater than or equal to 0. Saw {max_mismatches}"
-            )
-        if max_gap_opens < 0:
-            errors.append(
-                f"'max_gap_opens' must be greater than or equal to 0. Saw {max_gap_opens}"
-            )
-        if max_gap_extends < -1:
-            errors.append(
-                "'max_gap_extends' must be -1 (for unlimited extensions up to 'max_mismatches'="
-                f"{max_mismatches}) or greater than or equal to 0. Saw {max_gap_extends}"
-            )
-
-        if len(errors) > 0:
-            raise ValueError("\n".join(errors))
-
         self._primer_cache: dict[str, BwaResult] = {}
         self._primer_pair_cache: dict[PrimerPair, OffTargetResult] = {}
         self._bwa = BwaAlnInteractive(
@@ -418,77 +344,26 @@ class OffTargetDetector(AbstractContextManager):
         result: OffTargetResult
 
         # Get the mappings for the left primer and right primer respectively
-        left_bwa_result: BwaResult = hits_by_primer[primer_pair.left_primer.bases]
-        right_bwa_result: BwaResult = hits_by_primer[primer_pair.right_primer.bases]
+        p1: BwaResult = hits_by_primer[primer_pair.left_primer.bases]
+        p2: BwaResult = hits_by_primer[primer_pair.right_primer.bases]
 
-        # If there are too many hits, this primer pair will not pass. Exit early.
-        if (
-            left_bwa_result.hit_count > self._max_primer_hits
-            or right_bwa_result.hit_count > self._max_primer_hits
-        ):
+        # Get all possible amplicons from the left_primer_mappings and right_primer_mappings
+        # primer hits, filtering if there are too many for either
+        if p1.hit_count > self._max_primer_hits or p2.hit_count > self._max_primer_hits:
             result = OffTargetResult(primer_pair=primer_pair, passes=False)
-            if self._cache_results:
-                self._primer_pair_cache[primer_pair] = replace(result, cached=True)
-            return result
-
-        # Map the hits by reference name
-        left_positive_hits: defaultdict[ReferenceName, list[BwaHit]] = defaultdict(list)
-        left_negative_hits: defaultdict[ReferenceName, list[BwaHit]] = defaultdict(list)
-        right_positive_hits: defaultdict[ReferenceName, list[BwaHit]] = defaultdict(list)
-        right_negative_hits: defaultdict[ReferenceName, list[BwaHit]] = defaultdict(list)
-
-        # Split the hits for left and right by reference name and strand
-        for hit in left_bwa_result.hits:
-            if hit.negative:
-                left_negative_hits[hit.refname].append(hit)
-            else:
-                left_positive_hits[hit.refname].append(hit)
-
-        for hit in right_bwa_result.hits:
-            if hit.negative:
-                right_negative_hits[hit.refname].append(hit)
-            else:
-                right_positive_hits[hit.refname].append(hit)
-
-        refnames: set[ReferenceName] = {
-            h.refname for h in itertools.chain(left_bwa_result.hits, right_bwa_result.hits)
-        }
-
-        # Build amplicons from hits on the same reference with valid relative orientation
-        amplicons: list[Span] = []
-        for refname in refnames:
-            amplicons.extend(
-                self._to_amplicons(
-                    positive_hits=left_positive_hits[refname],
-                    negative_hits=right_negative_hits[refname],
-                    max_len=self._max_amplicon_size,
-                    strand=Strand.POSITIVE,
-                )
+        else:
+            amplicons = self._to_amplicons(p1.hits, p2.hits, self._max_amplicon_size)
+            result = OffTargetResult(
+                primer_pair=primer_pair,
+                passes=self._min_primer_pair_hits <= len(amplicons) <= self._max_primer_pair_hits,
+                spans=amplicons if self._keep_spans else [],
+                left_primer_spans=(
+                    [self._hit_to_span(h) for h in p1.hits] if self._keep_primer_spans else []
+                ),
+                right_primer_spans=(
+                    [self._hit_to_span(h) for h in p2.hits] if self._keep_primer_spans else []
+                ),
             )
-            amplicons.extend(
-                self._to_amplicons(
-                    positive_hits=right_positive_hits[refname],
-                    negative_hits=left_negative_hits[refname],
-                    max_len=self._max_amplicon_size,
-                    strand=Strand.NEGATIVE,
-                )
-            )
-
-        result = OffTargetResult(
-            primer_pair=primer_pair,
-            passes=self._min_primer_pair_hits <= len(amplicons) <= self._max_primer_pair_hits,
-            spans=amplicons if self._keep_spans else [],
-            left_primer_spans=(
-                [self._hit_to_span(h) for h in left_bwa_result.hits]
-                if self._keep_primer_spans
-                else []
-            ),
-            right_primer_spans=(
-                [self._hit_to_span(h) for h in right_bwa_result.hits]
-                if self._keep_primer_spans
-                else []
-            ),
-        )
 
         if self._cache_results:
             self._primer_pair_cache[primer_pair] = replace(result, cached=True)
@@ -523,7 +398,9 @@ class OffTargetDetector(AbstractContextManager):
             primers_to_map = primers
         else:
             primers_to_map = [
-                primer for primer in list(OrderedSet(primers)) if primer not in self._primer_cache
+                primer
+                for primer in list(OrderedSet(primers))
+                if primer.bases not in self._primer_cache
             ]
 
         # Build the unique list of queries to map with BWA
@@ -545,89 +422,19 @@ class OffTargetDetector(AbstractContextManager):
         return hits_by_primer
 
     @staticmethod
-    def _to_amplicons(
-        positive_hits: list[BwaHit], negative_hits: list[BwaHit], max_len: int, strand: Strand
-    ) -> list[Span]:
-        """Takes lists of positive strand hits and negative strand hits and constructs amplicon
-        mappings anywhere a positive strand hit and a negative strand hit occur where the end of
-        the negative strand hit is no more than `max_len` from the start of the positive strand
-        hit.
-
-        Primers may not overlap.
-
-        Args:
-            positive_hits: List of hits on the positive strand for one of the primers in the pair.
-            negative_hits: List of hits on the negative strand for the other primer in the pair.
-            max_len: Maximum length of amplicons to consider.
-            strand: The strand of the amplicon to generate. Set to Strand.POSITIVE if
-                `positive_hits` are for the left primer and `negative_hits` are for the right
-                primer. Set to Strand.NEGATIVE if `positive_hits` are for the right primer and
-                `negative_hits` are for the left primer.
-
-        Raises:
-            ValueError: If any of the positive hits are not on the positive strand, or any of the
-                negative hits are not on the negative strand. If hits are present on more than one
-                reference.
+    def _to_amplicons(lefts: list[BwaHit], rights: list[BwaHit], max_len: int) -> list[Span]:
+        """Takes a set of hits for one or more left primers and right primers and constructs
+        amplicon mappings anywhere a left primer hit and a right primer hit align in F/R
+        orientation up to `maxLen` apart on the same reference.  Primers may not overlap.
         """
-        if any(h.negative for h in positive_hits):
-            raise ValueError("Positive hits must be on the positive strand.")
-        if any(not h.negative for h in negative_hits):
-            raise ValueError("Negative hits must be on the negative strand.")
-
-        refnames: set[ReferenceName] = {
-            h.refname for h in itertools.chain(positive_hits, negative_hits)
-        }
-        if len(refnames) > 1:
-            raise ValueError(f"Hits are present on more than one reference: {refnames}")
-
-        # Exit early if one of the hit lists is empty - this will save unnecessary sorting of the
-        # other list
-        if len(positive_hits) == 0 or len(negative_hits) == 0:
-            return []
-
-        # Sort the positive strand hits by start position and the negative strand hits by *end*
-        # position. The `max_len` cutoff is based on negative_hit.end - positive_hit.start + 1.
-        positive_hits_sorted = sorted(positive_hits, key=lambda h: h.start)
-        negative_hits_sorted = sorted(negative_hits, key=lambda h: h.end)
-
         amplicons: list[Span] = []
+        for h1, h2 in itertools.product(lefts, rights):
+            if h1.negative == h2.negative or h1.refname != h2.refname:  # not F/R orientation
+                continue
 
-        # Track the position of the previously examined negative hit.
-        prev_negative_hit_index = 0
-        for positive_hit in positive_hits_sorted:
-            # Check only negative hits starting with the previously examined one.
-            for negative_hit_index, negative_hit in enumerate(
-                negative_hits_sorted[prev_negative_hit_index:],
-                start=prev_negative_hit_index,
-            ):
-                # TODO: Consider allowing overlapping positive and negative hits.
-                if (
-                    negative_hit.start > positive_hit.end
-                    and negative_hit.end - positive_hit.start + 1 <= max_len
-                ):
-                    # If the negative hit starts to the right of the positive hit, and the amplicon
-                    # length is <= max_len, add it to the list of amplicon hits to be returned.
-                    amplicons.append(
-                        Span(
-                            refname=positive_hit.refname,
-                            start=positive_hit.start,
-                            end=negative_hit.end,
-                            strand=strand,
-                        )
-                    )
-
-                if negative_hit.end - positive_hit.start + 1 > max_len:
-                    # Stop searching for negative hits to pair with this positive hit.
-                    # All subsequence negative hits will have amplicon length > max_len
-                    break
-
-                if negative_hit.end < positive_hit.start:
-                    # This positive hit is genomically right of the current negative hit.
-                    # All subsequent positive hits will also be genomically right of this negative
-                    # hit, so we should start at the one after this. If this index is past the end
-                    # of the list, the slice `negative_hits_sorted[prev_negative_hit_index:]` will
-                    # be empty.
-                    prev_negative_hit_index = negative_hit_index + 1
+            plus, minus = (h2, h1) if h1.negative else (h1, h2)
+            if minus.start > plus.end and (minus.end - plus.start + 1) <= max_len:
+                amplicons.append(Span(refname=plus.refname, start=plus.start, end=minus.end))
 
         return amplicons
 
