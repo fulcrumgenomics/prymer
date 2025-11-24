@@ -575,3 +575,43 @@ def test_calculate_amplicon_span() -> None:
     right = Oligo(name="l", bases="AACCGGTTAA", tm=60, penalty=1, span=Span("chr1", 150, 159))
     with pytest.raises(ValueError, match="Right primer ends before left primer ends"):
         PrimerPair.calculate_amplicon_span(left, right)
+
+
+def test_primer_pair_amplicon_sequence_length_validation() -> None:
+    """Test that PrimerPair validates amplicon sequence length matches span length."""
+    left_span = Span(refname="chr1", start=1, end=20)
+    left_primer = Oligo(tm=70.0, penalty=-123.0, span=left_span, bases="G" * 20)
+    right_span = Span(refname="chr1", start=101, end=120, strand=Strand.NEGATIVE)
+    right_primer = Oligo(tm=70.0, penalty=-123.0, span=right_span, bases="T" * 20)
+
+    # Valid case: amplicon sequence length matches span (120 - 1 + 1 = 120)
+    valid_sequence = "A" * 120
+    primer_pair = PrimerPair(
+        left_primer=left_primer,
+        right_primer=right_primer,
+        amplicon_sequence=valid_sequence,
+        amplicon_tm=70.0,
+        penalty=-123.0,
+    )
+    assert len(primer_pair.amplicon_sequence) == primer_pair.amplicon.length
+
+    # Invalid case: amplicon sequence length doesn't match span
+    invalid_sequence = "A" * 100  # Should be 120
+    with pytest.raises(ValueError, match="Amplicon sequence length.*does not match"):
+        PrimerPair(
+            left_primer=left_primer,
+            right_primer=right_primer,
+            amplicon_sequence=invalid_sequence,
+            amplicon_tm=70.0,
+            penalty=-123.0,
+        )
+
+    # None case should still work (no validation when sequence is None)
+    primer_pair_no_seq = PrimerPair(
+        left_primer=left_primer,
+        right_primer=right_primer,
+        amplicon_sequence=None,
+        amplicon_tm=70.0,
+        penalty=-123.0,
+    )
+    assert primer_pair_no_seq.amplicon_sequence is None

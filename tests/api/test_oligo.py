@@ -436,3 +436,22 @@ def test_primer_compare(
 ) -> None:
     assert expected == Oligo.compare(this=this, that=that, seq_dict=seq_dict)
     assert -expected == Oligo.compare(this=that, that=this, seq_dict=seq_dict)
+
+
+def test_longest_dinucleotide_run_length_with_none_bases() -> None:
+    """Test that longest_dinucleotide_run_length raises ValueError for None bases."""
+    import pytest
+
+    primer_with_none_bases = Oligo(
+        bases=None,
+        tm=65.0,
+        penalty=0.5,
+        span=Span(refname="chr1", start=1, end=20),
+    )
+    # Should raise ValueError when bases is None
+    with pytest.raises(ValueError, match="Cannot calculate longest dinucleotide run length"):
+        primer_with_none_bases.longest_dinucleotide_run_length()
+
+    # Also test longest_hp_length for consistency
+    with pytest.raises(ValueError, match="Cannot calculate longest homopolymer length"):
+        primer_with_none_bases.longest_hp_length()
