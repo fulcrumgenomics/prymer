@@ -1,4 +1,3 @@
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -12,7 +11,6 @@ from prymer.api.span import Strand
 from prymer.offtarget.bwa import BWA_EXECUTABLE_NAME
 from prymer.offtarget.bwa import BwaHit
 from prymer.offtarget.bwa import BwaResult
-from prymer.offtarget.bwa import Query
 from prymer.offtarget.offtarget_detector import OffTargetDetector
 from prymer.offtarget.offtarget_detector import OffTargetResult
 
@@ -173,157 +171,66 @@ def test_mappings_of(ref_fasta: Path, cache_results: bool) -> None:
             assert results_dict[p2.bases].hits[0] == expected_hit2
 
 
-# Test building an OffTargetResult for a primer pair with left/right hits on different references
-# and in different orientations
-def test_build_off_target_result(ref_fasta: Path) -> None:
-    hits_by_primer: dict[str, BwaResult] = {
-        "A" * 100: BwaResult(
-            query=Query(
-                id="left",
-                bases="A" * 100,
-            ),
-            hit_count=3,
-            hits=[
-                BwaHit.build("chr1", 100, False, "100M", 0),
-                BwaHit.build("chr1", 400, True, "100M", 0),
-                BwaHit.build("chr2", 100, False, "100M", 0),
-                BwaHit.build("chr3", 700, True, "100M", 0),
-            ],
-        ),
-        "C" * 100: BwaResult(
-            query=Query(
-                id="right",
-                bases="C" * 100,
-            ),
-            hit_count=2,
-            hits=[
-                BwaHit.build("chr1", 800, False, "100M", 0),
-                BwaHit.build("chr1", 200, True, "100M", 0),
-                BwaHit.build("chr3", 600, False, "100M", 0),
-            ],
-        ),
-    }
-
-    primer_pair = PrimerPair(
-        left_primer=Oligo(
-            tm=50,
-            penalty=0,
-            span=Span(refname="chr10", start=100, end=199, strand=Strand.POSITIVE),
-            bases="A" * 100,
-        ),
-        right_primer=Oligo(
-            tm=50,
-            penalty=0,
-            span=Span(refname="chr10", start=300, end=399, strand=Strand.NEGATIVE),
-            bases="C" * 100,
-        ),
-        amplicon_tm=100,
-        penalty=0,
-    )
-
-    with _build_detector(
-        ref_fasta=ref_fasta, max_primer_hits=10, max_primer_pair_hits=10
-    ) as detector:
-        off_target_result: OffTargetResult = detector._build_off_target_result(
-            primer_pair=primer_pair,
-            hits_by_primer=hits_by_primer,
-        )
-
-    assert set(off_target_result.spans) == {
-        Span(refname="chr1", start=100, end=299, strand=Strand.POSITIVE),
-        Span(refname="chr3", start=600, end=799, strand=Strand.NEGATIVE),
-    }
-
-
 # Test that using the cache (or not) does not affect the results
 @pytest.mark.parametrize("cache_results", [True, False])
 @pytest.mark.parametrize(
-    "test_id, positive, negative, strand, expected",
+    "test_id, left, right, expected",
     [
+        (
+            "No mappings - different refnames",
+            BwaHit.build("chr1", 100, False, "100M", 0),
+            BwaHit.build("chr2", 100, True, "100M", 0),
+            [],
+        ),
+        (
+            "No mappings - FF pair",
+            BwaHit.build("chr1", 100, True, "100M", 0),
+            BwaHit.build("chr1", 100, True, "100M", 0),
+            [],
+        ),
+        (
+            "No mappings - RR pair",
+            BwaHit.build("chr1", 100, False, "100M", 0),
+            BwaHit.build("chr1", 100, False, "100M", 0),
+            [],
+        ),
         (
             "No mappings - overlapping primers (1bp overlap)",
             BwaHit.build("chr1", 100, False, "100M", 0),
             BwaHit.build("chr1", 199, True, "100M", 0),
-            Strand.POSITIVE,
             [],
         ),
         (
             "No mappings - amplicon size too big (1bp too big)",
             BwaHit.build("chr1", 100, False, "100M", 0),
             BwaHit.build("chr1", 151, True, "100M", 0),
-            Strand.POSITIVE,
             [],
         ),
         (
             "Mappings - FR pair (R1 F)",
             BwaHit.build("chr1", 100, False, "100M", 0),
             BwaHit.build("chr1", 200, True, "100M", 0),
-            Strand.POSITIVE,
-            [Span(refname="chr1", start=100, end=299, strand=Strand.POSITIVE)],
+            [Span(refname="chr1", start=100, end=299)],
         ),
         (
             "Mappings - FR pair (R1 R)",
-            BwaHit.build("chr1", 100, False, "100M", 0),
             BwaHit.build("chr1", 200, True, "100M", 0),
-            Strand.NEGATIVE,
-            [Span(refname="chr1", start=100, end=299, strand=Strand.NEGATIVE)],
+            BwaHit.build("chr1", 100, False, "100M", 0),
+            [Span(refname="chr1", start=100, end=299)],
         ),
     ],
 )
 def test_to_amplicons(
     ref_fasta: Path,
     test_id: str,
-    positive: BwaHit,
-    negative: BwaHit,
-    strand: Strand,
+    left: BwaHit,
+    right: BwaHit,
     expected: list[Span],
     cache_results: bool,
 ) -> None:
     with _build_detector(ref_fasta=ref_fasta, cache_results=cache_results) as detector:
-        actual = detector._to_amplicons(
-            positive_hits=[positive], negative_hits=[negative], max_len=250, strand=strand
-        )
+        actual = detector._to_amplicons(lefts=[left], rights=[right], max_len=250)
         assert actual == expected, test_id
-
-
-@pytest.mark.parametrize("cache_results", [True, False])
-@pytest.mark.parametrize(
-    "positive, negative, expected_error",
-    [
-        (
-            # No mappings - different refnames
-            BwaHit.build("chr1", 100, False, "100M", 0),
-            BwaHit.build("chr2", 100, True, "100M", 0),
-            "Hits are present on more than one reference",
-        ),
-        (
-            # No mappings - FF pair
-            BwaHit.build("chr1", 100, True, "100M", 0),
-            BwaHit.build("chr1", 100, True, "100M", 0),
-            "Positive hits must be on the positive strand",
-        ),
-        (
-            # No mappings - RR pair
-            BwaHit.build("chr1", 100, False, "100M", 0),
-            BwaHit.build("chr1", 100, False, "100M", 0),
-            "Negative hits must be on the negative strand",
-        ),
-    ],
-)
-def test_to_amplicons_value_error(
-    ref_fasta: Path,
-    positive: BwaHit,
-    negative: BwaHit,
-    expected_error: str,
-    cache_results: bool,
-) -> None:
-    with (
-        _build_detector(ref_fasta=ref_fasta, cache_results=cache_results) as detector,
-        pytest.raises(ValueError, match=expected_error),
-    ):
-        detector._to_amplicons(
-            positive_hits=[positive], negative_hits=[negative], max_len=250, strand=Strand.POSITIVE
-        )
 
 
 def test_generic_filter(ref_fasta: Path) -> None:
@@ -350,52 +257,3 @@ def test_generic_filter(ref_fasta: Path) -> None:
         # 2. Return a list of the same type.
         # NB: we're ignoring the unused value error because we want to check the type hint
         filtered_primers: list[CustomPrimer] = detector.filter(primers)  # noqa: F841
-
-
-# fmt: off
-@pytest.mark.parametrize(
-    (
-        "max_primer_hits,max_primer_pair_hits,min_primer_pair_hits,three_prime_region_length,"
-        "max_mismatches_in_three_prime_region,max_mismatches,max_amplicon_size,"
-        "max_gap_opens,max_gap_extends,expected_error"
-    ),
-    [
-        (-1, 1, 1, 20, 0, 0, 1, 0, 0, "'max_primer_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
-        (1, -1, 1, 20, 0, 0, 1, 0, 0, "'max_primer_pair_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
-        (1, 1, -1, 20, 0, 0, 1, 0, 0, "'min_primer_pair_hits' must be greater than or equal to 0. Saw -1"),  # noqa: E501
-        (1, 1, 1, 5, 0, 0, 1, 0, 0, "'three_prime_region_length' must be greater than or equal to 8. Saw 5"),  # noqa: E501
-        (1, 1, 1, 20, -1, 0, 1, 0, 0, "'max_mismatches_in_three_prime_region' must be between 0 and 'three_prime_region_length'=20 inclusive. Saw -1"),  # noqa: E501
-        (1, 1, 1, 20, 21, 0, 1, 0, 0, "'max_mismatches_in_three_prime_region' must be between 0 and 'three_prime_region_length'=20 inclusive. Saw 21"),  # noqa: E501
-        (1, 1, 1, 20, 0, -1, 1, 0, 0, "'max_mismatches' must be greater than or equal to 0. Saw -1"),  # noqa: E501
-        (1, 1, 1, 20, 0, 0, 0, 0, 0, "'max_amplicon_size' must be greater than 0. Saw 0"),
-        (1, 1, 1, 20, 0, 0, 1, -1, 0, "'max_gap_opens' must be greater than or equal to 0. Saw -1"),
-        (1, 1, 1, 20, 0, 5, 1, 0, -2, re.escape("'max_gap_extends' must be -1 (for unlimited extensions up to 'max_mismatches'=5) or greater than or equal to 0. Saw -2")), #noqa: E501
-    ],
-)
-# fmt: on
-def test_init(
-    ref_fasta: Path,
-    max_primer_hits: int,
-    max_primer_pair_hits: int,
-    min_primer_pair_hits: int,
-    three_prime_region_length: int,
-    max_mismatches_in_three_prime_region: int,
-    max_mismatches: int,
-    max_amplicon_size: int,
-    max_gap_opens: int,
-    max_gap_extends: int,
-    expected_error: str,
-) -> None:
-    with pytest.raises(ValueError, match=expected_error):
-        OffTargetDetector(
-            ref=ref_fasta,
-            max_primer_hits=max_primer_hits,
-            max_primer_pair_hits=max_primer_pair_hits,
-            min_primer_pair_hits=min_primer_pair_hits,
-            three_prime_region_length=three_prime_region_length,
-            max_mismatches_in_three_prime_region=max_mismatches_in_three_prime_region,
-            max_mismatches=max_mismatches,
-            max_amplicon_size=max_amplicon_size,
-            max_gap_opens=max_gap_opens,
-            max_gap_extends=max_gap_extends,
-        )

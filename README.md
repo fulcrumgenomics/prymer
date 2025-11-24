@@ -6,7 +6,7 @@
 [![Poetry][poetry-badge]][poetry-link]
 [![Ruff][ruff-badge]][ruff-link]
 
-[language-badge]:       https://img.shields.io/badge/python-3.11_|_3.12_|_3.13-blue
+[language-badge]:       https://img.shields.io/badge/python-3.11_|_3.12-blue
 [language-link]:        http://www.python.org/
 [license-badge]:        http://img.shields.io/badge/license-MIT-blue.svg
 [license-link]:         https://github.com/fulcrumgenomics/prymer/blob/main/LICENSE
@@ -49,7 +49,7 @@
 [zenodo-link]:          https://doi.org/10.5281/zenodo.15029066
 
 <p>
-<a href float="left"="https://fulcrumgenomics.com"><img src=".github/logos/fulcrumgenomics.svg" alt="Fulcrum Genomics" height="100"/></a>
+<a href="https://fulcrumgenomics.com"><img src=".github/logos/fulcrumgenomics.svg" alt="Fulcrum Genomics" height="100"/></a>
 </p>
 
 [Visit us at Fulcrum Genomics](https://www.fulcrumgenomics.com) to learn more about how we can power your Bioinformatics with prymer and beyond.
