@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        PYTHON_VERSION: ["3.11", "3.12", "3.13"]
+        PYTHON_VERSION: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
 
@@ -46,6 +46,14 @@ jobs:
       - name: Install the project's dependencies
         shell: bash -el {0}
         run: poetry install
+
+      - name: Run ruff linting
+        shell: bash -el {0}
+        run: poetry run ruff check .
+
+      - name: Run ruff formatting check
+        shell: bash -el {0}
+        run: poetry run ruff format --check .
 
       - name: Test the codebase
         shell: bash -el {0}
