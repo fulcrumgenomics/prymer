@@ -80,6 +80,19 @@ class PrimerPair(OligoLike):
     penalty: float
     amplicon_sequence: Optional[str] = None
 
+    def __post_init__(self) -> None:
+        """Validate amplicon sequence length matches amplicon span length if provided."""
+        if self.amplicon_sequence is not None:
+            expected_length = self.calculate_amplicon_span(
+                self.left_primer, self.right_primer
+            ).length
+            actual_length = len(self.amplicon_sequence)
+            if actual_length != expected_length:
+                raise ValueError(
+                    f"Amplicon sequence length ({actual_length}) does not match "
+                    f"amplicon span length ({expected_length})"
+                )
+
     @cached_property
     def amplicon(self) -> Span:
         """Returns the mapping for the amplicon"""
