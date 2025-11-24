@@ -135,9 +135,8 @@ class Oligo(OligoLike, Metric["Oligo"]):
     def longest_hp_length(self) -> int:
         """Length of longest homopolymer in the oligo."""
         if self.bases is None:
-            return 0
-        else:
-            return longest_homopolymer_length(self.bases)
+            raise ValueError("Cannot calculate longest homopolymer length when bases is None")
+        return longest_homopolymer_length(self.bases)
 
     @property
     def length(self) -> int:
@@ -158,6 +157,8 @@ class Oligo(OligoLike, Metric["Oligo"]):
         A dinucleotide run is when length two repeat-unit is repeated. For example,
         TCTC (length = 4) or ACACACACAC (length = 10). If there are no such runs, returns 2
         (or 0 if there are fewer than 2 bases)."""
+        if self.bases is None:
+            raise ValueError("Cannot calculate longest dinucleotide run length when bases is None")
         return longest_dinucleotide_run_length(self.bases)
 
     def with_tail(self, tail: str) -> "Oligo":
